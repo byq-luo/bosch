@@ -32,7 +32,7 @@ class App:
             self.photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
             self.canvas.create_image(0, 0, image=self.photo, anchor=tkinter.NW)
 
-        self.window.after(1, self.update)
+        self.window.after(self.delay, self.update)
 
 
 class Video:
