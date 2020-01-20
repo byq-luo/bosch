@@ -62,7 +62,7 @@ class Video:
             return(ret, None)
 
 
-App(tkinter.Tk(), "Tkinter and OpenCV", "flame.avi")
+#App(tkinter.Tk(), "Tkinter and OpenCV", "flame.avi")
 
 def main():
     #App(tkinter.Tk(), "Tkinter and OpenCV", "flame.avi")
