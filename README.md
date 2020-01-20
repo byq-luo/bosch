@@ -1,6 +1,7 @@
 Ideas:
 
-    Show learning/training statistics for video file in GUI?
+    Support batch processing of videos
+    Show learning/training statistics for video file in GUI
 
 Questions for next meeting:
 
@@ -20,4 +21,4 @@ Questions for next meeting:
       However, putting this data into a db might make it easier to access, filter, and do other analysis.
 
     Q: Should we implement a system for finding/correcting incorrect predictions?
-      Guess: yeah
+      Guess: maybe? maybe they have a system for this already
