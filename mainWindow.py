@@ -61,6 +61,9 @@ class Root(Tk):
     def update(self):
         if self.vid is not None:
             ret, frame = self.vid.get_frame()
+            if frame is None:
+                # video has played all the way through
+                return
 
             if ret:
                 photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
@@ -77,3 +80,4 @@ class Root(Tk):
 
 root = Root()
 root.mainloop()
+1+1
