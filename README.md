@@ -22,3 +22,7 @@ Questions for next meeting:
 
     Q: Should we implement a system for finding/correcting incorrect predictions?
       Guess: maybe? maybe they have a system for this already
+
+    Q: Would it be possible to upload the data (or a subset of the data) to the cloud, Google Cloud Platform for example?
+
+    Q: Does bosch have compute servers we can use for learning, if we need to do learning?
