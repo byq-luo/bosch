@@ -1,24 +1,23 @@
-Setup
+Ideas:
 
-Install Miniconda from https://docs.conda.io/en/latest/miniconda.html
-    Open an anaconda prompt and run
-        conda install theano pygpu
-    then, from an anaconda prompt, the following python script should successfully execute.
+    Show learning/training statistics for video file in GUI?
 
-        from __future__ import absolute_import, print_function, division
-        import numpy
-        import theano
-        import theano.tensor as T
-        from theano import function
-        x = T.dscalar('x')
-        y = T.dscalar('y')
-        z = x + y
-        f = function([x, y], z)
-        print(f(2, 3)) # 5.0
-        print(numpy.allclose(f(16.3, 12.1), 28.4)) # True
+Questions for next meeting:
 
-        a = theano.tensor.vector()  # declare variable
-        b = theano.tensor.vector()  # declare variable
-        out = a ** 2 + b ** 2 + 2 * a * b  # build symbolic expression
-        f = theano.function([a, b], out)   # compile function
-        print(f([1, 2], [4, 5]))  # prints [ 25.  49.]
+    Q: How are video files accessed by computers that would run the app?
+      Guess: videos are stored in a shared network drive and can be accessed as normal
+
+    Q: Would it be possible to give the app a root folder and then select for processing all videos under that root?
+      Guess: yes
+
+    Q: Where will the machine learning predictions be stored?
+      Guess: for a given video file, store results as text file in same directory as video file
+
+    Q: Should we have some kind of database?
+      I think we could get away with not having a database at all.
+      We could put all data related to a certain video into a folder in the same directory as the video.
+      This data might include (labels & times & confidences, bounding box locations & sizes, line lanes).
+      However, putting this data into a db might make it easier to access, filter, and do other analysis.
+
+    Q: Should we implement a system for finding/correcting incorrect predictions?
+      Guess: yeah
