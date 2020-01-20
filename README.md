@@ -6,7 +6,7 @@ Ideas:
 Questions for next meeting:
 
     Q: How are video files accessed by computers that would run the app?
-      Guess: videos are stored in a shared network drive and can be accessed as normal
+      Guess: videos are stored in a shared network drive and can be accessed as normal files
 
     Q: Would it be possible to give the app a root folder and then select for processing all videos under that root?
       Guess: yes
@@ -23,6 +23,9 @@ Questions for next meeting:
     Q: Should we implement a system for finding/correcting incorrect predictions?
       Guess: maybe? maybe they have a system for this already
 
-    Q: Would it be possible to upload the data (or a subset of the data) to the cloud, Google Cloud Platform for example?
+    Q: Would it be possible to upload the data (or a subset of the data) to the cloud (Google Cloud Platform)?
+      We could use this for learning IF our ML model is too costly to learn on our laptops.
 
     Q: Does bosch have compute servers we can use for learning, if we need to do learning?
+
+    Q: Will you ever have more videos to process than the ones you have given us?
