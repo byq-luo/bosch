@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 import gui
+import pathlib
 
 
 class Root(Tk):
@@ -31,7 +32,7 @@ class Root(Tk):
         self.videobutton.grid(column=1, row=1)
 
     def fileDialog(self):
-        self.filename = filedialog.askopenfilename(initialdir="/", title="Select A File", filetype=
+        self.filename = filedialog.askopenfilename(initialdir=pathlib.Path().absolute(), title="Select A File", filetype=
         (("avi files", "*.avi"), ("all files", "*.*")))
         self.label = ttk.Label(self.FileFrame, text="")
         self.label.grid(column=1, row=2)
