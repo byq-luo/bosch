@@ -3,7 +3,7 @@ import cv2
 import PIL.Image, PIL.ImageTk
 import time
 
-class App:
+"""class App:
     def __init__(self, window, window_title, video_source):
         self.window = window
         self.window.title(window_title)
@@ -32,7 +32,7 @@ class App:
             self.photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
             self.canvas.create_image(0, 0, image=self.photo, anchor=tkinter.NW)
 
-        self.window.after(self.delay, self.update)
+        self.window.after(self.delay, self.update)"""
 
 
 class Video:
@@ -70,5 +70,6 @@ class Video:
 
 def main():
     #App(tkinter.Tk(), "Tkinter and OpenCV", "flame.avi")
-    print("ran")
+    #print("ran")
+    return
 
