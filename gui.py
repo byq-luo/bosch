@@ -43,6 +43,7 @@ class Video:
 
         self.width = self.vid.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        self.fps = self.vid.get(cv2.CAP_PROP_FPS)
 
     def __del__(self):
         if self.vid.isOpened():
@@ -60,6 +61,9 @@ class Video:
 
         else:
             return(ret, None)
+
+    def get_fps(self):
+        return self.fps
 
 
 #App(tkinter.Tk(), "Tkinter and OpenCV", "flame.avi")
