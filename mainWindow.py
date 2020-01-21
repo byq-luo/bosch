@@ -1,5 +1,5 @@
 from tkinter import *
-from tkinter import ttk
+#from tkinter import ttk
 from tkinter import filedialog
 import gui
 import pathlib
@@ -17,45 +17,62 @@ class Root(Tk):
         self.title("Main Window")
         self.minsize(600, 400)
         self.filename = None
+        self.videoLabel = None
+        self.fileLabel = None
         self.vid = None
         self.delay = 20
         self.wm_iconbitmap('icon2.ico')     # application icon
         self.time = int(round(time.time() * 1000))      # time in ms will be used to playback at the correct speed
 
         """The frame for file button and file path"""
-        self.FileFrame = ttk.LabelFrame(self, text="Open File")
-        self.FileFrame.grid(column=0, row=1, padx=20, pady=20)
+        self.FileFrame = LabelFrame(self, text="Open File")
+        self.FileFrame.grid(column=0, row=1, sticky=N, padx=15, pady=15)
         self.buttonFile()
 
         """The frame for the play button"""
-        self.VideoFrame = ttk.LabelFrame(self, text="Video")
-        self.VideoFrame.grid(column=1, row=1, padx=20, pady=20)
+        self.VideoFrame = LabelFrame(self, text="Video")
+        self.VideoFrame.grid(column=0, row=2, sticky=N, padx=15, pady=15)
         self.buttonVideo()
 
         """The video widget"""
-        self.videoLabel = ttk.Label(self, anchor=S, image=None)
-        self.videoLabel.grid(column=1, row=2,)
+        self.playerLabel = Label(self, image=None)
+        self.playerLabel.grid(row=1, column=1, rowspan=2, sticky=N+E+S+W)
 
     def buttonFile(self):
-        self.filebutton = ttk.Button(self.FileFrame, text="Browse A File", command=self.fileDialog)
+        self.filebutton = Button(self.FileFrame, text="Browse A File", command=self.fileDialog)
         self.filebutton.grid(column=1, row=1)
 
     def buttonVideo(self):
-        self.videobutton = ttk.Button(self.VideoFrame, text="Play File", command=self.makeVideo)
+        self.videobutton = Button(self.VideoFrame, text="Play File", command=self.makeVideo)
         self.videobutton.grid(column=1, row=1)
 
     def fileDialog(self):
-        self.filename = filedialog.askopenfilename(initialdir=pathlib.Path().absolute(), title="Select A File", filetype=
+        filename = filedialog.askopenfilename(initialdir=pathlib.Path().absolute(), title="Select A File", filetype=
         (("avi files", "*.avi"), ("all files", "*.*")))
-        self.label = ttk.Label(self.FileFrame, text="")
-        self.label.grid(column=1, row=2)
-        self.label.configure(text=self.filename)
-        # App(Tk(), "Tkinter and OpenCV", self.filename)
+        if filename is not '':
+            """only sets self.filename and fileLabel if a file was selected"""
+            if self.fileLabel is not None:
+                self.fileLabel.destroy()
+            self.filename = filename
+            self.fileLabel = Label(self.FileFrame, text="")
+            self.fileLabel.grid(column=1, row=2)
+            self.fileLabel.configure(text=self.filename)
 
     def makeVideo(self):
-        self.vid = gui.Video(self.filename)
-        self.delay = int(1000/self.vid.get_fps())
-        self.update()
+        if self.filename is not None:   # a file was selected
+            if self.videoLabel is not None:     # get rid of no file selected label
+                self.videoLabel.destroy()
+                self.videoLabel = None
+
+            self.vid = gui.Video(self.filename)
+            self.delay = int(1000/self.vid.get_fps())
+            self.update()
+
+        else:   # a file was not selected
+            """create label to notify user that there is no file selected"""
+            self.videoLabel = Label(self.VideoFrame, text="")
+            self.videoLabel.grid(column=1, row=2)
+            self.videoLabel.configure(text="No file selected")
 
     def draw_bounding_box(self, uptime, frame):
         # draws a bounding box
@@ -78,8 +95,8 @@ class Root(Tk):
 
             if ret:
                 photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
-                self.videoLabel.photo = photo
-                self.videoLabel.config(image=photo)
+                self.playerLabel.photo = photo
+                self.playerLabel.config(image=photo)    # updates the player label to show most current image
         self.time = int(round(time.time() * 1000))
         self.after(uptime - self.time, self.update)    # call the function again after the difference in time has passed
 
