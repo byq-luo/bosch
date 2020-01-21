@@ -5,6 +5,8 @@ import gui
 import pathlib
 import PIL.Image, PIL.ImageTk
 import time
+import cv2
+import math
 
 
 
@@ -55,6 +57,14 @@ class Root(Tk):
         self.delay = int(1000/self.vid.get_fps())
         self.update()
 
+    def draw_bounding_box(self, uptime, frame):
+        # draws a bounding box
+        x = int(100*(.75 + .25*math.cos(uptime/200)))
+        y = int(100*(.75 + .25*math.sin(uptime/200)))
+        w = 100
+        h = 100
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 255), 2)
+
     def update(self):
         self.time = int(round(time.time() * 1000))
         uptime = self.time + self.delay     # the time that the next frame should be pulled
@@ -63,6 +73,8 @@ class Root(Tk):
             if frame is None:
                 """video has played all the way through"""
                 return
+
+            self.draw_bounding_box(uptime, frame)
 
             if ret:
                 photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
