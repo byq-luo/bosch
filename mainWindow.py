@@ -19,6 +19,8 @@ class Root(Tk):
         self.filename = None
         self.videoLabel = None
         self.fileLabel = None
+        self.playButtonLabel = None
+        self.pauseButtonLabel = None
         self.vid = None
         self.delay = 20
         self.wm_iconbitmap('icon2.ico')     # application icon
@@ -46,8 +48,33 @@ class Root(Tk):
         self.videobutton = Button(self.VideoFrame, text="Play File", command=self.makeVideo)
         self.videobutton.grid(column=1, row=1)
 
+    def buttonVideoPlay(self):
+        if self.pauseButtonLabel is not None:
+            self.pauseButtonLabel.destroy()
+            self.pauseButtonLabel = None
+
+        """The play button label"""
+        self.playButtonLabel = Label(self, text=None)
+        self.playButtonLabel.grid(row=3, column=1)
+
+        #photo = PhotoImage(file = r"/Users/adamschroth/PycharmProjects/bosch/play.png")
+        self.videoPlayButton = Button(self.playButtonLabel, text = "Play", command=self.playVideo)
+        self.videoPlayButton.grid(column=1, row=1)
+
+    def buttonVideoPause(self):
+        if self.playButtonLabel is not None:
+            self.playButtonLabel.destroy()
+            self.playButtonLabel = None
+
+        """The pause button label"""
+        self.pauseButtonLabel = Label(self, text=None)
+        self.pauseButtonLabel.grid(row=3, column=1)
+
+        self.videoPauseButton = Button(self.pauseButtonLabel, text = "Pause", command=self.pauseVideo)
+        self.videoPauseButton.grid(column=1, row=1)
+
     def fileDialog(self):
-        filename = filedialog.askopenfilename(initialdir=pathlib.Path().absolute(), title="Select A File", filetype=
+        filename = filedialog.askopenfilename(initialdir=pathlib.Path().absolute(), title="Select A File", filetypes=
         (("avi files", "*.avi"), ("all files", "*.*")))
         if filename is not '':
             """only sets self.filename and fileLabel if a file was selected"""
@@ -59,6 +86,10 @@ class Root(Tk):
             self.fileLabel.configure(text=self.filename)
 
     def makeVideo(self):
+
+        self.buttonVideoPlay()
+
+        self.isPaused = True
         if self.filename is not None:   # a file was selected
             if self.videoLabel is not None:     # get rid of no file selected label
                 self.videoLabel.destroy()
@@ -74,6 +105,18 @@ class Root(Tk):
             self.videoLabel.grid(column=1, row=2)
             self.videoLabel.configure(text="No file selected")
 
+
+    def playVideo(self):
+        self.isPaused = False
+        self.buttonVideoPause()
+        self.update()
+
+
+    def pauseVideo(self):
+        self.isPaused = True
+        self.buttonVideoPlay()
+        self.update()
+
     def draw_bounding_box(self, uptime, frame):
         # draws a bounding box
         x = int(100*(.75 + .25*math.cos(uptime/200)))
@@ -83,6 +126,8 @@ class Root(Tk):
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 255), 2)
 
     def update(self):
+
+
         self.time = int(round(time.time() * 1000))
         uptime = self.time + self.delay     # the time that the next frame should be pulled
         if self.vid is not None:
@@ -98,7 +143,8 @@ class Root(Tk):
                 self.playerLabel.photo = photo
                 self.playerLabel.config(image=photo)    # updates the player label to show most current image
         self.time = int(round(time.time() * 1000))
-        self.after(uptime - self.time, self.update)    # call the function again after the difference in time has passed
+        if not self.isPaused:
+            self.after(uptime - self.time, self.update)    # call the function again after the difference in time has passed
 
 
 root = Root()
