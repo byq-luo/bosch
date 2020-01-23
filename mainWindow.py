@@ -36,9 +36,6 @@ class Root(Tk):
         self.VideoFrame.grid(column=0, row=2, sticky=N, padx=15, pady=15)
         self.buttonVideo()
 
-        """The video widget"""
-        self.playerLabel = Label(self, image=None)
-        self.playerLabel.grid(row=1, column=1, rowspan=2, sticky=N+E+S+W)
 
     def buttonFile(self):
         self.filebutton = Button(self.FileFrame, text="Browse A File", command=self.fileDialog)
@@ -49,29 +46,40 @@ class Root(Tk):
         self.videobutton.grid(column=1, row=1)
 
     def buttonVideoPlay(self):
+        """Destroy the pause button"""
         if self.pauseButtonLabel is not None:
             self.pauseButtonLabel.destroy()
             self.pauseButtonLabel = None
 
         """The play button label"""
         self.playButtonLabel = Label(self, text=None)
-        self.playButtonLabel.grid(row=3, column=1)
+        self.playButtonLabel.grid(row=4, column=0)
 
         #photo = PhotoImage(file = r"/Users/adamschroth/PycharmProjects/bosch/play.png")
         self.videoPlayButton = Button(self.playButtonLabel, text = "Play", command=self.playVideo)
         self.videoPlayButton.grid(column=1, row=1)
 
     def buttonVideoPause(self):
+        """Destroy the play button"""
         if self.playButtonLabel is not None:
             self.playButtonLabel.destroy()
             self.playButtonLabel = None
 
         """The pause button label"""
         self.pauseButtonLabel = Label(self, text=None)
-        self.pauseButtonLabel.grid(row=3, column=1)
+        self.pauseButtonLabel.grid(row=4, column=0)
 
         self.videoPauseButton = Button(self.pauseButtonLabel, text = "Pause", command=self.pauseVideo)
         self.videoPauseButton.grid(column=1, row=1)
+
+
+    def buttonBackToSelect(self):
+        self.backButtonLabel = Label(self, text=None)
+        self.backButtonLabel.grid(column=0, row=1)
+
+        self.backButton = Button(self.backButtonLabel, text = "Select another file", command=self.backToSelect)
+        self.backButton.grid(column=1, row=1)
+
 
     def fileDialog(self):
         filename = filedialog.askopenfilename(initialdir=pathlib.Path().absolute(), title="Select A File", filetypes=
@@ -85,7 +93,22 @@ class Root(Tk):
             self.fileLabel.grid(column=1, row=2)
             self.fileLabel.configure(text=self.filename)
 
+
     def makeVideo(self):
+
+        self.buttonBackToSelect()
+
+        """The video widget"""
+        self.playerLabel = Label(self, image=None)
+        self.playerLabel.grid(row=2, column=0, rowspan=2, sticky=N+E+S+W)
+
+        if self.FileFrame is not None:
+            self.FileFrame.destroy()
+            self.FileFrame = None
+
+        if self.VideoFrame is not None:
+            self.VideoFrame.destroy()
+            self.VideoFrame = None
 
         self.buttonVideoPlay()
 
@@ -102,7 +125,7 @@ class Root(Tk):
         else:   # a file was not selected
             """create label to notify user that there is no file selected"""
             self.videoLabel = Label(self.VideoFrame, text="")
-            self.videoLabel.grid(column=1, row=2)
+            self.videoLabel.grid(column=0, row=2)
             self.videoLabel.configure(text="No file selected")
 
 
@@ -117,6 +140,37 @@ class Root(Tk):
         self.buttonVideoPlay()
         self.update()
 
+    def backToSelect(self):
+        """Destroy the video player widget"""
+        if self.playerLabel is not None:
+            self.playerLabel.destroy()
+            self.playerLabel = None
+
+        """Destroy the play button"""
+        if self.playButtonLabel is not None:
+            self.playButtonLabel.destroy()
+            self.playButtonLabel = None
+
+        """Destroy the pause button"""
+        if self.pauseButtonLabel is not None:
+            self.pauseButtonLabel.destroy()
+            self.pauseButtonLabel = None
+
+        """Destroy the select another file label"""
+        if self.backButtonLabel is not None:
+            self.backButtonLabel.destroy()
+            self.backButtonLabel = None
+
+        """The frame for file button and file path"""
+        self.FileFrame = LabelFrame(self, text="Open File")
+        self.FileFrame.grid(column=0, row=1, sticky=N, padx=15, pady=15)
+        self.buttonFile()
+
+        """The frame for the play button"""
+        self.VideoFrame = LabelFrame(self, text="Video")
+        self.VideoFrame.grid(column=0, row=2, sticky=N, padx=15, pady=15)
+        self.buttonVideo()
+
     def draw_bounding_box(self, uptime, frame):
         # draws a bounding box
         x = int(100*(.75 + .25*math.cos(uptime/200)))
@@ -125,8 +179,8 @@ class Root(Tk):
         h = 100
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 255), 2)
 
-    def update(self):
 
+    def update(self):
 
         self.time = int(round(time.time() * 1000))
         uptime = self.time + self.delay     # the time that the next frame should be pulled
