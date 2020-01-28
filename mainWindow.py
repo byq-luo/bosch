@@ -5,7 +5,7 @@ import gui
 import pathlib
 import PIL.Image, PIL.ImageTk
 import time
-import cv2
+#import cv2
 import math
 
 
@@ -190,7 +190,7 @@ class Root(Tk):
                 """video has played all the way through"""
                 return
 
-            self.draw_bounding_box(uptime, frame)
+            #self.draw_bounding_box(uptime, frame)
 
             if ret:
                 photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
