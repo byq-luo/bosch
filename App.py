@@ -33,7 +33,7 @@ class Home(QMainWindow):
 
         '''initializes the text showing the file path'''
         self.filetext = QLabel(self)
-        self.filetext.setAlignment(Qt.Qt.AlignTop)
+        self.filetext.setAlignment(Qt.AlignTop)
         self.filetext.setGeometry(10,10,30,80)
         self.filetext.setText("File: "+ str(self.filename))
         self.setCentralWidget(self.filetext)
@@ -43,7 +43,7 @@ class Home(QMainWindow):
         self.videoscreen.resize(400, 500)
         self.setCentralWidget(self.videoscreen)
         img = QImage('icon2.ico')
-        i = img.scaled(720, 480, Qt.Qt.KeepAspectRatio)
+        i = img.scaled(720, 480, Qt.KeepAspectRatio)
         pmap = QPixmap(i)
         self.videoscreen.setPixmap(pmap)
         #pmap = QPixmap('icon2.ico')
@@ -135,7 +135,7 @@ class Home(QMainWindow):
         self.setWindowTitle('Label Classifier')
         self.show()
 
-    '''
+
     class Thread(QThread):
         changePixmap = pyqtSignal()
     class Thread(QThread):
@@ -171,9 +171,9 @@ class Home(QMainWindow):
                     time.sleep((uptime - self.time) / 1000)  # call the function again after the difference in time has passed
                     self.run()
                     # self.show()
-                    self.changePixmap.emit(pmap)
+                    #self.changePixmap.emit(pmap)
 
-    '''
+
 
     def openFileNameDialog(self):
         options = QFileDialog.Options()
@@ -191,14 +191,13 @@ class Home(QMainWindow):
             self.delay = int(1000 / self.vid.get_fps())
             #self.update()
             worker = self.Thread(self.vid, self.delay)
-            self.update()
-            '''
-            videoThread = QThread()
-            worker = self.Thread()
+
+            #videoThread = QThread()
+            #worker = self.Thread()
             worker.changePixmap.connect(self.updateVidImage)
             worker.start()
-            worker.start()
-            '''
+            #worker.start()
+
 
     '''
     Make a frame the central widget
@@ -225,7 +224,7 @@ class Home(QMainWindow):
                 h, w, ch = rgbImage.shape
                 bytesPerLine = ch * w
                 convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
-                p = convertToQtFormat.scaled(720, 480, Qt.Qt.KeepAspectRatio)
+                p = convertToQtFormat.scaled(720, 480, Qt.KeepAspectRatio)
                 pmap = QPixmap(p)
                 self.videoscreen.setPixmap(pmap)
                 #self.resize(convertToQtFormat.width(), convertToQtFormat.height())
