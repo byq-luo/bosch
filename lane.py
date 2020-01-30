@@ -2,35 +2,40 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-
-img = cv2.imread('1540915995809.jpeg',0)
-edges = cv2.Canny(img,100,200)
-
-plt.subplot(121),plt.imshow(img,cmap = 'gray')
-plt.title('Original Image'), plt.xticks([]), plt.yticks([])
-plt.subplot(122),plt.imshow(edges,cmap = 'gray')
-plt.title('Edge Image'), plt.xticks([]), plt.yticks([])
-
-#plt.show()
-
+# Open video
 cap = cv2.VideoCapture('./video/trimmed-Gen5_RU_2019-10-07_07-56-42-0001_m0.avi-.avi')
-i=0
-img_array = []
-while(cap.isOpened()):
+# Frame number counter
+i = 0
+
+# Information of the video
+fps = cap.get(cv2.CAP_PROP_FPS)
+size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+        int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+
+# Video writer
+out = cv2.VideoWriter('Output.avi', cv2.VideoWriter_fourcc(*'DIVX'), 30, size, 0)
+# Kernel size for GaussianBlur
+kernel_size = 5
+
+while cap.isOpened():
+    # Read video, get (if read success) and (next frame)
     ret, frame = cap.read()
-    if ret == False:
+    if not ret:
         break
-    #cv2.imwrite('./images/frame' + str(i) + '.jpg', frame)
-    height, width, layer = frame.shape
-    edges = cv2.Canny(frame,100,200)
-    size = (width, height)
-    img_array.append(frame)
+    # Turn image gray
+    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    # Do GaussianBlur
+    blur_gray = cv2.GaussianBlur(gray,(kernel_size,kernel_size),0)
+    # Canny, get the edges
+    edges = cv2.Canny(blur_gray,50,100)
 
-    i+=1
+    # Output frames
+    cv2.imwrite('./images/frame' + str(i) + '.jpg', blur_gray)
+    # Output video
+    out.write(edges)
+    # Frame number counter + 1
+    i += 1
 
-out = cv2.VideoWriter('Output.avi', cv2.VideoWriter_fourcc(*'DIVX'), 30, size)
 
-for i in range(len(img_array)):
-    out.write(img_array[i])
 cap.release()
 out.release()
