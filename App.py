@@ -24,7 +24,6 @@ import math
 class Home(QMainWindow):
     def __init__(self):
         super().__init__()
-        print("Home created")
         self.filename = None;
         self.time = int(round(time.time() * 1000))
         self.startUI()
@@ -47,9 +46,6 @@ class Home(QMainWindow):
         i = img.scaled(720, 480, Qt.KeepAspectRatio)
         pmap = QPixmap(i)
         self.videoscreen.setPixmap(pmap)
-        #pmap = QPixmap('icon2.ico')
-        #p = pmap.scaled(640, 480, Qt.Qt.KeepAspectRatio)
-        #self.videoscreen.setPixmap(p)
 
         self.labelList = QListWidget()
         self.labelList.setGeometry(700, 0, 300, 600)
@@ -141,27 +137,14 @@ class Home(QMainWindow):
                                                   ";AVI Files (*.avi)", options=options)
         if fileName:
             self.filename = fileName
-            #self.filetext.setText('File: ' + str(self.filename))
             self.fileList.addItem(fileName)
 
     def makeVideo(self):
         if self.filename is not None:
             self.vid = gui.Video(self.filename)
             self.delay = int(1000 / self.vid.get_fps())
-            #self.update()
-            #self.thread = QThread()
-            #self.thread.start()
-
-
-
             self.worker = Thread(self.vid, self.delay)
             self.worker.changePixmap.connect(self.updateVidImage)
-
-            #videoThread = QThread()
-
-            #self.worker.moveToThread(self.thread)
-            #worker = self.Thread()
-            #orker.start()
             self.worker.start()
 
 
@@ -175,8 +158,6 @@ class Home(QMainWindow):
                 """video has played all the way through"""
                 return
 
-            #self.draw_bounding_box(uptime, frame)
-
             if ret:
                 rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 h, w, ch = rgbImage.shape
@@ -185,8 +166,7 @@ class Home(QMainWindow):
                 p = convertToQtFormat.scaled(720, 480, Qt.KeepAspectRatio)
                 pmap = QPixmap(p)
                 self.videoscreen.setPixmap(pmap)
-                #self.resize(convertToQtFormat.width(), convertToQtFormat.height())
-                #self.videoscreen.show()
+
 
         self.time = int(round(time.time() * 1000))
         time.sleep((uptime - self.time)/1000)  # call the function again after the difference in time has passed
@@ -196,7 +176,7 @@ class Home(QMainWindow):
     def updateVidImage(self, img):
         pmap = QPixmap.fromImage(img)
         self.videoscreen.setPixmap(pmap)
-        #self.show()
+
 
 
 class Thread(QThread):
@@ -204,11 +184,8 @@ class Thread(QThread):
 
     def __init__(self, video, delay):
         super().__init__()
-        print('Thread created')
         self.vid = video
-        print('video saved')
         self.delay = delay
-        print('delay saved')
         #self.run()
 
     def run(self):
@@ -218,24 +195,15 @@ class Thread(QThread):
             ret, frame = self.vid.get_frame()
             if frame is None:
                 """video has played all the way through"""
-
-                # return False
             if ret:
-                rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                h, w, ch = rgbImage.shape
+                h, w, ch = frame.shape
                 bytesPerLine = ch * w
-                convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
+                convertToQtFormat = QImage(frame.data, w, h, bytesPerLine, QImage.Format_RGB888)
                 p = convertToQtFormat.scaled(640, 480)
-                # pmap = QPixmap(convertToQtFormat)
-                # self.videoscreen.setPixmap(pmap)
-                # self.resize(convertToQtFormat.width(), convertToQtFormat.height())
-                # self.show()
                 self.changePixmap.emit(p)
                 self.time = int(round(time.time() * 1000))
                 time.sleep((uptime - self.time) / 1000)  # call the function again after the difference in time has passed
                 self.run()
-                # self.show()
-                # self.changePixmap.emit(pmap)
 
 
 if __name__ == '__main__':
