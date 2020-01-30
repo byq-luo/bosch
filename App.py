@@ -14,7 +14,6 @@ from PyQt5.QtCore import QThread, pyqtSlot, pyqtSignal, QRectF
 import PyQt5.QtCore as Qt
 from PyQt5.QtCore import QThread, pyqtSlot, pyqtSignal, Qt
 #import PyQt5.QtGui
-import gui
 import PIL.Image, PIL.ImageTk
 import time
 import cv2
@@ -31,6 +30,7 @@ class Home(QMainWindow):
         self.resize(1000, 600)
         self.vid = None
         self.paused = False
+        self.currentFrame = 0
 
     def startUI(self):
 
@@ -156,7 +156,9 @@ class Home(QMainWindow):
     def makeVideo(self):
         if self.vid is None:
             if self.filename is not None:
-                self.vid = gui.Video(self.filename)
+                self.vid = Video(self.filename)
+                self.vid.set_frame_number(self.currentFrame)
+                self.currentFrame = 0
                 self.delay = int(1000 / self.vid.get_fps())
                 #self.update()
                 #self.thread = QThread()
@@ -173,47 +175,8 @@ class Home(QMainWindow):
                 #worker = self.Thread()
                 #orker.start()
                 self.worker.start()
-        else:
-            self.paused = False
-            self.update()
 
 
-
-    def update(self):
-        if not self.paused:
-            self.time = int(round(time.time() * 1000))
-            uptime = self.time + self.delay  # the time that the next frame should be pulled
-            if self.vid is not None:
-                ret, frame = self.vid.get_frame()
-                if frame is None:
-                    """video has played all the way through"""
-                    return
-
-            if ret:
-                rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                h, w, ch = rgbImage.shape
-                bytesPerLine = ch * w
-                convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
-                p = convertToQtFormat.scaled(720, 480, Qt.KeepAspectRatio)
-                pmap = QPixmap(p)
-                self.videoscreen.setPixmap(pmap)
-
-                #self.draw_bounding_box(uptime, frame)
-
-                if ret:
-                    rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    h, w, ch = rgbImage.shape
-                    bytesPerLine = ch * w
-                    convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
-                    p = convertToQtFormat.scaled(720, 480, Qt.KeepAspectRatio)
-                    pmap = QPixmap(p)
-                    self.videoscreen.setPixmap(pmap)
-                    #self.resize(convertToQtFormat.width(), convertToQtFormat.height())
-                    #self.videoscreen.show()
-
-            self.time = int(round(time.time() * 1000))
-            time.sleep((uptime - self.time)/1000)  # call the function again after the difference in time has passed
-            self.update()
 
     @pyqtSlot(QImage)
     def updateVidImage(self, img):
@@ -224,6 +187,10 @@ class Home(QMainWindow):
 
     def pauseVideo(self):
         self.paused = True
+        self.worker.pause()
+        self.currentFrame = self.vid.get_frame_number()
+        self.vid = None
+        self.worker.exit()
 
 
 class Thread(QThread):
@@ -235,25 +202,70 @@ class Thread(QThread):
         self.vid = video
         print('video saved')
         self.delay = delay
+        self.paused2 = False
+
         #self.run()
 
     def run(self):
-        self.time = int(round(time.time() * 1000))
-        uptime = self.time + self.delay  # the time that the next frame should be pulled
-        if self.vid is not None:
-            ret, frame = self.vid.get_frame()
-            if frame is None:
-                """video has played all the way through"""
-            if ret:
-                h, w, ch = frame.shape
-                bytesPerLine = ch * w
-                convertToQtFormat = QImage(frame.data, w, h, bytesPerLine, QImage.Format_RGB888)
-                p = convertToQtFormat.scaled(640, 480)
-                self.changePixmap.emit(p)
-                self.time = int(round(time.time() * 1000))
-                time.sleep((uptime - self.time) / 1000)  # call the function again after the difference in time has passed
-                self.run()
+        if not self.paused2:
+            self.time = int(round(time.time() * 1000))
+            uptime = self.time + self.delay  # the time that the next frame should be pulled
+            if self.vid is not None:
+                ret, frame = self.vid.get_frame()
+                if frame is None:
+                    self.vid = None
+                    """video has played all the way through"""
+                if ret:
+                    h, w, ch = frame.shape
+                    bytesPerLine = ch * w
+                    convertToQtFormat = QImage(frame.data, w, h, bytesPerLine, QImage.Format_RGB888)
+                    p = convertToQtFormat.scaled(640, 480)
+                    self.changePixmap.emit(p)
+                    self.time = int(round(time.time() * 1000))
+                    time.sleep((uptime - self.time) / 1000)  # call the function again after the difference in time has passed
+                    self.run()
 
+    def pause(self):
+        self.paused2 = True
+
+
+
+
+class Video:
+    def __init__(self, video_source):
+        self.vid = cv2.VideoCapture(video_source)
+        if not self.vid.isOpened():
+            raise ValueError("Unable to open video source", video_source)
+
+        self.width = self.vid.get(cv2.CAP_PROP_FRAME_WIDTH)
+        self.height = self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        self.fps = self.vid.get(cv2.CAP_PROP_FPS)
+
+    def __del__(self):
+        if self.vid.isOpened():
+            self.vid.release()
+
+
+    def get_frame(self):
+        ret = False
+        if self.vid.isOpened():
+            ret, frame = self.vid.read()
+            if ret:
+                return (ret, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            else:
+                return (ret, None)
+
+        else:
+            return(ret, None)
+
+    def get_fps(self):
+        return self.fps
+
+    def get_frame_number(self):
+        return self.vid.get(cv2.CAP_PROP_POS_FRAMES)
+
+    def set_frame_number(self, frame):
+        self.vid.set(cv2.CAP_PROP_POS_FRAMES, frame)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
