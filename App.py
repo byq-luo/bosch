@@ -42,7 +42,7 @@ class Home(QMainWindow):
         self.videoscreen = QLabel(self)
         self.videoscreen.setGeometry(300, 0, 400, 500)
         self.setCentralWidget(self.videoscreen)
-        img = QImage('icon2.ico')
+        img = QImage('icons/icon2.ico')
         i = img.scaled(720, 480, Qt.KeepAspectRatio)
         pmap = QPixmap(i)
         self.videoscreen.setPixmap(pmap)
@@ -81,19 +81,19 @@ class Home(QMainWindow):
         self.labelList.addItem("end,108,44646106956341")
 
         '''action to exit'''
-        exitAct = QAction(QIcon('exit.png'), 'Exit', self)
+        exitAct = QAction(QIcon('icons/exit.png'), 'Exit', self)
         exitAct.setShortcut('Ctrl+Q')
         exitAct.setStatusTip('Exit application')
         exitAct.triggered.connect(self.close)
 
         '''action to open one file'''
-        fileAct = QAction(QIcon('file.png'), 'Process File', self)
+        fileAct = QAction(QIcon('icons/file.png'), 'Process File', self)
         #exitAct.setShortcut('Ctrl+Q')
         fileAct.setStatusTip('Process one video file')
         fileAct.triggered.connect(self.openFileNameDialog)
 
         '''action to open a whole folder'''
-        folderAct = QAction(QIcon('folder.png'), 'Process Folder', self)
+        folderAct = QAction(QIcon('icons/folder.png'), 'Process Folder', self)
         #folderAct.setShortcut('Ctrl+Q')
         folderAct.setStatusTip('Process every video file in a folder')
         #folderAct.triggered.connect(self.close)
