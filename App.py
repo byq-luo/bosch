@@ -40,23 +40,21 @@ class Home(QMainWindow):
 
         '''initializes the video screen'''
         self.videoscreen = QLabel(self)
-        self.videoscreen.resize(400, 500)
+        self.videoscreen.setGeometry(300, 0, 400, 500)
         self.setCentralWidget(self.videoscreen)
-        img = QImage('icon2.ico')
+        img = QImage('icons/icon2.ico')
         i = img.scaled(720, 480, Qt.KeepAspectRatio)
         pmap = QPixmap(i)
         self.videoscreen.setPixmap(pmap)
-        #pmap = QPixmap('icon2.ico')
-        #p = pmap.scaled(640, 480, Qt.Qt.KeepAspectRatio)
-        #self.videoscreen.setPixmap(p)
 
         self.labelList = QListWidget()
-        self.labelList.resize(300, 600)
+        self.labelList.setGeometry(700, 0, 300, 600)
         self.fileList = QListWidget()
-        self.fileList.resize(300, 600)
+        self.fileList.setGeometry(0, 0, 300, 600)
         self.boxCheckBox = QCheckBox("Display Box Over Target Object", self)
-        self.boxCheckBox.resize(300, 100)
+        self.boxCheckBox.setGeometry(400, 500, 400, 50)
         self.labelCheckBox = QCheckBox("Display Current Label", self)
+        self.labelCheckBox.setGeometry(400, 550, 400, 50)
 
 
         self.rightDock = QDockWidget("Labels ", self)
@@ -69,10 +67,6 @@ class Home(QMainWindow):
         self.bottomDock2.setWidget(self.labelCheckBox)
 
 
-
-
-        self.resizeDocks({self.leftDock,self.rightDock,self.bottomDock}, {300,300,400}, Qt.Horizontal)
-        self.resizeDocks({self.leftDock,self.rightDock,self.bottomDock}, {600,600,100}, Qt.Vertical)
 
         self.addDockWidget(Qt.RightDockWidgetArea, self.rightDock)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.leftDock)
@@ -87,19 +81,19 @@ class Home(QMainWindow):
         self.labelList.addItem("end,108,44646106956341")
 
         '''action to exit'''
-        exitAct = QAction(QIcon('exit.png'), 'Exit', self)
+        exitAct = QAction(QIcon('icons/exit.png'), 'Exit', self)
         exitAct.setShortcut('Ctrl+Q')
         exitAct.setStatusTip('Exit application')
         exitAct.triggered.connect(self.close)
 
         '''action to open one file'''
-        fileAct = QAction(QIcon('file.png'), 'Process File', self)
+        fileAct = QAction(QIcon('icons/file.png'), 'Process File', self)
         #exitAct.setShortcut('Ctrl+Q')
         fileAct.setStatusTip('Process one video file')
         fileAct.triggered.connect(self.openFileNameDialog)
 
         '''action to open a whole folder'''
-        folderAct = QAction(QIcon('folder.png'), 'Process Folder', self)
+        folderAct = QAction(QIcon('icons/folder.png'), 'Process Folder', self)
         #folderAct.setShortcut('Ctrl+Q')
         folderAct.setStatusTip('Process every video file in a folder')
         #folderAct.triggered.connect(self.close)
@@ -136,45 +130,6 @@ class Home(QMainWindow):
         self.show()
 
 
-    class Thread(QThread):
-        changePixmap = pyqtSignal()
-    class Thread(QThread):
-        def __init__(self, video, delay):
-            super().__init__()
-            self.vid = video
-            self.delay = delay
-        changePixmap = pyqtSignal(QImage)
-
-        def run(self):
-            self.time = int(round(time.time() * 1000))
-            uptime = self.time + self.delay  # the time that the next frame should be pulled
-            if self.vid is not None:
-                ret, frame = self.vid.get_frame()
-                if frame is None:
-                    """video has played all the way through"""
-
-
-
-                    #return False
-                if ret:
-                    rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    h, w, ch = rgbImage.shape
-                    bytesPerLine = ch * w
-                    convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
-                    p = convertToQtFormat.scaled(640, 480)
-                    #pmap = QPixmap(convertToQtFormat)
-                    # self.videoscreen.setPixmap(pmap)
-                    # self.resize(convertToQtFormat.width(), convertToQtFormat.height())
-                    # self.show()
-                    self.changePixmap.emit(p)
-                    self.time = int(round(time.time() * 1000))
-                    time.sleep((uptime - self.time) / 1000)  # call the function again after the difference in time has passed
-                    self.run()
-                    # self.show()
-                    #self.changePixmap.emit(pmap)
-
-
-
     def openFileNameDialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -182,29 +137,15 @@ class Home(QMainWindow):
                                                   ";AVI Files (*.avi)", options=options)
         if fileName:
             self.filename = fileName
-            #self.filetext.setText('File: ' + str(self.filename))
             self.fileList.addItem(fileName)
 
     def makeVideo(self):
         if self.filename is not None:
             self.vid = gui.Video(self.filename)
             self.delay = int(1000 / self.vid.get_fps())
-            #self.update()
-            worker = self.Thread(self.vid, self.delay)
-
-            #videoThread = QThread()
-            #worker = self.Thread()
-            worker.changePixmap.connect(self.updateVidImage)
-            worker.start()
-            #worker.start()
-
-
-    '''
-    Make a frame the central widget
-    Insert individual widget into the frame(process files, video, text file)
-    Allign them using "Allign function"
-    Create two boxes for processed and unprocessed files
-    '''
+            self.worker = Thread(self.vid, self.delay)
+            self.worker.changePixmap.connect(self.updateVidImage)
+            self.worker.start()
 
 
 
@@ -217,8 +158,6 @@ class Home(QMainWindow):
                 """video has played all the way through"""
                 return
 
-            #self.draw_bounding_box(uptime, frame)
-
             if ret:
                 rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 h, w, ch = rgbImage.shape
@@ -227,8 +166,7 @@ class Home(QMainWindow):
                 p = convertToQtFormat.scaled(720, 480, Qt.KeepAspectRatio)
                 pmap = QPixmap(p)
                 self.videoscreen.setPixmap(pmap)
-                #self.resize(convertToQtFormat.width(), convertToQtFormat.height())
-                #self.videoscreen.show()
+
 
         self.time = int(round(time.time() * 1000))
         time.sleep((uptime - self.time)/1000)  # call the function again after the difference in time has passed
@@ -238,30 +176,34 @@ class Home(QMainWindow):
     def updateVidImage(self, img):
         pmap = QPixmap.fromImage(img)
         self.videoscreen.setPixmap(pmap)
-        #self.show()
 
-'''
-class Worker(QThread):
+
+
+class Thread(QThread):
     changePixmap = pyqtSignal(QImage)
+
+    def __init__(self, video, delay):
+        super().__init__()
+        self.vid = video
+        self.delay = delay
+        #self.run()
+
     def run(self):
+        self.time = int(round(time.time() * 1000))
+        uptime = self.time + self.delay  # the time that the next frame should be pulled
         if self.vid is not None:
             ret, frame = self.vid.get_frame()
             if frame is None:
                 """video has played all the way through"""
-                return False
             if ret:
-                rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                h, w, ch = rgbImage.shape
+                h, w, ch = frame.shape
                 bytesPerLine = ch * w
-                convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
-                #p = convertToQtFormat.scaled(640, 480, QImage.KeepAspectRatio)
-                pmap = QPixmap(convertToQtFormat)
-                self.changePixmap.emit(pmap)
-                #self.videoscreen.setPixmap(pmap)
-                #self.resize(convertToQtFormat.width(), convertToQtFormat.height())
-                #self.show()
-        return True
-'''
+                convertToQtFormat = QImage(frame.data, w, h, bytesPerLine, QImage.Format_RGB888)
+                p = convertToQtFormat.scaled(640, 480)
+                self.changePixmap.emit(p)
+                self.time = int(round(time.time() * 1000))
+                time.sleep((uptime - self.time) / 1000)  # call the function again after the difference in time has passed
+                self.run()
 
 
 if __name__ == '__main__':
