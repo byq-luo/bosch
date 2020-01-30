@@ -24,10 +24,13 @@ import math
 class Home(QMainWindow):
     def __init__(self):
         super().__init__()
+        print("Home created")
         self.filename = None;
         self.time = int(round(time.time() * 1000))
         self.startUI()
         self.resize(1000, 600)
+        self.vid = None
+        self.paused = False
 
     def startUI(self):
 
@@ -46,6 +49,9 @@ class Home(QMainWindow):
         i = img.scaled(720, 480, Qt.KeepAspectRatio)
         pmap = QPixmap(i)
         self.videoscreen.setPixmap(pmap)
+        #pmap = QPixmap('icon2.ico')
+        #p = pmap.scaled(640, 480, Qt.Qt.KeepAspectRatio)
+        #self.videoscreen.setPixmap(p)
 
         self.labelList = QListWidget()
         self.labelList.setGeometry(700, 0, 300, 600)
@@ -104,6 +110,11 @@ class Home(QMainWindow):
         playAct.setStatusTip('Play the video')
         playAct.triggered.connect(self.makeVideo)
 
+        '''action to pause video'''
+        pauseAct = QAction(QIcon(''), 'Pause', self)
+        pauseAct.setStatusTip('Pause the video')
+        pauseAct.triggered.connect(self.pauseVideo)
+
         self.statusBar()
 
         menubar = self.menuBar()
@@ -124,6 +135,9 @@ class Home(QMainWindow):
         toolbar.addAction(folderAct)
         toolbar = self.addToolBar('PLAY')
         toolbar.addAction(playAct)
+        toolbar = self.addToolBar('PAUSE')
+        toolbar.addAction(pauseAct)
+
 
         self.setGeometry(300, 300, 800, 540)   # sizes the window (x location, y location, width, height)
         self.setWindowTitle('Label Classifier')
@@ -140,23 +154,40 @@ class Home(QMainWindow):
             self.fileList.addItem(fileName)
 
     def makeVideo(self):
-        if self.filename is not None:
-            self.vid = gui.Video(self.filename)
-            self.delay = int(1000 / self.vid.get_fps())
-            self.worker = Thread(self.vid, self.delay)
-            self.worker.changePixmap.connect(self.updateVidImage)
-            self.worker.start()
+        if self.vid is None:
+            if self.filename is not None:
+                self.vid = gui.Video(self.filename)
+                self.delay = int(1000 / self.vid.get_fps())
+                #self.update()
+                #self.thread = QThread()
+                #self.thread.start()
+
+
+
+                self.worker = Thread(self.vid, self.delay)
+                self.worker.changePixmap.connect(self.updateVidImage)
+
+                #videoThread = QThread()
+
+                #self.worker.moveToThread(self.thread)
+                #worker = self.Thread()
+                #orker.start()
+                self.worker.start()
+        else:
+            self.paused = False
+            self.update()
 
 
 
     def update(self):
-        self.time = int(round(time.time() * 1000))
-        uptime = self.time + self.delay  # the time that the next frame should be pulled
-        if self.vid is not None:
-            ret, frame = self.vid.get_frame()
-            if frame is None:
-                """video has played all the way through"""
-                return
+        if not self.paused:
+            self.time = int(round(time.time() * 1000))
+            uptime = self.time + self.delay  # the time that the next frame should be pulled
+            if self.vid is not None:
+                ret, frame = self.vid.get_frame()
+                if frame is None:
+                    """video has played all the way through"""
+                    return
 
             if ret:
                 rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -167,16 +198,32 @@ class Home(QMainWindow):
                 pmap = QPixmap(p)
                 self.videoscreen.setPixmap(pmap)
 
+                #self.draw_bounding_box(uptime, frame)
 
-        self.time = int(round(time.time() * 1000))
-        time.sleep((uptime - self.time)/1000)  # call the function again after the difference in time has passed
-        self.update()
+                if ret:
+                    rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    h, w, ch = rgbImage.shape
+                    bytesPerLine = ch * w
+                    convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
+                    p = convertToQtFormat.scaled(720, 480, Qt.KeepAspectRatio)
+                    pmap = QPixmap(p)
+                    self.videoscreen.setPixmap(pmap)
+                    #self.resize(convertToQtFormat.width(), convertToQtFormat.height())
+                    #self.videoscreen.show()
+
+            self.time = int(round(time.time() * 1000))
+            time.sleep((uptime - self.time)/1000)  # call the function again after the difference in time has passed
+            self.update()
 
     @pyqtSlot(QImage)
     def updateVidImage(self, img):
-        pmap = QPixmap.fromImage(img)
-        self.videoscreen.setPixmap(pmap)
+        if not self.paused:
+            pmap = QPixmap.fromImage(img)
+            self.videoscreen.setPixmap(pmap)
+            #self.show()
 
+    def pauseVideo(self):
+        self.paused = True
 
 
 class Thread(QThread):
@@ -184,7 +231,9 @@ class Thread(QThread):
 
     def __init__(self, video, delay):
         super().__init__()
+        print('Thread created')
         self.vid = video
+        print('video saved')
         self.delay = delay
         #self.run()
 
