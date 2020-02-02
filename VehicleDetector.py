@@ -1,4 +1,3 @@
-# import some common detectron2 utilities
 import detectron2
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor
@@ -23,14 +22,14 @@ class VehicleDetector:
     #cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = args.confidence_threshold
     #cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = args.confidence_threshold
     #cfg.freeze()
-    
 
     # If there is no GPU available (iMacs) we can do feature extraction on the GPU
-    #cfg.MODEL.DEVICE = 'cpu'
+    cfg.MODEL.DEVICE = 'cpu'
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5 # set threshold for this model
     self.predictor = DefaultPredictor(cfg)
 
-  def getFeaturesForFrame(frame):
+  def getFeaturesForFrame(self, frame):
+
     # This code will draw things to the image. It will draw 'everything' detectron2
     # detects, not just vehicles.
 
@@ -48,5 +47,4 @@ class VehicleDetector:
     # print(x.scores)
     # print(x.pred_classes)
     # print(x.pred_masks)
-
     return self.predictor(frame)
