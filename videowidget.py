@@ -14,6 +14,7 @@ class VideoWidget(QWidget):
   def initUI(self):
     self.video = None
     self.isPlaying = False
+    self.didSeek = False
 
     # QTimer is basically what we were doing with time.sleep but more accurate
     self.timer = QTimer(self)
@@ -33,11 +34,12 @@ class VideoWidget(QWidget):
     self.timer.start(self.video.get_fps())
   
   def seekToPercent(self, percent):
-    print('seeking')
     if self.video is None:
       return
     totalNumFrames = self.video.get_total_num_frames()
     self.video.set_frame_number(int(percent / 100 * totalNumFrames))
+    self.didSeek = True
+    self.update()
   
   def setSlider(self, slider):
     self.slider = slider
@@ -75,7 +77,8 @@ class VideoWidget(QWidget):
     qp = QPainter()
     qp.begin(self)
   
-    if self.isPlaying and self.video is not None:
+    if (self.isPlaying or self.didSeek) and self.video is not None:
+      self.didSeek = False
       currentPercent = int(100 * self.video.get_frame_number() / self.video.get_total_num_frames())
       self.slider.setValue(currentPercent)
   
