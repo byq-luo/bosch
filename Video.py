@@ -18,15 +18,15 @@ class Video:
             self.vid.release()
 
     def get_frame(self):
-        frameAvailable = False
+        isFrameAvailable = False
         if self.vid.isOpened():
-            frameAvailable, frame = self.vid.read()
-            if frameAvailable:
-                return (frameAvailable, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            isFrameAvailable, frame = self.vid.read()
+            if isFrameAvailable:
+                return (isFrameAvailable, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             else:
-                return (frameAvailable, None)
+                return (isFrameAvailable, None)
         else:
-            return(frameAvailable, None)
+            return(isFrameAvailable, None)
 
     def get_fps(self):
         return self.fps
