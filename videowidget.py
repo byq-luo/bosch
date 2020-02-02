@@ -23,11 +23,12 @@ class VideoWidget(QWidget):
     # so that the image does not disappear when pause is hit
     self.previousFrame = None
   
-  def pause(self, toggled: bool):
+  def pause(self, toggled=False):
     self.isPlaying = False
     self.timer.stop()
+    self.update()
   
-  def play(self, toggled: bool):
+  def play(self, toggled=False):
     if self.video is None:
       return
     self.isPlaying = True
@@ -49,6 +50,7 @@ class VideoWidget(QWidget):
     # TODO
     #self.videoOverlay = VideoOverlay(videoPath)
     self.isPlaying = True
+    self.update()
   
   def __drawImage(self, frame, qp):
     vidHeight, vidWidth, vidChannels = frame.shape
@@ -86,7 +88,7 @@ class VideoWidget(QWidget):
 
       # video has played all the way through
       if frame is None:
-        self.isPlaying = False
+        self.pause()
         self.video.set_frame_number(0)
       elif frameAvailable:
         self.previousFrame = frame
