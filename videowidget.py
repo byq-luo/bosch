@@ -62,9 +62,6 @@ class VideoWidget(QWidget):
     if widgetWidth > widgetHeight:
       scaledWidth = widgetHeight
       scaledHeight = widgetHeight
-    videoPadding = 100
-    scaledWidth = max(scaledWidth - 2 * videoPadding, 200)
-    scaledHeight = max(scaledHeight - 2 * videoPadding, 200)
  
     # TODO respect aspect ratio
  
