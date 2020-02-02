@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import QPoint, QTimer, pyqtSignal
+from PyQt5.QtCore import QPoint, QTimer
 from PyQt5.QtGui import QPainter, QImage
 
 from Video import Video
@@ -14,7 +14,9 @@ class VideoWidget(QWidget):
     self.video = None
     self.isPlaying = False
 
+    # QTimer is basically what we were doing with time.sleep but more accurate
     self.timer = QTimer(self)
+    self.timer.timeout.connect(self.update)
 
     # so that the image does not disappear when pause is hit
     self.previousFrame = None
@@ -30,6 +32,7 @@ class VideoWidget(QWidget):
     self.timer.start(self.video.get_fps())
   
   def seekToPercent(self, percent):
+    print('seeking')
     if self.video is None:
       return
     totalNumFrames = self.video.get_total_num_frames()
@@ -41,10 +44,6 @@ class VideoWidget(QWidget):
   def setVideoPath(self, videoPath: str):
     self.video = Video(videoPath)
     self.isPlaying = True
- 
-    # QTimer is basically what we were doing with time.sleep but more accurate
-    self.timer = QTimer(self)
-    self.timer.timeout.connect(self.update)
   
   def __drawImage(self, frame, qp):
     vidHeight, vidWidth, vidChannels = frame.shape
