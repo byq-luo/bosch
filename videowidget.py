@@ -32,7 +32,9 @@ class VideoWidget(QWidget):
     if self.video is None:
       return
     self.isPlaying = True
+    self.timer.stop()
     self.timer.start(self.video.get_fps())
+    self.update()
   
   def seekToPercent(self, percent):
     if self.video is None:
@@ -49,8 +51,7 @@ class VideoWidget(QWidget):
     self.video = Video(videoPath)
     # TODO
     #self.videoOverlay = VideoOverlay(videoPath)
-    self.isPlaying = True
-    self.update()
+    self.play()
   
   def __drawImage(self, frame, qp):
     vidHeight, vidWidth, vidChannels = frame.shape
