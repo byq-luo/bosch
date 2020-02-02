@@ -1,4 +1,3 @@
-import Video
 import ray
 ray.init()
 
@@ -37,7 +36,7 @@ class BehaviorClassifier:
 
   def processVideo(self, videoPath: str):
     # TODO do we have to put the import here when using ray?
-    import Video
+    from Video import Video
     video = Video(videoPath)
 
 

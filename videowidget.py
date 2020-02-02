@@ -3,6 +3,7 @@ from PyQt5.QtCore import QPoint, QTimer
 from PyQt5.QtGui import QPainter, QImage
 
 from Video import Video
+from VideoOverlay import VideoOverlay
 import time
 
 class VideoWidget(QWidget):
@@ -43,6 +44,8 @@ class VideoWidget(QWidget):
   
   def setVideoPath(self, videoPath: str):
     self.video = Video(videoPath)
+    # TODO
+    #self.videoOverlay = VideoOverlay(videoPath)
     self.isPlaying = True
   
   def __drawImage(self, frame, qp):
@@ -77,6 +80,10 @@ class VideoWidget(QWidget):
       self.slider.setValue(currentPercent)
   
       frameAvailable, frame = self.video.get_frame()
+
+      # TODO
+      # frame = self.videoOverlay.processFrame(frame, frameNumber)
+
       # video has played all the way through
       if frame is None:
         self.isPlaying = False

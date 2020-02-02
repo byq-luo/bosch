@@ -26,7 +26,6 @@ def wrapper(videosToProcess, completedCallback, progressCallback):
 # ...
 
 def processingProgressCallback(percent: float):
-  # Could use the slot for some Qt progress widget instead of this callback
   print('Processing',percent,'complete.')
 def processingCompleteCallback(videoPath: str):
   print('Video',videoPath,'has completed processing.')
