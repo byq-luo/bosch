@@ -1,0 +1,41 @@
+import cv2
+
+class Video:
+    def __init__(self, video_source):
+        self.vid = cv2.VideoCapture(video_source)
+        if not self.vid.isOpened():
+            raise ValueError("Unable to open video source", video_source)
+
+        self.width = self.vid.get(cv2.CAP_PROP_FRAME_WIDTH)
+        self.height = self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        self.fps = self.vid.get(cv2.CAP_PROP_FPS)
+
+        # https://www.pyimagesearch.com/2017/01/09/count-the-total-number-of-frames-in-a-video-with-opencv-and-python/
+        self.num_frames = self.vid.get(cv2.CAP_PROP_FRAME_COUNT)
+        
+    def __del__(self):
+        if self.vid.isOpened():
+            self.vid.release()
+
+    def get_frame(self):
+        frameAvailable = False
+        if self.vid.isOpened():
+            frameAvailable, frame = self.vid.read()
+            if frameAvailable:
+                return (frameAvailable, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            else:
+                return (frameAvailable, None)
+        else:
+            return(frameAvailable, None)
+
+    def get_fps(self):
+        return self.fps
+
+    def get_total_num_frames(self):
+        return self.num_frames
+
+    def get_frame_number(self):
+        return self.vid.get(cv2.CAP_PROP_POS_FRAMES)
+
+    def set_frame_number(self, frame):
+        self.vid.set(cv2.CAP_PROP_POS_FRAMES, frame)
