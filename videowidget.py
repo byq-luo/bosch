@@ -34,7 +34,6 @@ class VideoWidget(QWidget):
     self.isPlaying = True
     self.timer.stop()
     self.timer.start(self.video.get_fps())
-    self.update()
   
   def seekToPercent(self, percent):
     if self.video is None:

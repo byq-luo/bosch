@@ -1,1 +1,0 @@
-To get the overlay we can have a 'frame number to overlay data' map

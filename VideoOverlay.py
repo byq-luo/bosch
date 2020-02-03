@@ -1,9 +1,11 @@
+from DataPoint import DataPoint
+
 class VideoOverlay:
-  def __init__(self, videoPath: str):
+  def __init__(self, dataPoint: DataPoint):
     self.shouldDrawBoxes = False
     self.shouldDrawLabels = False
 
-    # TODO load overlay data from disk
+    # TODO load overlay data from disk (or it's in dataPoint)
     self.frameNumberToData = {}
 
   # TODO connect Checkbox signals to this
