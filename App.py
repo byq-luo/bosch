@@ -48,7 +48,12 @@ class MainWindow(QMainWindow):
                                               filter="AVI/MKV Files (*.avi *.mkv)",\
                                               options=options)
     if fileName:
-      self.ui.fileListWidget.addItem(QListWidgetItem(fileName))
+      try:
+        self.dataPoints[fileName] = DataPoint(fileName, self.storage)
+        self.ui.fileListWidget.addItem(QListWidgetItem(fileName))
+        # TODO if video has labels then show them ?
+      except:
+        pass
 
   def openFolderNameDialog(self):
     options = QFileDialog.Options()
