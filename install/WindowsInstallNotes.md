@@ -3,8 +3,10 @@ Make sure Miniconda3 is installed at C:\Miniconda3
 
 Download & install CUDA
 
-
 Do a custom install and make sure the only checked option is the Development components
+
+![](image.png)
+
 http://developer.download.nvidia.com/compute/cuda/10.1/Prod/network_installers/cuda_10.1.243_win10_network.exe
 
 Now create a new conda environment
