@@ -12,6 +12,7 @@ class Video:
 
         # https://www.pyimagesearch.com/2017/01/09/count-the-total-number-of-frames-in-a-video-with-opencv-and-python/
         self.num_frames = self.vid.get(cv2.CAP_PROP_FRAME_COUNT)
+
         
     def __del__(self):
         if self.vid.isOpened():
@@ -39,3 +40,9 @@ class Video:
 
     def set_frame_number(self, frame):
         self.vid.set(cv2.CAP_PROP_POS_FRAMES, frame)
+
+    def getVideoLength(self):
+        return self.num_frames / self.fps
+
+    def getCurrentTime(self):
+        return self.vid.get(cv2.CAP_PROP_POS_FRAMES) / self.fps

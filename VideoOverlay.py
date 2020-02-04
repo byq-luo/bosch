@@ -1,7 +1,8 @@
 from DataPoint import DataPoint
 
+
 class VideoOverlay:
-  def __init__(self, dataPoint: DataPoint):
+  def __init__(self):
     self.shouldDrawBoxes = False
     self.shouldDrawLabels = False
 
@@ -9,12 +10,16 @@ class VideoOverlay:
     self.frameNumberToData = {}
 
   # TODO connect Checkbox signals to this
-  def setDrawBoxes(self, shouldDrawLabels: bool):
+  def setDrawLabels(self, shouldDrawLabels: bool):
     self.shouldDrawLabels = shouldDrawLabels
 
   # TODO connect Checkbox signals to this
   def setDrawBoxes(self, shouldDrawBoxes: bool):
     self.shouldDrawBoxes = shouldDrawBoxes
 
-  def processFrame(frame, frameNumber: int):
-    return frame
+
+  def processFrame(self, qp):
+    if self.shouldDrawBoxes:
+      qp.drawRect(150,200, 40, 40)
+
+

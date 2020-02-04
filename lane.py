@@ -9,7 +9,9 @@ def do_canny(frame, kernel_size):
     # Do GaussianBlur
     blur_gray = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
     # Canny, get the edges
-    edges = cv2.Canny(blur_gray, 50, 100)
+    # edges = cv2.Canny(blur_gray, 50, 100)
+
+    edges = cv2.adaptiveThreshold(blur_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 9, 2)
 
     return edges
 
@@ -62,12 +64,12 @@ if __name__ == "__main__":
 
         canny = do_canny(frames, kernel)
         polygon = do_polygon(canny, size[0], size[1])
-        cv2.imshow("polygon", polygon)
+        cv2.imshow("polygon", canny)
 
         # Output frames
-        cv2.imwrite('./images/frame' + str(i) + '.jpg', canny)
+        # cv2.imwrite('./images/frame' + str(i) + '.jpg', canny)
         # Output video
-        out.write(canny)
+        # out.write(canny)
         # Frame number counter + 1
         i += 1
         cv2.waitKey(10)
