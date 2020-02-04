@@ -11,7 +11,7 @@ def do_canny(frame, kernel_size):
     # Canny, get the edges
     # edges = cv2.Canny(blur_gray, 50, 100)
 
-    edges = cv2.adaptiveThreshold(blur_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 9, 2)
+    edges = cv2.adaptiveThreshold(blur_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 7, 3)
 
     return edges
 
@@ -42,7 +42,7 @@ def do_polygon(frame, width, height):
 if __name__ == "__main__":
 
     # Open video
-    cap = cv2.VideoCapture('./video/trimmed-Gen5_RU_2019-10-07_07-56-42-0001_m0.avi-.avi')
+    cap = cv2.VideoCapture('./video/Gen5_RU_2019-10-07_07-56-42-0001_m0.avi')
     # Frame number counter
     i = 0
 
@@ -52,7 +52,8 @@ if __name__ == "__main__":
             int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
     # Video writer
-    out = cv2.VideoWriter('Output.avi', cv2.VideoWriter_fourcc(*'DIVX'), 30, size, 0)
+    #out = cv2.VideoWriter('Output.avi', cv2.VideoWriter_fourcc(*'DIVX'), 30, size, 0)
+
     # Kernel size for GaussianBlur
     kernel = 5
 
@@ -64,15 +65,22 @@ if __name__ == "__main__":
 
         canny = do_canny(frames, kernel)
         polygon = do_polygon(canny, size[0], size[1])
-        cv2.imshow("polygon", canny)
+
+        hough = cv2.HoughLinesP(polygon, 1, np.pi/180, 100, minLineLength=100, maxLineGap=10)
+        for line in hough:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(frames, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.imshow("polygon", frames)
 
         # Output frames
         # cv2.imwrite('./images/frame' + str(i) + '.jpg', canny)
+
         # Output video
-        # out.write(canny)
+        #out.write(canny)
+
         # Frame number counter + 1
         i += 1
         cv2.waitKey(10)
 
     cap.release()
-    out.release()
+    #out.release()
