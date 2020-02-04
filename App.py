@@ -26,6 +26,7 @@ class MainWindow(QMainWindow):
     self.ui.videoWidget.setSlider(self.ui.horizontalSlider)
     self.ui.videoWidget.setTimeLabels(self.ui.currentVideoTime, self.ui.fullVideoTime)
     self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
+    self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
 
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()

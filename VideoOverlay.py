@@ -22,4 +22,7 @@ class VideoOverlay:
     if self.shouldDrawBoxes:
       qp.drawRect(150,200, 40, 40)
 
+    if self.shouldDrawLabels:
+      qp.drawText(150, 190, "objTurnOff")
+
 
