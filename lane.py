@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
+# Do canny and gaussian for input frames
 def do_canny(frame, kernel_size):
     # Turn image gray
     gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
@@ -16,6 +17,7 @@ def do_canny(frame, kernel_size):
     return edges
 
 
+# Remove useless parts, only the parts that may contain lane information
 def do_polygon(frame, width, height):
 
     # A polygon area contain main lane information
@@ -39,6 +41,7 @@ def do_polygon(frame, width, height):
     return polygon_area
 
 
+# From input line information, calculate the left lane and right lane equation
 def calculate_lines(frame,lines):
     # Array for left lane and right lane
     left = []
@@ -76,6 +79,7 @@ def calculate_lines(frame,lines):
     return np.array([left_line, right_line])
 
 
+# From slop and y interception, get (x, y) for two end point
 def calculate_coordinate(frame, parameters):
     slope, y_intercept = parameters
 
@@ -88,12 +92,32 @@ def calculate_coordinate(frame, parameters):
     return np.array([x1, y1, x2, y2])
 
 
+# visualize the lines
 def visualize_lines(frame, lines):
     lines_visualized = np.zeros_like(frame)
     if lines is not None:
         for x1, y1, x2, y2 in lines:
             cv2.line(lines_visualized, (x1, y1), (x2, y2), (0, 0, 255), 5)
     return lines_visualized
+
+
+# Detect lane colors: white and yellow
+def color_detection(frame):
+    # Color boundaries for white and yellow lane color
+    boundaries = [([224, 224, 224], [255, 255, 255]), ([0, 204, 204], [100, 255, 255])]
+
+    for (lower, upper) in boundaries:
+        lower = np.array(lower, dtype="uint8")
+        upper = np.array(upper, dtype="uint8")
+
+        # find the colors within the specified boundaries and apply
+        # the mask
+        mask = cv2.inRange(frame, lower, upper)
+        output = cv2.bitwise_and(frame, frame, mask=mask)
+
+        # show the images
+        cv2.imshow("images", np.hstack([frame, output]))
+
 
 
 if __name__ == "__main__":
