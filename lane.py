@@ -11,7 +11,7 @@ def do_canny(frame, kernel_size):
     # Canny, get the edges
     # edges = cv2.Canny(blur_gray, 50, 100)
 
-    edges = cv2.adaptiveThreshold(blur_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 7, 3)
+    edges = cv2.adaptiveThreshold(blur_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 9, 2)
 
     return edges
 
@@ -39,10 +39,68 @@ def do_polygon(frame, width, height):
     return polygon_area
 
 
+def calculate_lines(frame,lines):
+    # Array for left lane and right lane
+    left = []
+    right = []
+
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+
+        # Get slope and y interception of line
+        parameters = np.polyfit((x1, x2), (y1, y2), 1)
+        slope = parameters[0]
+        y_intercept = parameters[1]
+
+        # Add good lines to array
+        if abs(slope) > 0.5:
+            if slope < 0:
+                left.append((slope, y_intercept))
+            else:
+                right.append((slope, y_intercept))
+
+    # If no good lines detected, do not output
+    if np.size(left) == 0:
+        left_line = np.array([0, 0, 0, 0])
+    else:
+        # get average of good lines
+        left_avg = np.average(left, axis=0)
+        # Convert value to x and y
+        left_line = calculate_coordinate(frame, parameters=left_avg)
+    if np.size(right) == 0:
+        right_line = np.array([0, 0, 0, 0])
+    else:
+        right_avg = np.average(right, axis=0)
+        right_line = calculate_coordinate(frame, parameters=right_avg)
+
+    return np.array([left_line, right_line])
+
+
+def calculate_coordinate(frame, parameters):
+    slope, y_intercept = parameters
+
+    # Line start from button end with half of the height of frame
+    y1 = frame.shape[0]
+    y2 = int(y1/2)
+    # Get x1, x2 according to y1, y2, slope and intersection
+    x1 = int((y1-y_intercept)/slope)
+    x2 = int((y2-y_intercept)/slope)
+    return np.array([x1, y1, x2, y2])
+
+
+def visualize_lines(frame, lines):
+    lines_visualized = np.zeros_like(frame)
+    if lines is not None:
+        for x1, y1, x2, y2 in lines:
+            cv2.line(lines_visualized, (x1, y1), (x2, y2), (0, 0, 255), 5)
+    return lines_visualized
+
+
 if __name__ == "__main__":
 
     # Open video
     cap = cv2.VideoCapture('./video/Gen5_RU_2019-10-07_07-56-42-0001_m0.avi')
+    #cap = cv2.VideoCapture('./online_vid.mp4')
     # Frame number counter
     i = 0
 
@@ -66,11 +124,16 @@ if __name__ == "__main__":
         canny = do_canny(frames, kernel)
         polygon = do_polygon(canny, size[0], size[1])
 
-        hough = cv2.HoughLinesP(polygon, 1, np.pi/180, 100, minLineLength=100, maxLineGap=10)
-        for line in hough:
-            x1, y1, x2, y2 = line[0]
-            cv2.line(frames, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.imshow("polygon", frames)
+        hough = cv2.HoughLinesP(polygon, 1, np.pi/180, 50, minLineLength=70, maxLineGap=10)
+        #for line in hough:
+            #x1, y1, x2, y2 = line[0]
+            #cv2.line(frames, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        #cv2.imshow("polygon", frames)
+
+        lines = calculate_lines(frames, hough)
+        lines_visualize = visualize_lines(frames, lines)
+        output = cv2.addWeighted(frames,0.6,lines_visualize,1,0.1)
+        cv2.imshow("output", output)
 
         # Output frames
         # cv2.imwrite('./images/frame' + str(i) + '.jpg', canny)
