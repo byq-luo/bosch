@@ -3,6 +3,7 @@ import os
 
 # This class is a relationship between a video and its data
 class DataPoint:
+  # This constructor should throw on any failures.
   def __init__(self, videoPath: str, storage: Storage):
     assert(videoPath != '')
     self.videoPath = videoPath

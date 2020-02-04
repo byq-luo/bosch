@@ -54,8 +54,6 @@ class VideoWidget(QWidget):
   
   def setVideoPath(self, videoPath: str):
     self.video = Video(videoPath)
-    # TODO
-    #self.videoOverlay = VideoOverlay(videoPath)
     self.play()
     self.setFullTimeLabel()
 
@@ -74,6 +72,10 @@ class VideoWidget(QWidget):
     timeString = str(minutes) + ":" + str(seconds)
     self.currentTimeLabel.setText(timeString)
   
+  def updateSliderValue(self):
+    currentPercent = int(100 * self.video.get_frame_number() / self.video.get_total_num_frames())
+    self.slider.setValue(currentPercent)
+
   def __drawImage(self, frame, qp):
     vidHeight, vidWidth, vidChannels = frame.shape
     bytesPerLine = vidChannels * vidWidth
@@ -93,7 +95,6 @@ class VideoWidget(QWidget):
     image = image.scaled(scaledWidth, scaledHeight)
     putImageHere = QPoint(widgetWidth // 2 - scaledWidth // 2, widgetHeight // 2 - scaledHeight // 2)
     qp.drawImage(putImageHere, image)
-    self.videoOverlay.processFrame(qp)
   
   def paintEvent(self, e):
     qp = QPainter()
@@ -101,11 +102,12 @@ class VideoWidget(QWidget):
   
     if (self.isPlaying or self.didSeek) and self.video is not None:
       self.updateTimeLabel()
+      self.updateSliderValue()
       self.didSeek = False
-      currentPercent = int(100 * self.video.get_frame_number() / self.video.get_total_num_frames())
-      self.slider.setValue(currentPercent)
   
       frameAvailable, frame = self.video.get_frame()
+
+      frame = self.videoOverlay.processFrame(frame)
 
       # video has played all the way through
       if frame is None:

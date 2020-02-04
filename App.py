@@ -2,13 +2,12 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetI
 from App_ui import Ui_MainWindow
 import os
 
-from BehaviorClassifier import BehaviorClassifier, ProgressTracker, processVideos
+# from BehaviorClassifier import BehaviorClassifier, ProgressTracker, processVideos
 from DataPoint import DataPoint
 from Storage import Storage
 
 # TODO TODO background workers do not stop if GUI is closed while processing
 
-# TODO do we want to process the videos as soon as they're selected from the dialog?
 # TODO there is a warning given by ray that we might want to checkout eventually
 
 class MainWindow(QMainWindow):
@@ -31,8 +30,8 @@ class MainWindow(QMainWindow):
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
 
-    self.progressTracker = ProgressTracker.remote()
-    self.behaviorClassifier = BehaviorClassifier.remote(self.progressTracker)
+    # self.progressTracker = ProgressTracker.remote()
+    # self.behaviorClassifier = BehaviorClassifier.remote(self.progressTracker)
 
     # just a thin wrapper around a storage device
     self.storage = Storage()
@@ -73,12 +72,12 @@ class MainWindow(QMainWindow):
           self.ui.fileListWidget.addItem(QListWidgetItem(dataPoint.videoPath))
         except: # If DataPoint fails to construct just skip this video
           pass
-      processVideos(
-        self.dataPoints.values(),
-        self.behaviorClassifier,
-        self.progressTracker,
-        self.processingCompleteCallback,
-        self.processingProgressCallback)
+      # processVideos(
+      #   self.dataPoints.values(),
+      #   self.behaviorClassifier,
+      #   self.progressTracker,
+      #   self.processingCompleteCallback,
+      #   self.processingProgressCallback)
 
   def processingProgressCallback(self, percent: float):
     # update some widget or something

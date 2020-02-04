@@ -17,8 +17,6 @@ Then activate the environment
   $ conda activate pytorch
 
 
-# TODO TODO TODO does python=3.7 bring in python 3.7.6 or just 3.7.0?
-
 Install python 3.7
 (ray cannot use 3.8 and installing pytorch wants to install 3.8)
   $ conda install python=3.7
