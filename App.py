@@ -1,212 +1,114 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem
+from App_ui import Ui_MainWindow
+import os
 
-"""
-Sources Used:
-ZetCode PyQt5 tutorial http://zetcode.com/gui/pyqt5/
-"""
+from BehaviorClassifier import BehaviorClassifier, ProgressTracker, processVideos
+from DataPoint import DataPoint
+from Storage import Storage
+
+# TODO TODO background workers do not stop if GUI is closed while processing
+
+# TODO do we want to process the videos as soon as they're selected from the dialog?
+# TODO there is a warning given by ray that we might want to checkout eventually
+
+class MainWindow(QMainWindow):
+  def __init__(self):
+    super(MainWindow, self).__init__()
+    self.ui = Ui_MainWindow()
+    self.ui.setupUi(self)
+
+    self.ui.playButton.clicked.connect(self.ui.videoWidget.play)
+    self.ui.pauseButton.clicked.connect(self.ui.videoWidget.pause)
+    self.ui.horizontalSlider.sliderMoved.connect(self.ui.videoWidget.seekToPercent)
+    self.ui.processOneFileAction.triggered.connect(self.openFileNameDialog)
+    self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
+    self.ui.fileListWidget.currentTextChanged.connect(self.videoInListClicked)
+    self.ui.videoWidget.setSlider(self.ui.horizontalSlider)
+
+    # TODO what if user tries to process same video twice?
+    self.dataPoints = dict()
+
+    self.progressTracker = ProgressTracker.remote()
+    self.behaviorClassifier = BehaviorClassifier.remote(self.progressTracker)
+
+    # just a thin wrapper around a storage device
+    self.storage = Storage()
+  
+  def videoInListClicked(self, videoPath: str):
+    self.ui.labelListWidget.clear()
+    dataPoint = self.dataPoints[videoPath]
+    for label in dataPoint.predictedLabels:
+      self.ui.labelListWidget.addItem(QListWidgetItem(label))
+    self.ui.videoWidget.setVideoPath(videoPath)
+
+  def openFileNameDialog(self):
+    options = QFileDialog.Options()
+    options |= QFileDialog.DontUseNativeDialog
+    fileName, _ = QFileDialog.getOpenFileName(self, caption="Choose a video",\
+                                              filter="AVI/MKV Files (*.avi *.mkv)",\
+                                              options=options)
+    if fileName:
+      try:
+        self.dataPoints[fileName] = DataPoint(fileName, self.storage)
+        self.ui.fileListWidget.addItem(QListWidgetItem(fileName))
+        # TODO if video has labels then show them ?
+      except:
+        pass
+
+  def openFolderNameDialog(self):
+    options = QFileDialog.Options()
+    options |= QFileDialog.DontUseNativeDialog
+    options |= QFileDialog.ShowDirsOnly
+    folderName = QFileDialog.getExistingDirectory(self, caption="Select Directory",\
+                                                  options=options)
+    if folderName:
+      videoPaths = self.storage.recursivelyFindVideosInFolder(folderName)
+      # TODO this just blindly processes videos for now
+      for videoPath in videoPaths:
+        try:
+          self.dataPoints[videoPath] = DataPoint(videoPath, self.storage)
+          self.ui.fileListWidget.addItem(QListWidgetItem(dataPoint.videoPath))
+        except: # If DataPoint fails to construct just skip this video
+          pass
+      processVideos(
+        self.dataPoints.values(),
+        self.behaviorClassifier,
+        self.progressTracker,
+        self.processingCompleteCallback,
+        self.processingProgressCallback)
+
+  def processingProgressCallback(self, percent: float):
+    # update some widget or something
+    print('Processing',percent,'complete.')
+
+  def processingCompleteCallback(self, dataPoint: DataPoint):
+    print('Video',dataPoint.videoPath,'has completed processing.')
+    # id(oldVid) != id(dataPoint) so changes made to dataPoint in
+    # BehaviorClassifier are not reflected in oldVid. oldVid and
+    # dataPoint are different python objects.
+    self.dataPoints[dataPoint.videoPath] = dataPoint
+
+    # TODO the KPI computation should not be in the GUI code here
+
+    # TODO just to get KPIs lets compare against groundtruth here
+    print()
+    print(dataPoint.videoPath)
+    trueLabels = dataPoint.groundTruthLabels
+    predLabels = dataPoint.predictedLabels
+    print(trueLabels)
+    print(predLabels)
+    numerator = 0.0
+    denominator = len(trueLabels) + abs(len(trueLabels) - len(predLabels))
+    for trueLabel, predLabel in zip(trueLabels, predLabels):
+      if trueLabel[:5] == predLabel[:5]:
+        numerator += 1.0
+    accuracy = numerator / denominator
+    print('Accuracy', accuracy)
+    print()
+
 
 import sys
-from PyQt5.QtWidgets import QFrame, QMainWindow, QTextEdit, QAction, QApplication, QFileDialog, QWidget, QLabel, \
-    QDockWidget, QListWidget, QCheckBox
-from PyQt5.QtGui import QIcon, QPixmap, QImage
-from PyQt5.QtCore import QThread, pyqtSlot, pyqtSignal, QRectF
-import PyQt5.QtCore as Qt
-from PyQt5.QtCore import QThread, pyqtSlot, pyqtSignal, Qt
-#import PyQt5.QtGui
-import gui
-import PIL.Image, PIL.ImageTk
-import time
-import cv2
-import math
-
-
-class Home(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.filename = None;
-        self.time = int(round(time.time() * 1000))
-        self.startUI()
-        self.resize(1000, 600)
-
-    def startUI(self):
-
-        '''initializes the text showing the file path'''
-        self.filetext = QLabel(self)
-        self.filetext.setAlignment(Qt.AlignTop)
-        self.filetext.setGeometry(10,10,30,80)
-        self.filetext.setText("File: "+ str(self.filename))
-        self.setCentralWidget(self.filetext)
-
-        '''initializes the video screen'''
-        self.videoscreen = QLabel(self)
-        self.videoscreen.setGeometry(300, 0, 400, 500)
-        self.setCentralWidget(self.videoscreen)
-        img = QImage('icons/icon2.ico')
-        i = img.scaled(720, 480, Qt.KeepAspectRatio)
-        pmap = QPixmap(i)
-        self.videoscreen.setPixmap(pmap)
-
-        self.labelList = QListWidget()
-        self.labelList.setGeometry(700, 0, 300, 600)
-        self.fileList = QListWidget()
-        self.fileList.setGeometry(0, 0, 300, 600)
-        self.boxCheckBox = QCheckBox("Display Box Over Target Object", self)
-        self.boxCheckBox.setGeometry(400, 500, 400, 50)
-        self.labelCheckBox = QCheckBox("Display Current Label", self)
-        self.labelCheckBox.setGeometry(400, 550, 400, 50)
-
-
-        self.rightDock = QDockWidget("Labels ", self)
-        self.rightDock.setWidget(self.labelList)
-        self.leftDock = QDockWidget("Files", self)
-        self.leftDock.setWidget(self.fileList)
-        self.bottomDock = QDockWidget("Box Display Option", self)
-        self.bottomDock.setWidget(self.boxCheckBox)
-        self.bottomDock2 = QDockWidget("Label Display Option", self)
-        self.bottomDock2.setWidget(self.labelCheckBox)
-
-
-
-        self.addDockWidget(Qt.RightDockWidgetArea, self.rightDock)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.leftDock)
-        self.setDockNestingEnabled(True)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.bottomDock)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.bottomDock2)
-
-        self.labelList.addItem("end,1.7207001116268856")
-        self.labelList.addItem("evtEnd,67.567842448350611")
-        self.labelList.addItem("rightTO=24,90.52518677490954")
-        self.labelList.addItem("evtEnd,104.18015323449663")
-        self.labelList.addItem("end,108,44646106956341")
-
-        '''action to exit'''
-        exitAct = QAction(QIcon('icons/exit.png'), 'Exit', self)
-        exitAct.setShortcut('Ctrl+Q')
-        exitAct.setStatusTip('Exit application')
-        exitAct.triggered.connect(self.close)
-
-        '''action to open one file'''
-        fileAct = QAction(QIcon('icons/file.png'), 'Process File', self)
-        #exitAct.setShortcut('Ctrl+Q')
-        fileAct.setStatusTip('Process one video file')
-        fileAct.triggered.connect(self.openFileNameDialog)
-
-        '''action to open a whole folder'''
-        folderAct = QAction(QIcon('icons/folder.png'), 'Process Folder', self)
-        #folderAct.setShortcut('Ctrl+Q')
-        folderAct.setStatusTip('Process every video file in a folder')
-        #folderAct.triggered.connect(self.close)
-
-        '''action to play video'''
-        playAct = QAction(QIcon(''), 'Play', self)
-        #playAct.setShortcut('Clt+Q')
-        playAct.setStatusTip('Play the video')
-        playAct.triggered.connect(self.makeVideo)
-
-        self.statusBar()
-
-        menubar = self.menuBar()
-
-        '''Add actions to menubar'''
-        actionMenu = menubar.addMenu('&Action')
-        actionMenu.addAction(exitAct)
-        actionMenu.addAction(fileAct)
-        actionMenu.addAction(folderAct)
-        #actionMenu.addAction(playAct)
-
-        '''Add actions to toolbar'''
-        toolbar = self.addToolBar('Exit')
-        toolbar.addAction(exitAct)
-        toolbar = self.addToolBar('OPEN FILE')
-        toolbar.addAction(fileAct)
-        toolbar = self.addToolBar('OPEN FOLDER')
-        toolbar.addAction(folderAct)
-        toolbar = self.addToolBar('PLAY')
-        toolbar.addAction(playAct)
-
-        self.setGeometry(300, 300, 800, 540)   # sizes the window (x location, y location, width, height)
-        self.setWindowTitle('Label Classifier')
-        self.show()
-
-
-    def openFileNameDialog(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
-                                                  ";AVI Files (*.avi)", options=options)
-        if fileName:
-            self.filename = fileName
-            self.fileList.addItem(fileName)
-
-    def makeVideo(self):
-        if self.filename is not None:
-            self.vid = gui.Video(self.filename)
-            self.delay = int(1000 / self.vid.get_fps())
-            self.worker = Thread(self.vid, self.delay)
-            self.worker.changePixmap.connect(self.updateVidImage)
-            self.worker.start()
-
-
-
-    def update(self):
-        self.time = int(round(time.time() * 1000))
-        uptime = self.time + self.delay  # the time that the next frame should be pulled
-        if self.vid is not None:
-            ret, frame = self.vid.get_frame()
-            if frame is None:
-                """video has played all the way through"""
-                return
-
-            if ret:
-                rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                h, w, ch = rgbImage.shape
-                bytesPerLine = ch * w
-                convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
-                p = convertToQtFormat.scaled(720, 480, Qt.KeepAspectRatio)
-                pmap = QPixmap(p)
-                self.videoscreen.setPixmap(pmap)
-
-
-        self.time = int(round(time.time() * 1000))
-        time.sleep((uptime - self.time)/1000)  # call the function again after the difference in time has passed
-        self.update()
-
-    @pyqtSlot(QImage)
-    def updateVidImage(self, img):
-        pmap = QPixmap.fromImage(img)
-        self.videoscreen.setPixmap(pmap)
-
-
-
-class Thread(QThread):
-    changePixmap = pyqtSignal(QImage)
-
-    def __init__(self, video, delay):
-        super().__init__()
-        self.vid = video
-        self.delay = delay
-        #self.run()
-
-    def run(self):
-        self.time = int(round(time.time() * 1000))
-        uptime = self.time + self.delay  # the time that the next frame should be pulled
-        if self.vid is not None:
-            ret, frame = self.vid.get_frame()
-            if frame is None:
-                """video has played all the way through"""
-            if ret:
-                h, w, ch = frame.shape
-                bytesPerLine = ch * w
-                convertToQtFormat = QImage(frame.data, w, h, bytesPerLine, QImage.Format_RGB888)
-                p = convertToQtFormat.scaled(640, 480)
-                self.changePixmap.emit(p)
-                self.time = int(round(time.time() * 1000))
-                time.sleep((uptime - self.time) / 1000)  # call the function again after the difference in time has passed
-                self.run()
-
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    ex = Home()
-    sys.exit(app.exec_())
+app = QApplication(sys.argv)
+window = MainWindow()
+window.show()
+sys.exit(app.exec_())
