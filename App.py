@@ -24,6 +24,9 @@ class MainWindow(QMainWindow):
     self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
     self.ui.fileListWidget.currentTextChanged.connect(self.videoInListClicked)
     self.ui.videoWidget.setSlider(self.ui.horizontalSlider)
+    self.ui.videoWidget.setTimeLabels(self.ui.currentVideoTime, self.ui.fullVideoTime)
+    self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
+    self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
 
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
@@ -105,6 +108,13 @@ class MainWindow(QMainWindow):
     accuracy = numerator / denominator
     print('Accuracy', accuracy)
     print()
+
+
+  def enableBoundingBoxes(self):
+    pass
+
+  def disableBoundingBoxes(self):
+    pass
 
 
 import sys

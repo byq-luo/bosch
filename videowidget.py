@@ -22,6 +22,8 @@ class VideoWidget(QWidget):
 
     # so that the image does not disappear when pause is hit
     self.previousFrame = None
+
+    self.videoOverlay = VideoOverlay()
   
   def pause(self, toggled=False):
     self.isPlaying = False
@@ -45,12 +47,32 @@ class VideoWidget(QWidget):
   
   def setSlider(self, slider):
     self.slider = slider
+
+  def setTimeLabels(self, currentTime, fullTime):
+    self.currentTimeLabel = currentTime
+    self.fullTimeLabel = fullTime
   
   def setVideoPath(self, videoPath: str):
     self.video = Video(videoPath)
     # TODO
     #self.videoOverlay = VideoOverlay(videoPath)
     self.play()
+    self.setFullTimeLabel()
+
+  def setFullTimeLabel(self):
+    totalSeconds = self.video.getVideoLength()
+    minutes = int(totalSeconds / 60)
+    seconds = int(totalSeconds % 60)
+    timeString = str(minutes) + ":" + str(seconds)
+    self.fullTimeLabel.setText(timeString)
+
+  def updateTimeLabel(self):
+    totalSeconds = self.video.getCurrentTime()
+    minutes = int(totalSeconds / 60)
+    seconds = int(totalSeconds % 60)
+    format(seconds, '.2f')
+    timeString = str(minutes) + ":" + str(seconds)
+    self.currentTimeLabel.setText(timeString)
   
   def __drawImage(self, frame, qp):
     vidHeight, vidWidth, vidChannels = frame.shape
@@ -71,20 +93,19 @@ class VideoWidget(QWidget):
     image = image.scaled(scaledWidth, scaledHeight)
     putImageHere = QPoint(widgetWidth // 2 - scaledWidth // 2, widgetHeight // 2 - scaledHeight // 2)
     qp.drawImage(putImageHere, image)
+    self.videoOverlay.processFrame(qp)
   
   def paintEvent(self, e):
     qp = QPainter()
     qp.begin(self)
   
     if (self.isPlaying or self.didSeek) and self.video is not None:
+      self.updateTimeLabel()
       self.didSeek = False
       currentPercent = int(100 * self.video.get_frame_number() / self.video.get_total_num_frames())
       self.slider.setValue(currentPercent)
   
       frameAvailable, frame = self.video.get_frame()
-
-      # TODO
-      # frame = self.videoOverlay.processFrame(frame, frameNumber)
 
       # video has played all the way through
       if frame is None:

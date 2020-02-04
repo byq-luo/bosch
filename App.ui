@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1572</width>
-    <height>675</height>
+    <width>1145</width>
+    <height>613</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -126,6 +126,63 @@
         </item>
        </layout>
       </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <spacer name="horizontalSpacer_6">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="currentVideoTime">
+          <property name="text">
+           <string>00:00</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_7">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="fullVideoTime">
+          <property name="text">
+           <string>00:00</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_5">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
      </layout>
     </item>
     <item>
@@ -159,14 +216,14 @@
       <item>
        <widget class="QCheckBox" name="showLabelsCheckbox">
         <property name="text">
-         <string>Show Box Over Target Object</string>
+         <string>Show Current Label</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QCheckBox" name="boundingBoxCheckbox">
         <property name="text">
-         <string>Show Current Label</string>
+         <string>Show Bounding Box</string>
         </property>
        </widget>
       </item>
