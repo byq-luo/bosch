@@ -102,9 +102,13 @@ def loadLibs(progressTracker):
   globals()['progressTracker'] = progressTracker
 
 class Classifier:
+  __instances = 0
   # These members cannot be globals in this file since multiprocessing forks this python
   # exe to create the new processes. So code in global scope would execute twice????????
   def __init__(self):
+    Classifier.__instances += 1
+    assert(Classifier.__instances == 1)
+
     self.progressTracker = _ProgressTracker()
 
     # only run one video at a time
