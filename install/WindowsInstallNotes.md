@@ -48,7 +48,6 @@ And
 
 Then run the following commands (might take 5-20 minutes)
 
-    $ conda activate pytorch
     $ pip install git+https://github.com/xdaimon/detectron2.git
     $ pip install opencv-python==4.2.0.32
     $ pip install pyqt5==5.14.1
