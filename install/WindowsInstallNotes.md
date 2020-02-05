@@ -1,13 +1,14 @@
 Install Visual Studio Community 2019.
+
 Make sure Miniconda3 is installed at C:\Miniconda3
 
-Download & install CUDA
+For your convenience, C:\Miniconda3\Scripts should be in your PATH.
 
-Do a custom install and make sure the only checked option is the Development components
-
-![](image.png)
+Download & install CUDA. Do a custom install and make sure the only checked option is the Development components.
 
 http://developer.download.nvidia.com/compute/cuda/10.1/Prod/network_installers/cuda_10.1.243_win10_network.exe
+
+![](image.png)
 
 Now create a new conda environment
 
@@ -21,7 +22,7 @@ Install python 3.7
 
     $ conda install python=3.7
 
-Install pytorch, torchvision, and cudatoolkit=10.1
+Install pytorch, torchvision, and cudatoolkit
 
     $ conda install pytorch=1.4 torchvision=0.5 cudatoolkit=10.1 -c pytorch
 
