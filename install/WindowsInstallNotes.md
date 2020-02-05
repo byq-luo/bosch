@@ -46,17 +46,10 @@ And
         change to -->
       explicit operator type&() { return *((type*)this->value); }
 
-Then execute
-
-    $ "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
-
 Then run the following commands (might take 5-20 minutes)
 
     $ conda activate pytorch
     $ pip install git+https://github.com/xdaimon/detectron2.git
-
-Finally
-
     $ pip install opencv-python==4.2.0.32
     $ pip install pyqt5==5.14.1
 
