@@ -1,28 +1,47 @@
 from DataPoint import DataPoint
+import cv2
 
 
 class VideoOverlay:
   def __init__(self):
     self.shouldDrawBoxes = False
     self.shouldDrawLabels = False
+    self.shouldDrawLaneLines = False
 
-    # TODO load overlay data from disk (or it's in dataPoint)
-    self.frameNumberToData = {}
+    self.boundingBoxColor = (0,255,0)
+    self.boundingBoxThickness = 2
+    self.labelColor = (255,0,0)
 
-  # TODO connect Checkbox signals to this
   def setDrawLabels(self, shouldDrawLabels: bool):
     self.shouldDrawLabels = shouldDrawLabels
 
-  # TODO connect Checkbox signals to this
   def setDrawBoxes(self, shouldDrawBoxes: bool):
     self.shouldDrawBoxes = shouldDrawBoxes
+  
+  def setDrawLaneLines(self, shouldDrawLaneLines: bool):
+    self.shouldDrawLaneLines = shouldDrawLaneLines
 
+  def processFrame(self, frame):
+    x,y = 25, 25
+    w,h = 100,100
 
-  def processFrame(self, qp):
     if self.shouldDrawBoxes:
-      qp.drawRect(150,200, 40, 40)
+      cv2.rectangle(frame,
+        (x,y),
+        (x+w,y+h),
+        self.boundingBoxColor,
+        self.boundingBoxThickness)
 
     if self.shouldDrawLabels:
-      qp.drawText(150, 190, "objTurnOff")
+      cv2.putText(frame,
+        'Moth Detected',
+        (x+w+10,y+h),
+        0,
+        1.0,
+        self.labelColor,
+        2)
 
+    if self.shouldDrawLaneLines:
+      pass
 
+    return frame
