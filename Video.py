@@ -8,17 +8,17 @@ class Video:
 
         self.width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.fps = int(self.vid.get(cv2.CAP_PROP_FPS))
+        self.fps = self.vid.get(cv2.CAP_PROP_FPS)
 
         # https://www.pyimagesearch.com/2017/01/09/count-the-total-number-of-frames-in-a-video-with-opencv-and-python/
-        self.num_frames = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.numFrames = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))
 
         
     def __del__(self):
         if self.vid.isOpened():
             self.vid.release()
 
-    def get_frame(self):
+    def getFrame(self):
         isFrameAvailable = False
         if self.vid.isOpened():
             isFrameAvailable, frame = self.vid.read()
@@ -29,20 +29,20 @@ class Video:
         else:
             return(isFrameAvailable, None)
 
-    def get_fps(self):
+    def getFps(self):
         return self.fps
 
-    def get_total_num_frames(self):
-        return self.num_frames
+    def getTotalNumFrames(self):
+        return self.numFrames
 
-    def get_frame_number(self):
+    def getFrameNumber(self):
         return int(self.vid.get(cv2.CAP_PROP_POS_FRAMES))
 
-    def set_frame_number(self, frame):
+    def setFrameNumber(self, frame):
         self.vid.set(cv2.CAP_PROP_POS_FRAMES, frame)
 
     def getVideoLength(self):
-        return self.num_frames / self.fps
+        return self.numFrames / self.fps
 
     def getCurrentTime(self):
         return self.vid.get(cv2.CAP_PROP_POS_FRAMES) / self.fps

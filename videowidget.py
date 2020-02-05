@@ -35,13 +35,13 @@ class VideoWidget(QWidget):
       return
     self.isPlaying = True
     self.timer.stop()
-    self.timer.start(self.video.get_fps())
+    self.timer.start(self.video.getFps())
   
   def seekToPercent(self, percent):
     if self.video is None:
       return
-    totalNumFrames = self.video.get_total_num_frames()
-    self.video.set_frame_number(int(percent / 100 * totalNumFrames))
+    totalNumFrames = self.video.getTotalNumFrames()
+    self.video.setFrameNumber(int(percent / 100 * totalNumFrames))
     self.didSeek = True
     self.update()
   
@@ -73,7 +73,7 @@ class VideoWidget(QWidget):
     self.currentTimeLabel.setText(timeString)
   
   def updateSliderValue(self):
-    currentPercent = int(100 * self.video.get_frame_number() / self.video.get_total_num_frames())
+    currentPercent = int(100 * self.video.getFrameNumber() / self.video.getTotalNumFrames())
     self.slider.setValue(currentPercent)
 
   def __drawImage(self, frame, qp):
@@ -105,14 +105,14 @@ class VideoWidget(QWidget):
       self.updateSliderValue()
       self.didSeek = False
   
-      frameAvailable, frame = self.video.get_frame()
+      frameAvailable, frame = self.video.getFrame()
 
       frame = self.videoOverlay.processFrame(frame)
 
       # video has played all the way through
       if frame is None:
         self.pause()
-        self.video.set_frame_number(0)
+        self.video.setFrameNumber(0)
       elif frameAvailable:
         self.previousFrame = frame
         self.__drawImage(frame, qp)

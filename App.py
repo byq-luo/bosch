@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetI
 from App_ui import Ui_MainWindow
 import os
 
-# from BehaviorClassifier import BehaviorClassifier, ProgressTracker, processVideos
+from Classifier import Classifier
 from DataPoint import DataPoint
 from Storage import Storage
 
@@ -30,8 +30,7 @@ class MainWindow(QMainWindow):
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
 
-    # self.progressTracker = ProgressTracker.remote()
-    # self.behaviorClassifier = BehaviorClassifier.remote(self.progressTracker)
+    self.classifier = Classifier()
 
     # just a thin wrapper around a storage device
     self.storage = Storage()
@@ -68,17 +67,18 @@ class MainWindow(QMainWindow):
       # TODO this just blindly processes videos for now
       for videoPath in videoPaths:
         try:
-          self.dataPoints[videoPath] = DataPoint(videoPath, self.storage)
+          dataPoint = DataPoint(videoPath, self.storage)
+          self.dataPoints[videoPath] = dataPoint
           self.ui.fileListWidget.addItem(QListWidgetItem(dataPoint.videoPath))
         except: # If DataPoint fails to construct just skip this video
           pass
-      # processVideos(
-      #   self.dataPoints.values(),
-      #   self.behaviorClassifier,
-      #   self.progressTracker,
-      #   self.processingCompleteCallback,
-      #   self.processingProgressCallback)
+      self.classifier.processVideos(
+        self.dataPoints.values(),
+        self.processingCompleteCallback,
+        self.processingProgressCallback)
 
+  # TODO These run on a different thread than the GUI thread.
+  # TODO how do we put them on the GUI thread in Qt?
   def processingProgressCallback(self, percent: float):
     # update some widget or something
     print('Processing',percent,'complete.')
@@ -109,15 +109,9 @@ class MainWindow(QMainWindow):
     print()
 
 
-  def enableBoundingBoxes(self):
-    pass
-
-  def disableBoundingBoxes(self):
-    pass
-
-
-import sys
-app = QApplication(sys.argv)
-window = MainWindow()
-window.show()
-sys.exit(app.exec_())
+if __name__ == '__main__':
+  import sys
+  app = QApplication(sys.argv)
+  window = MainWindow()
+  window.show()
+  sys.exit(app.exec_())
