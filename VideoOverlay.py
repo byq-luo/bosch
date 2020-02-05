@@ -21,7 +21,7 @@ class VideoOverlay:
   def setDrawLaneLines(self, shouldDrawLaneLines: bool):
     self.shouldDrawLaneLines = shouldDrawLaneLines
 
-  def processFrame(self, frame):
+  def processFrame(self, frame, dataPoint=None):
     x,y = 25, 25
     w,h = 100,100
 
