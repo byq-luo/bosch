@@ -49,7 +49,6 @@ And
 Then run the following commands (might take 5-20 minutes)
 
     $ pip install git+https://github.com/xdaimon/detectron2.git
-    $ pip install opencv-python==4.2.0.32
-    $ pip install pyqt5==5.14.1
+    $ pip install opencv-python==4.2.0.32 pyqt5==5.14.1
 
 

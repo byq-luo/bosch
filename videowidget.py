@@ -10,7 +10,7 @@ class VideoWidget(QWidget):
   def __init__(self, centralWidget):
     super().__init__()
     self.initUI()
-  
+
   def initUI(self):
     self.video = None
     self.isPlaying = False
@@ -24,19 +24,19 @@ class VideoWidget(QWidget):
     self.previousFrame = None
 
     self.videoOverlay = VideoOverlay()
-  
+
   def pause(self, toggled=False):
     self.isPlaying = False
     self.timer.stop()
     self.update()
-  
+
   def play(self, toggled=False):
     if self.video is None:
       return
     self.isPlaying = True
     self.timer.stop()
     self.timer.start(self.video.getFps())
-  
+
   def seekToPercent(self, percent):
     if self.video is None:
       return
@@ -44,16 +44,17 @@ class VideoWidget(QWidget):
     self.video.setFrameNumber(int(percent / 100 * totalNumFrames))
     self.didSeek = True
     self.update()
-  
+
   def setSlider(self, slider):
     self.slider = slider
 
   def setTimeLabels(self, currentTime, fullTime):
     self.currentTimeLabel = currentTime
     self.fullTimeLabel = fullTime
-  
-  def setVideoPath(self, videoPath: str):
-    self.video = Video(videoPath)
+
+  def setVideo(self, dataPoint):
+    self.dataPoint = dataPoint
+    self.video = Video(dataPoint.videoPath)
     self.play()
     self.setFullTimeLabel()
 
@@ -71,7 +72,7 @@ class VideoWidget(QWidget):
     format(seconds, '.2f')
     timeString = str(minutes) + ":" + str(seconds)
     self.currentTimeLabel.setText(timeString)
-  
+
   def updateSliderValue(self):
     currentPercent = int(100 * self.video.getFrameNumber() / self.video.getTotalNumFrames())
     self.slider.setValue(currentPercent)
@@ -79,7 +80,7 @@ class VideoWidget(QWidget):
   def __drawImage(self, frame, qp):
     vidHeight, vidWidth, vidChannels = frame.shape
     bytesPerLine = vidChannels * vidWidth
- 
+
     widgetWidth = self.width()
     widgetHeight = self.height()
     if widgetWidth <= widgetHeight:
@@ -88,26 +89,27 @@ class VideoWidget(QWidget):
     if widgetWidth > widgetHeight:
       scaledWidth = widgetHeight
       scaledHeight = widgetHeight
- 
+
     # TODO respect aspect ratio
- 
+
     image = QImage(frame.data, vidWidth, vidHeight, bytesPerLine, QImage.Format_RGB888)
     image = image.scaled(scaledWidth, scaledHeight)
     putImageHere = QPoint(widgetWidth // 2 - scaledWidth // 2, widgetHeight // 2 - scaledHeight // 2)
     qp.drawImage(putImageHere, image)
-  
+
   def paintEvent(self, e):
     qp = QPainter()
     qp.begin(self)
-  
+
     if (self.isPlaying or self.didSeek) and self.video is not None:
       self.updateTimeLabel()
       self.updateSliderValue()
       self.didSeek = False
-  
+
+      frameIndex = self.video.getFrameNumber()
       frameAvailable, frame = self.video.getFrame()
 
-      frame = self.videoOverlay.processFrame(frame)
+      frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint)
 
       # video has played all the way through
       if frame is None:
@@ -118,6 +120,6 @@ class VideoWidget(QWidget):
         self.__drawImage(frame, qp)
     elif self.previousFrame is not None:
       self.__drawImage(self.previousFrame, qp)
-    
+
     qp.end()
 

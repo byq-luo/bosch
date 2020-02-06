@@ -1,26 +1,43 @@
 from Storage import Storage
+import pickle
 import os
 
 # This class is a relationship between a video and its data
 class DataPoint:
-  # This constructor should throw on any failures.
   def __init__(self, videoPath: str, storage: Storage):
     assert(videoPath != '')
     self.videoPath = videoPath
+    self.videoName = ''
     self.predictedLabels = []
     self.groundTruthLabels = []
     self.boundingBoxes = []
     self.laneLines = []
 
-    # try to load data from disk
     folder, nameExtension = os.path.split(videoPath)
     name, extension = os.path.splitext(nameExtension)
-    name = name.replace('m0','labels')
-    with open(folder + '/' + name + '.txt') as file:
-      self.groundTruthLabels = [ln.rstrip('\n') for ln in file.readlines()]
+    self.videoName = name
+
+    # try to load data from disk
+    labelsFileName = name.replace('m0','labels.txt')
+    try:
+      with open(folder + '/' + labelsFileName) as file:
+        self.groundTruthLabels = [ln.rstrip('\n') for ln in file.readlines()]
+      print('DataPoint',videoPath,'loaded ground truth')
+    except:
+      self.groundTruthLabels = None
+
+    try:
+      dataFileName = name.replace('m0', 'data.pkl')
+      with open(folder + '/' + dataFileName, 'rb') as file:
+        data = pickle.load(file)
+      print('DataPoint',videoPath,'loaded feature data')
+    except:
+      pass
+
 
     # ...
     pass
 
   def saveToStorage(self, storage: Storage):
     pass
+
