@@ -9,12 +9,13 @@ import time
 # https://elsampsa.github.io/valkka-examples/_build/html/qt_notes.html#python-multiprocessing
 # https://stackoverflow.com/questions/15520957/python-multiprocessing-in-pyqt-application?rq=1
 
-# https://docs.python.org/2/library/multiprocessing.html#multiprocessing.Value
+# https://docs.python.org/3.7/library/multiprocessing.html#multiprocessing.Value
 # https://eli.thegreenplace.net/2012/01/04/shared-counter-with-pythons-multiprocessing
 class _ProgressTracker(object):
   def __init__(self):
     self.numFramesProcessed = Value('i', 0) # creates an int: https://docs.python.org/2/library/array.html#module-array
     self.totalNumFrames = Value('i', 0)
+    self.currentVideoProgress = Value('f', 0.0)
     self.hasAskedForProgress = Value('i', False)
     self.lock = Lock()
 
@@ -30,11 +31,20 @@ class _ProgressTracker(object):
       self.numFramesProcessed.value += 1
       assert(self.numFramesProcessed.value <= self.totalNumFrames.value)
 
-  def getProgress(self):
+  def setCurVidProgress(self, progress: float):
+    with self.lock:
+      self.currentVideoProgress.value = progress
+
+  def getTotalProgress(self):
     with self.lock:
       self.hasAskedForProgress.value = True
       assert(self.totalNumFrames.value != 0)
       return self.numFramesProcessed.value / self.totalNumFrames.value
+
+  def getCurVidProgress(self):
+    with self.lock:
+      self.hasAskedForProgress.value = True
+      return self.currentVideoProgress.value
 
   def reset(self):
     with self.lock:
@@ -42,27 +52,6 @@ class _ProgressTracker(object):
       self.totalNumFrames.value = 0
       # find totalNumFrames first then the getProgress can be used
       self.hasAskedForProgress.value = False
-
-def _processVideo(dataPoint: DataPoint):
-  return processVideo(dataPoint, vehicleDetector, laneLineDetector, progressTracker)
-
-def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool):
-  assert(dataPoints != [])
-  futures = set()
-  for dataPoint in dataPoints:
-    progressTracker.addToTotalNumFrames(dataPoint.videoPath)
-    futures.add(pool.submit(_processVideo, (dataPoint)))
-  while futures:
-    done, notDone = wait(futures, timeout=1, return_when=FIRST_COMPLETED)
-    futures = notDone
-    for future in done:
-      completedCallback(future.result())
-    percentDone = progressTracker.getProgress()
-    progressCallback(percentDone)
-    time.sleep(1)
-  progressTracker.reset()
-
-# TODO test if detectron uses multithreading when model is CPU. It should because it uses PyTorch.
 
 # executed in the other python process
 def _loadLibs(progressTracker):
@@ -72,9 +61,27 @@ def _loadLibs(progressTracker):
   globals()['laneLineDetector'] = LaneLineDetector()
   globals()['progressTracker'] = progressTracker
 
+def _processVideo(dataPoint: DataPoint):
+  # accesses the globals assigned above
+  return processVideo(dataPoint, vehicleDetector, laneLineDetector, progressTracker)
+
+def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool):
+  assert(dataPoints != [])
+  for dataPoint in dataPoints:
+    progressTracker.addToTotalNumFrames(dataPoint.videoPath)
+  for dataPoint in dataPoints:
+    future = pool.submit(_processVideo, (dataPoint))
+    while not future.done():
+      time.sleep(1)
+      totalPercentDone = progressTracker.getTotalProgress()
+      videoPercentDone = progressTracker.getCurVidProgress()
+      progressCallback(totalPercentDone, videoPercentDone, dataPoint)
+    completedCallback(future.result())
+  progressTracker.reset()
+
 class ClassifierRunner:
   # These members cannot be globals in this file since multiprocessing forks this python
-  # exe to create the new processes. So code in global scope would execute twice????????
+  # exe to create the new processes? So code in global scope would execute twice????????
   def __init__(self):
     self.progressTracker = _ProgressTracker()
 

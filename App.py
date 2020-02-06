@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem, QTableWidgetItem, QHeaderView
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
@@ -14,7 +14,7 @@ from Storage import Storage
 DONT_PROCESS_VIDS = False
 
 class MainWindow(QMainWindow):
-  processingProgressSignal = QtCore.pyqtSignal(float)
+  processingProgressSignal = QtCore.pyqtSignal(float, float, DataPoint)
   processingCompleteSignal = QtCore.pyqtSignal(DataPoint)
 
   def __init__(self):
@@ -31,10 +31,11 @@ class MainWindow(QMainWindow):
     self.ui.videoWidget.setTimeLabels(self.ui.currentVideoTime, self.ui.fullVideoTime)
     self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
     self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
-    self.ui.fileListWidget.currentItemChanged.connect(self.videoInListClicked)
-    self.ui.labelListWidget.currentItemChanged.connect(self.labelInListClicked)
+    self.ui.fileTableWidget.cellClicked.connect(self.videoInListClicked)
+    self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
+    self.ui.fileTableWidget.setColumnWidth(1, 325)
 
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
@@ -44,23 +45,21 @@ class MainWindow(QMainWindow):
     # just a thin wrapper around a storage device
     self.storage = Storage()
 
-  def labelInListClicked(self, item: QListWidgetItem, previousItem):
-    if item is None:
-      return
-    frameIndex = item.data(Qt.UserRole)
+  def labelInListClicked(self, row, column):
+    frameIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
     self.ui.videoWidget.seekToFrame(frameIndex)
 
   def setLabelList(self, dataPoint):
-    self.ui.labelListWidget.clear()
-    for label,frameIndex in dataPoint.predictedLabels:
-      item = QListWidgetItem(label)
+    self.ui.labelTableWidget.setRowCount(0)
+    for label, frameIndex in dataPoint.predictedLabels:
+      rowIndex = self.ui.labelTableWidget.rowCount()
+      self.ui.labelTableWidget.insertRow(rowIndex)
+      item = QTableWidgetItem(label)
       item.setData(Qt.UserRole, frameIndex)
-      self.ui.labelListWidget.addItem(item)
+      self.ui.labelTableWidget.setItem(rowIndex, 0, item)
 
-  def videoInListClicked(self, item: QListWidgetItem, previousItem):
-    if item is None:
-      return
-    videoPath = item.data(Qt.UserRole)
+  def videoInListClicked(self, row, column):
+    videoPath = self.ui.fileTableWidget.currentItem().data(Qt.UserRole)
     self.setCurrentVideo(self.dataPoints[videoPath])
 
   def setCurrentVideo(self, dataPoint, play=True):
@@ -69,10 +68,19 @@ class MainWindow(QMainWindow):
     if play:
       self.ui.videoWidget.play()
 
-  def addToVideoList(self, dataPoint):
-    listItem = QListWidgetItem(dataPoint.videoName)
-    listItem.setData(Qt.UserRole, dataPoint.videoPath)
-    self.ui.fileListWidget.addItem(listItem)
+  def addToVideoList(self, dataPoint: DataPoint):
+    rowIndex = self.ui.fileTableWidget.rowCount()
+    self.ui.fileTableWidget.insertRow(rowIndex)
+    # TODO
+    msg = ' ?'
+    if dataPoint.aggregatePredConfidence != 0:
+      msg = ' {:2.2f}'.format(dataPoint.aggregatePredConfidence)
+    nameItem = QTableWidgetItem(dataPoint.videoName)
+    nameItem.setData(Qt.UserRole, dataPoint.videoPath)
+    self.ui.fileTableWidget.setItem(rowIndex, 0, QTableWidgetItem(msg))
+    self.ui.fileTableWidget.setItem(rowIndex, 1, nameItem)
+    self.ui.fileTableWidget.resizeColumnsToContents()
+
 
   def openFileNameDialog(self):
     options = QFileDialog.Options()
@@ -124,11 +132,11 @@ class MainWindow(QMainWindow):
     print()
 
   # put the work onto the gui thread
-  def processingProgressCallback(self, percent: float):
-    self.processingProgressSignal.emit(percent)
-  def processingProgressUpdate(self, percent: float):
-    # update some widget or something
-    print('Processing',percent,'complete.')
+  def processingProgressCallback(self, totalPercentDone: float, currentPercentDone: float, dataPoint: DataPoint):
+    self.processingProgressSignal.emit(totalPercentDone, currentPercentDone, dataPoint)
+  def processingProgressUpdate(self, totalPercentDone: float, currentPercentDone: float, dataPoint: DataPoint):
+    msg = 'Total : {:3d}%   |   Current : {:3d}%   |   Video : {}'.format(int(totalPercentDone*100),int(currentPercentDone*100),dataPoint.videoPath)
+    self.ui.statusbar.showMessage(msg, 3000)
 
   def processingCompleteCallback(self, dataPoint: DataPoint):
     self.processingCompleteSignal.emit(dataPoint)
@@ -138,12 +146,13 @@ class MainWindow(QMainWindow):
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
     self.dataPoints[dataPoint.videoPath] = dataPoint
+
     self.dummyKPI(dataPoint)
 
-    currentListItem = self.ui.fileListWidget.currentItem()
-    if currentListItem is None:
+    currentItem = self.ui.fileTableWidget.currentItem()
+    if currentItem is None:
       return
-    currentVideoPath = currentListItem.data(Qt.UserRole)
+    currentVideoPath = currentItem.data(Qt.UserRole)
     if currentVideoPath == dataPoint.videoPath:
       self.setCurrentVideo(dataPoint, play=False)
 
