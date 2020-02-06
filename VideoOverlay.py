@@ -28,13 +28,14 @@ class VideoOverlay:
           self.boundingBoxColor,
           self.boundingBoxThickness)
 
-    if self.shouldDrawLabels:
-      cv2.putText(frame,
-        'Moth Detected',
-        (x+w+10,y+h),
-        0,
-        1.0, # thickness
-        self.labelColor,
-        2)
+    # TODO and show confidences cause we can
+    #if self.shouldDrawLabels:
+    #  cv2.putText(frame,
+    #    'Moth Detected',
+    #    (x+w+10,y+h),
+    #    0,
+    #    1.0, # thickness
+    #    self.labelColor,
+    #    2)
 
     return frame
