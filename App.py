@@ -26,6 +26,7 @@ class MainWindow(QMainWindow):
     self.ui.pauseButton.clicked.connect(self.ui.videoWidget.pause)
     self.ui.horizontalSlider.sliderMoved.connect(self.ui.videoWidget.seekToPercent)
     self.ui.processOneFileAction.triggered.connect(self.openFileNameDialog)
+    self.ui.toolBar.addAction(self.ui.processOneFileAction)
     self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
     self.ui.videoWidget.setSlider(self.ui.horizontalSlider)
     self.ui.videoWidget.setTimeLabels(self.ui.currentVideoTime, self.ui.fullVideoTime)
@@ -39,7 +40,7 @@ class MainWindow(QMainWindow):
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
 
-    self.classifier = ClassifierRunner()
+    #self.classifier = ClassifierRunner()
 
     # just a thin wrapper around a storage device
     self.storage = Storage()
@@ -52,9 +53,9 @@ class MainWindow(QMainWindow):
 
   def setLabelList(self, dataPoint):
     self.ui.labelListWidget.clear()
-    for label,frameIndex in dataPoint.predictedLabels:
+    for label in dataPoint.groundTruthLabels:
       item = QListWidgetItem(label)
-      item.setData(Qt.UserRole, frameIndex)
+      item.setData(Qt.UserRole, label)
       self.ui.labelListWidget.addItem(item)
 
   def videoInListClicked(self, item: QListWidgetItem, previousItem):
@@ -74,12 +75,11 @@ class MainWindow(QMainWindow):
     listItem.setData(Qt.UserRole, dataPoint.videoPath)
     self.ui.fileListWidget.addItem(listItem)
 
+
   def openFileNameDialog(self):
     options = QFileDialog.Options()
     options |= QFileDialog.DontUseNativeDialog
-    fileName, _ = QFileDialog.getOpenFileName(self, caption="Choose a video",\
-                                              filter="AVI/MKV Files (*.avi *.mkv)",\
-                                              options=options)
+    fileName, _ = QFileDialog.getOpenFileName(self, caption="Choose a video", filter="AVI/MKV Files (*.avi *.mkv)", options=options)
     if fileName:
       dataPoint = DataPoint(fileName, self.storage)
       self.dataPoints[fileName] = dataPoint
@@ -89,8 +89,7 @@ class MainWindow(QMainWindow):
     options = QFileDialog.Options()
     options |= QFileDialog.DontUseNativeDialog
     options |= QFileDialog.ShowDirsOnly
-    folderName = QFileDialog.getExistingDirectory(self, caption="Select Directory",\
-                                                  options=options)
+    folderName = QFileDialog.getExistingDirectory(self, caption="Select Directory", options=options)
     if folderName:
       videoPaths = self.storage.recursivelyFindVideosInFolder(folderName)
       # TODO this just blindly processes videos for now
@@ -132,6 +131,7 @@ class MainWindow(QMainWindow):
 
   def processingCompleteCallback(self, dataPoint: DataPoint):
     self.processingCompleteSignal.emit(dataPoint)
+
   def processingComplete(self, dataPoint: DataPoint):
     print('Video',dataPoint.videoPath,'has completed processing.')
     # id(oldVid) != id(dataPoint) so changes made to dataPoint in

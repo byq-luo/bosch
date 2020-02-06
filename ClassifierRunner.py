@@ -61,10 +61,9 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool)
     progressCallback(percentDone)
     time.sleep(1)
   progressTracker.reset()
-
 # TODO test if detectron uses multithreading when model is CPU. It should because it uses PyTorch.
 
-# executed in the other python process
+# executed in the other python processp
 def _loadLibs(progressTracker):
   from VehicleDetector import VehicleDetector
   from LaneLineDetector import LaneLineDetector
