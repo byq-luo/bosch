@@ -22,7 +22,8 @@ class DataPoint:
     labelFolder = folder.replace('video', 'labels')
 
     try:
-      with open(labelFolder + '/' + labelsFileName) as file:
+      with open(folder + '/' + labelsFileName) as file:
+      #with open(labelFolder + '/' + labelsFileName) as file:
         self.groundTruthLabels = [ln.rstrip('\n') for ln in file.readlines()]
 
     except:
