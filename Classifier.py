@@ -3,6 +3,9 @@ from VehicleDetector import VehicleDetector
 from LaneLineDetector import LaneLineDetector
 from Video import Video
 
+# TODO this is also set in VehicleDetector
+BBOX_SCORE_THRES = .7
+
 def processVideo(dataPoint: DataPoint,
                  vehicleDetector: VehicleDetector,
                  laneLineDetector: LaneLineDetector,
@@ -37,7 +40,7 @@ def processVideo(dataPoint: DataPoint,
     boxes = instances.pred_boxes
     scores = instances.scores
     #classes = instances.pred_classes
-    keepBoxes.append([list(map(int,b.tolist())) for b in boxes[scores > .7]])
+    keepBoxes.append([list(map(int,b.tolist())) for b in boxes[scores > BBOX_SCORE_THRES]])
 
     progressTracker.incrementNumFramesProcessed()
 
