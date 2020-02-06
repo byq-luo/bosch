@@ -38,8 +38,9 @@ class Video:
     def getFrameNumber(self):
         return int(self.vid.get(cv2.CAP_PROP_POS_FRAMES))
 
-    def setFrameNumber(self, frame):
-        self.vid.set(cv2.CAP_PROP_POS_FRAMES, frame)
+    def setFrameNumber(self, frameIndex):
+        assert(frameIndex < self.numFrames)
+        self.vid.set(cv2.CAP_PROP_POS_FRAMES, frameIndex)
 
     def getVideoLength(self):
         return self.numFrames / self.fps

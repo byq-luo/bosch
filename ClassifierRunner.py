@@ -65,7 +65,7 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool)
 # TODO test if detectron uses multithreading when model is CPU. It should because it uses PyTorch.
 
 # executed in the other python process
-def loadLibs(progressTracker):
+def _loadLibs(progressTracker):
   from VehicleDetector import VehicleDetector
   from LaneLineDetector import LaneLineDetector
   globals()['vehicleDetector'] = VehicleDetector()
@@ -79,7 +79,7 @@ class ClassifierRunner:
     self.progressTracker = _ProgressTracker()
 
     # only run one video at a time
-    self.pool = ProcessPoolExecutor(max_workers=1, initializer=loadLibs, initargs=(self.progressTracker,))
+    self.pool = ProcessPoolExecutor(max_workers=1, initializer=_loadLibs, initargs=(self.progressTracker,))
 
   def processVideos(self, dataPoints, processingCompleteCallback, processingProgressCallback):
     from threading import Thread

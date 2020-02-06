@@ -32,7 +32,7 @@ def processVideo(dataPoint: DataPoint,
     # simulate doing some work
     frameIndex += 1
     if frameIndex % 75 == 0:
-      labels += [dummyLabels[frameIndex//75-1]]
+      labels += [(dummyLabels[frameIndex//75-1], frameIndex)]
 
     # See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
     output = vehicleDetector.getFeaturesForFrame(frame)
@@ -46,7 +46,6 @@ def processVideo(dataPoint: DataPoint,
 
   # return dummy data
   dataPoint.predictedLabels = labels
-  dataPoint.laneLines = [(10,20,30,40),(50,60,70,80),(100,200,300,200)]
   dataPoint.boundingBoxes = keepBoxes
 
   return dataPoint

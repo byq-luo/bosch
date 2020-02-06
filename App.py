@@ -32,6 +32,7 @@ class MainWindow(QMainWindow):
     self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
     self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
     self.ui.fileListWidget.currentItemChanged.connect(self.videoInListClicked)
+    self.ui.labelListWidget.currentItemChanged.connect(self.labelInListClicked)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
 
@@ -43,18 +44,30 @@ class MainWindow(QMainWindow):
     # just a thin wrapper around a storage device
     self.storage = Storage()
 
+  def labelInListClicked(self, item: QListWidgetItem, previousItem):
+    if item is None:
+      return
+    frameIndex = item.data(Qt.UserRole)
+    self.ui.videoWidget.seekToFrame(frameIndex)
+
   def setLabelList(self, dataPoint):
     self.ui.labelListWidget.clear()
-    for label in dataPoint.predictedLabels:
-      self.ui.labelListWidget.addItem(QListWidgetItem(label))
+    for label,frameIndex in dataPoint.predictedLabels:
+      item = QListWidgetItem(label)
+      item.setData(Qt.UserRole, frameIndex)
+      self.ui.labelListWidget.addItem(item)
 
   def videoInListClicked(self, item: QListWidgetItem, previousItem):
+    if item is None:
+      return
     videoPath = item.data(Qt.UserRole)
     self.setCurrentVideo(self.dataPoints[videoPath])
 
-  def setCurrentVideo(self, dataPoint):
+  def setCurrentVideo(self, dataPoint, play=True):
     self.setLabelList(dataPoint)
     self.ui.videoWidget.setVideo(dataPoint)
+    if play:
+      self.ui.videoWidget.play()
 
   def addToVideoList(self, dataPoint):
     listItem = QListWidgetItem(dataPoint.videoName)
@@ -132,7 +145,7 @@ class MainWindow(QMainWindow):
       return
     currentVideoPath = currentListItem.data(Qt.UserRole)
     if currentVideoPath == dataPoint.videoPath:
-      self.setCurrentVideo(dataPoint)
+      self.setCurrentVideo(dataPoint, play=False)
 
 
 if __name__ == '__main__':

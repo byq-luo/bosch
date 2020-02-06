@@ -37,13 +37,17 @@ class VideoWidget(QWidget):
     self.timer.stop()
     self.timer.start(self.video.getFps())
 
+  def seekToFrame(self, frameIndex):
+    self.video.setFrameNumber(frameIndex)
+    self.didSeek = True
+    self.update()
+
   def seekToPercent(self, percent):
     if self.video is None:
       return
     totalNumFrames = self.video.getTotalNumFrames()
-    self.video.setFrameNumber(int(percent / 100 * totalNumFrames))
-    self.didSeek = True
-    self.update()
+    frameIndex = int(percent / 100 * totalNumFrames)
+    self.seekToFrame(frameIndex)
 
   def setSlider(self, slider):
     self.slider = slider
@@ -55,7 +59,6 @@ class VideoWidget(QWidget):
   def setVideo(self, dataPoint):
     self.dataPoint = dataPoint
     self.video = Video(dataPoint.videoPath)
-    self.play()
     self.setFullTimeLabel()
 
   def setFullTimeLabel(self):
@@ -77,7 +80,7 @@ class VideoWidget(QWidget):
     currentPercent = int(100 * self.video.getFrameNumber() / self.video.getTotalNumFrames())
     self.slider.setValue(currentPercent)
 
-  def __drawImage(self, frame, qp):
+  def _drawImage(self, frame, qp):
     vidHeight, vidWidth, vidChannels = frame.shape
     bytesPerLine = vidChannels * vidWidth
 
@@ -117,9 +120,9 @@ class VideoWidget(QWidget):
         self.video.setFrameNumber(0)
       elif frameAvailable:
         self.previousFrame = frame
-        self.__drawImage(frame, qp)
+        self._drawImage(frame, qp)
     elif self.previousFrame is not None:
-      self.__drawImage(self.previousFrame, qp)
+      self._drawImage(self.previousFrame, qp)
 
     qp.end()
 

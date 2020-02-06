@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1145</width>
-    <height>613</height>
+    <width>1032</width>
+    <height>576</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -42,7 +42,7 @@
        <enum>Qt::Horizontal</enum>
       </property>
       <property name="sizeType">
-       <enum>QSizePolicy::Minimum</enum>
+       <enum>QSizePolicy::Preferred</enum>
       </property>
       <property name="sizeHint" stdset="0">
        <size>
@@ -213,7 +213,7 @@
        <enum>Qt::Horizontal</enum>
       </property>
       <property name="sizeType">
-       <enum>QSizePolicy::Minimum</enum>
+       <enum>QSizePolicy::Preferred</enum>
       </property>
       <property name="sizeHint" stdset="0">
        <size>
@@ -274,6 +274,8 @@
    <addaction name="processOneFileAction"/>
    <addaction name="separator"/>
    <addaction name="processMultipleFilesAction"/>
+   <addaction name="separator"/>
+   <addaction name="actionProcessVideos"/>
   </widget>
   <action name="processOneFileAction">
    <property name="icon">
@@ -299,14 +301,9 @@
     <string>Recursively Process Videos From Folder</string>
    </property>
   </action>
-  <action name="playAction">
+  <action name="actionProcessVideos">
    <property name="text">
-    <string>Play</string>
-   </property>
-  </action>
-  <action name="pauseAction">
-   <property name="text">
-    <string>Pause</string>
+    <string>Process Videos</string>
    </property>
   </action>
  </widget>
