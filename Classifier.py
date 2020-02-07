@@ -11,6 +11,7 @@ def processVideo(dataPoint: DataPoint,
                  laneLineDetector: LaneLineDetector,
                  progressTracker):
   video = Video(dataPoint.videoPath)
+  totalNumFrames = video.getTotalNumFrames()
 
   labels = []
 
@@ -42,6 +43,7 @@ def processVideo(dataPoint: DataPoint,
     #classes = instances.pred_classes
     keepBoxes.append([list(map(int,b.tolist())) for b in boxes[scores > BBOX_SCORE_THRES]])
 
+    progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
 
   # return dummy data

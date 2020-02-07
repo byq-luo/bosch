@@ -1,0 +1,37 @@
+  def get_qimage(self, image: numpy.ndarray):
+    assert (numpy.max(image) <= 255)
+    image8 = image.astype(numpy.uint8, order='C', casting='unsafe')
+    height, width, colors = image8.shape
+    bytesPerLine = 3 * width
+    image = QImage(image8.data, width, height, bytesPerLine,
+                       QImage.Format_RGB888)
+    image = image.rgbSwapped()
+    return image
+
+
+
+
+
+    # uncomment this code to draw vehicles and lane lines
+    size = (int(self.video.vid.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            int(self.video.vid.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+    kernel = 5
+    canny = lane.do_canny(frame, kernel)
+    polygon = lane.do_polygon(canny, size[0], size[1])
+    hough = cv2.HoughLinesP(polygon, 1, numpy.pi / 180, 50, minLineLength=70, maxLineGap=10)
+    # for line in hough:
+    # x1, y1, x2, y2 = line[0]
+    # cv2.line(frames, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    # cv2.imshow("polygon", frames)
+    lines = lane.calculate_lines(frame, hough)
+    lines_visualize = lane.visualize_lines(frame, lines)
+    output = cv2.addWeighted(frame, 0.6, lines_visualize, 1, 0.1)
+    image = PIL.Image.fromarray(output)
+    im = numpy.array(image)
+    im = im[:, :, ::-1].copy()
+    outputs = self.predictor(im)
+    # We can use `Visualizer` to draw the predictions on the image.
+    v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
+    v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+    image = v.get_image()[:, :, ::-1]
+    image = self.get_qimage(image)

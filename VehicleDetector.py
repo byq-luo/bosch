@@ -5,6 +5,8 @@ from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog
 
+# TODO create mock VehicleDetector that loads precomputed data from disk so that testing in VM is quick
+
 class VehicleDetector:
   def __init__(self):
     cfg = get_cfg()
@@ -46,7 +48,6 @@ class VehicleDetector:
     self.predictor = DefaultPredictor(cfg)
 
   def getFeaturesForFrame(self, frame):
-
     # This code will draw things to the image. It will draw 'everything' detectron2
     # detects, not just vehicles.
 

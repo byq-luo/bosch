@@ -2,6 +2,8 @@ from Storage import Storage
 import pickle
 import os
 
+import random
+
 # This class is a relationship between a video and its data
 class DataPoint:
   def __init__(self, videoPath: str, storage: Storage):
@@ -12,6 +14,7 @@ class DataPoint:
     self.groundTruthLabels = []
     self.boundingBoxes = []
     self.laneLines = []
+    self.aggregatePredConfidence = 0
 
     folder, nameExtension = os.path.split(videoPath)
     name, extension = os.path.splitext(nameExtension)
@@ -37,6 +40,8 @@ class DataPoint:
     except:
       pass
 
+    # TODO
+    self.aggregatePredConfidence = random.random()
 
     # ...
     pass
