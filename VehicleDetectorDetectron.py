@@ -5,9 +5,9 @@ from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog
 
-# TODO create mock VehicleDetector that loads precomputed data from disk so that testing in VM is quick
+BBOX_SCORE_THRESH = .7
 
-class VehicleDetector:
+class VehicleDetectorDetectron:
   def __init__(self):
     cfg = get_cfg()
 
@@ -47,22 +47,16 @@ class VehicleDetector:
     #cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5 # set threshold for this model
     self.predictor = DefaultPredictor(cfg)
 
-  def getFeatures(self, frame):
-    # This code will draw things to the image. It will draw 'everything' detectron2
-    # detects, not just vehicles.
-
-    # from detectron2.utils.visualizer import Visualizer
-    # v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
-    # v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-
+  # Returns torch.tensor of bounding boxes for frame
+  def getBoxes(self, frame):
+    vehicleFeatures = self.predictor(frame)
     # See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
-    # for output format description
+    instances = vehicleFeatures['instances']
+    boxes = instances.pred_boxes
+    scores = instances.scores
+    #classes = instances.pred_classes
+    keepBoxes = boxes[scores > BBOX_SCORE_THRESH]
 
-    # print(outputs['sem_seg'].to('cpu'))
-    # x = outputs['instances'].to('cpu')
-    # print(x)
-    # print(x.pred_boxes)
-    # print(x.scores)
-    # print(x.pred_classes)
-    # print(x.pred_masks)
-    return self.predictor(frame)
+    # Should rename function if we decide to also return segmentations
+
+    return keepBoxes

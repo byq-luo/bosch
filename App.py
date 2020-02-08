@@ -81,7 +81,6 @@ class MainWindow(QMainWindow):
     self.ui.fileTableWidget.setItem(rowIndex, 1, nameItem)
     # self.ui.fileTableWidget.resizeColumnsToContents()
 
-
   def openFileNameDialog(self):
     options = QFileDialog.Options()
     options |= QFileDialog.DontUseNativeDialog
@@ -148,13 +147,12 @@ class MainWindow(QMainWindow):
     self.dataPoints[dataPoint.videoPath] = dataPoint
 
     self.dummyKPI(dataPoint)
-
+    
     currentItem = self.ui.fileTableWidget.currentItem()
-    if currentItem is None:
-      return
-    currentVideoPath = currentItem.data(Qt.UserRole)
-    if currentVideoPath == dataPoint.videoPath:
-      self.setCurrentVideo(dataPoint, play=False)
+    if currentItem is not None:
+      currentVideoPath = currentItem.data(Qt.UserRole)
+      if currentVideoPath == dataPoint.videoPath:
+        self.setCurrentVideo(dataPoint, play=False)
 
 
 if __name__ == '__main__':

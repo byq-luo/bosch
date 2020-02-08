@@ -55,9 +55,9 @@ class _ProgressTracker(object):
 
 # executed in the other python process
 def _loadLibs(progressTracker):
-  from VehicleDetector import VehicleDetector
+  from VehicleDetectorYolo import VehicleDetectorYolo
   from LaneLineDetector import LaneLineDetector
-  globals()['vehicleDetector'] = VehicleDetector()
+  globals()['vehicleDetector'] = VehicleDetectorYolo()
   globals()['laneLineDetector'] = LaneLineDetector()
   globals()['progressTracker'] = progressTracker
 

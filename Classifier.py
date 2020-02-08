@@ -3,25 +3,16 @@ from VehicleDetector import VehicleDetector
 from LaneLineDetector import LaneLineDetector
 from Video import Video
 
-# TODO this is also set in VehicleDetector
-BBOX_SCORE_THRESH = .7
-
 # Take what we want from the features
-def _featuresToDataPoint(dp, vehicleFeatures, laneFeatures):
-  # See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
-  instances = vehicleFeatures['instances']
-  boxes = instances.pred_boxes
-  scores = instances.scores
-  #classes = instances.pred_classes
-  goodBoxes = boxes[scores > BBOX_SCORE_THRESH]
-  boxes = []
-  for boxTensor in goodBoxes:
+def _featuresToDataPoint(dp, boxesTensor, laneLinesNumpy):
+  boxesList = []
+  for boxTensor in boxesTensor:
     box = boxTensor.tolist()
-    boxes.append(list(map(int,box)))
-  dp.boundingBoxes.append(boxes)
+    boxesList.append(list(map(int,box)))
+  dp.boundingBoxes.append(boxesList)
 
   lanes = []
-  for lane in laneFeatures:
+  for lane in laneLinesNumpy:
     lanes.append(list(map(int, lane)))
   dp.laneLines.append(lanes)
 
@@ -54,10 +45,10 @@ def processVideo(dp: DataPoint,
     if frameIndex % 30 == 0:
       dp.predictedLabels.append((dummyLabels[(frameIndex//30-1)%len(dummyLabels)], frameIndex))
 
-    vehicleFeatures = vehicleDetector.getFeatures(frame)
-    laneFeatures = laneLineDetector.getLines(frame)
+    vehicleBoxes = vehicleDetector.getBoxes(frame)
+    laneLines = laneLineDetector.getLines(frame)
 
-    _featuresToDataPoint(dp, vehicleFeatures, laneFeatures)
+    _featuresToDataPoint(dp, vehicleBoxes, laneLines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
 
