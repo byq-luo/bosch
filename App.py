@@ -2,14 +2,13 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetI
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
-import os
+import os, time
 
 from ClassifierRunner import ClassifierRunner
 from DataPoint import DataPoint
 from Storage import Storage
 
 # TODO TODO background workers do not stop if GUI is closed while processing
-# TODO show parent folder of video in video list since some vids have same name?
 
 DONT_PROCESS_VIDS = False
 
@@ -107,6 +106,7 @@ class MainWindow(QMainWindow):
         self.addToVideoList(dataPoint)
       if DONT_PROCESS_VIDS:
           return
+      self.st = time.time()
       self.classifier.processVideos(
         list(self.dataPoints.values()),
         self.processingCompleteCallback,
@@ -145,6 +145,8 @@ class MainWindow(QMainWindow):
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
     self.dataPoints[dataPoint.videoPath] = dataPoint
+
+    print(time.time() - self.st)
 
     self.dummyKPI(dataPoint)
     

@@ -8,17 +8,23 @@ from torch.utils.data import DataLoader
 from torchvision import datasets
 from torch.autograd import Variable
 
+import cv2
+import numpy as np
+
 from Video import Video
+
+MODEL_CFG_PATH = 'yolo/cfg/yolov3-spp.cfg'
+MODEL_WEIGHTS_PATH = 'yolo/weights/ultralytics68.pt'
 
 class VehicleDetectorYolo:
     def __init__(self):
-        self.model_def="yolo/config/yolov3.cfg"
-        self.weights_path="yolo/weights/yolov3.weights"
-        self.conf_thres=0.8
-        self.nms_thres=0.4
+        self.model_def = MODEL_CFG_PATH
+        self.weights = MODEL_WEIGHTS_PATH
+        self.conf_thres=0.5
+        self.iou_thres=0.5
         self.batch_size=1
-        self.n_cpu=0
-        self.img_size=416
+        self.img_size=608
+        self.half = False
 
         self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
@@ -26,29 +32,45 @@ class VehicleDetectorYolo:
 
         # Set up model
         self.model = Darknet(self.model_def, img_size=self.img_size).to(self.device)
-        self.model.load_darknet_weights(self.weights_path)
-        self.model.eval()  # Set in evaluation mode
+
+        if self.weights.endswith('.pt'):  # pytorch format
+            self.model.load_state_dict(torch.load(self.weights, map_location=self.device)['model'])
+        else:  # darknet format
+            load_darknet_weights(self.model, self.weights)
+
+        self.model.to(self.device).eval()
+
+        # Half precision
+        self.half = self.half and self.device.type != 'cpu'  # half precision only supported on CUDA
+        if self.half:
+            self.model.half()
 
     def getBoxes(self, frame):
+        # Padded resize
+        img = letterbox(frame, new_shape=self.img_size)[0]
+        img = img.transpose(2, 0, 1)  # BGR to RGB, to 3x608x608
+        img = np.ascontiguousarray(img, dtype=np.float16 if self.half else np.float32)  # uint8 to fp16/fp32
+        img /= 255.0  # 0 - 255 to 0.0 - 1.0
+
         # Extract image as PyTorch tensor
-        img = transforms.ToTensor()(frame)
-        # Pad to square resolution
-        img, _ = pad_to_square(img, 0)
-        # Resize
-        img = resize(img, self.img_size)
+        img = torch.from_numpy(img).to(self.device)
 
-        # Configure input
+        # add empty dim to form batch of size 1?
         img = img.unsqueeze_(0)
-        input_imgs = Variable(img.to(self.device))
 
-        # Get detections
         with torch.no_grad():
-            detections = self.model(input_imgs)
-            detections = non_max_suppression(detections, self.conf_thres, self.nms_thres)
+            detections = self.model(img)[0]
+            if self.half:
+                detections = detections.float()
+            detections = non_max_suppression(detections, self.conf_thres, self.iou_thres)
 
-        if detections is not None:
-          detections = rescale_boxes(detections[0], self.img_size, frame.shape[:2])
+        if detections is not None and detections[0] is not None:
+          detections = detections[0]
+          # Rescale boxes from img_size to im0 size
+          detections[:, :4] = scale_coords(img.shape[2:], detections[:, :4], frame.shape[:2]).round()
+
           #unique_labels = detections[:, -1].cpu().unique()
           #n_cls_preds = len(unique_labels)
+
           return detections[:,:4]
         return torch.tensor([[0,0,0,0]])
