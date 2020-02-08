@@ -1,6 +1,4 @@
 from DataPoint import DataPoint
-from VehicleDetector import VehicleDetector
-from LaneLineDetector import LaneLineDetector
 from Video import Video
 
 # Take what we want from the features
@@ -17,8 +15,8 @@ def _featuresToDataPoint(dp, boxesTensor, laneLinesNumpy):
   dp.laneLines.append(lanes)
 
 def processVideo(dp: DataPoint,
-                 vehicleDetector: VehicleDetector,
-                 laneLineDetector: LaneLineDetector,
+                 vehicleDetector,
+                 laneLineDetector,
                  progressTracker):
   video = Video(dp.videoPath)
   totalNumFrames = video.getTotalNumFrames()

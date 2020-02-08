@@ -3,8 +3,6 @@ from yolo.models import *
 from yolo.utils.utils import *
 from yolo.utils.datasets import *
 
-import argparse
-
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets
@@ -14,7 +12,6 @@ from Video import Video
 
 class VehicleDetectorYolo:
     def __init__(self):
-        parser = argparse.ArgumentParser()
         self.model_def="yolo/config/yolov3.cfg"
         self.weights_path="yolo/weights/yolov3.weights"
         self.conf_thres=0.8
@@ -51,7 +48,7 @@ class VehicleDetectorYolo:
 
         if detections is not None:
           detections = rescale_boxes(detections[0], self.img_size, frame.shape[:2])
-          unique_labels = detections[:, -1].cpu().unique()
-          n_cls_preds = len(unique_labels)
+          #unique_labels = detections[:, -1].cpu().unique()
+          #n_cls_preds = len(unique_labels)
           return detections[:,:4]
         return torch.tensor([[0,0,0,0]])
