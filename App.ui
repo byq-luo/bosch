@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1032</width>
-    <height>576</height>
+    <width>1345</width>
+    <height>683</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,7 +21,7 @@
        <widget class="QTableWidget" name="fileTableWidget">
         <property name="maximumSize">
          <size>
-          <width>375</width>
+          <width>425</width>
           <height>16777215</height>
          </size>
         </property>
@@ -53,7 +53,7 @@
          <bool>false</bool>
         </attribute>
         <attribute name="horizontalHeaderStretchLastSection">
-         <bool>false</bool>
+         <bool>true</bool>
         </attribute>
         <attribute name="verticalHeaderVisible">
          <bool>false</bool>
@@ -289,6 +289,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="boundingBoxCheckbox">
+        <property name="text">
+         <string>Show Bounding Box</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QCheckBox" name="showLabelsCheckbox">
         <property name="text">
          <string>Show Current Label</string>
@@ -296,9 +303,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="boundingBoxCheckbox">
+       <widget class="QCheckBox" name="showLaneLinesCheckbox">
         <property name="text">
-         <string>Show Bounding Box</string>
+         <string>Show Lane Lines</string>
         </property>
        </widget>
       </item>

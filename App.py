@@ -31,11 +31,11 @@ class MainWindow(QMainWindow):
     self.ui.videoWidget.setTimeLabels(self.ui.currentVideoTime, self.ui.fullVideoTime)
     self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
     self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
+    self.ui.showLaneLinesCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLaneLines)
     self.ui.fileTableWidget.cellClicked.connect(self.videoInListClicked)
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
-    self.ui.fileTableWidget.setColumnWidth(1, 325)
 
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
     nameItem.setData(Qt.UserRole, dataPoint.videoPath)
     self.ui.fileTableWidget.setItem(rowIndex, 0, QTableWidgetItem(msg))
     self.ui.fileTableWidget.setItem(rowIndex, 1, nameItem)
-    self.ui.fileTableWidget.resizeColumnsToContents()
+    # self.ui.fileTableWidget.resizeColumnsToContents()
 
 
   def openFileNameDialog(self):
@@ -90,7 +90,7 @@ class MainWindow(QMainWindow):
                                               options=options)
     if fileName:
       dataPoint = DataPoint(fileName, self.storage)
-      self.dataPoints[fileName] = dataPoint
+      self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
 
   def openFolderNameDialog(self):
@@ -109,7 +109,7 @@ class MainWindow(QMainWindow):
       if DONT_PROCESS_VIDS:
           return
       self.classifier.processVideos(
-        self.dataPoints.values(),
+        list(self.dataPoints.values()),
         self.processingCompleteCallback,
         self.processingProgressCallback)
 

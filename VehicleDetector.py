@@ -47,7 +47,7 @@ class VehicleDetector:
     #cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5 # set threshold for this model
     self.predictor = DefaultPredictor(cfg)
 
-  def getFeaturesForFrame(self, frame):
+  def getFeatures(self, frame):
     # This code will draw things to the image. It will draw 'everything' detectron2
     # detects, not just vehicles.
 
