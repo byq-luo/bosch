@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1032</width>
-    <height>576</height>
+    <width>1345</width>
+    <height>683</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Label Generator</string>
+   <string>Dataset Annotator</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -21,7 +21,7 @@
        <widget class="QTableWidget" name="fileTableWidget">
         <property name="maximumSize">
          <size>
-          <width>375</width>
+          <width>450</width>
           <height>16777215</height>
          </size>
         </property>
@@ -53,7 +53,7 @@
          <bool>false</bool>
         </attribute>
         <attribute name="horizontalHeaderStretchLastSection">
-         <bool>false</bool>
+         <bool>true</bool>
         </attribute>
         <attribute name="verticalHeaderVisible">
          <bool>false</bool>
@@ -289,6 +289,31 @@
        </widget>
       </item>
       <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <item>
+         <widget class="QPushButton" name="pushButton">
+          <property name="text">
+           <string>Insert</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_2">
+          <property name="text">
+           <string>Delete</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="boundingBoxCheckbox">
+        <property name="text">
+         <string>Show Bounding Box</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QCheckBox" name="showLabelsCheckbox">
         <property name="text">
          <string>Show Current Label</string>
@@ -296,9 +321,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="boundingBoxCheckbox">
+       <widget class="QCheckBox" name="showLaneLinesCheckbox">
         <property name="text">
-         <string>Show Bounding Box</string>
+         <string>Show Lane Lines</string>
         </property>
        </widget>
       </item>
@@ -317,31 +342,13 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="processOneFileAction"/>
-   <addaction name="separator"/>
    <addaction name="processMultipleFilesAction"/>
    <addaction name="separator"/>
    <addaction name="actionProcessVideos"/>
   </widget>
-  <action name="processOneFileAction">
-   <property name="icon">
-    <iconset>
-     <normaloff>icons/file.png</normaloff>icons/file.png</iconset>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="toolTip">
-    <string>Process One Video File</string>
-   </property>
-  </action>
   <action name="processMultipleFilesAction">
-   <property name="icon">
-    <iconset>
-     <normaloff>icons/folder.png</normaloff>icons/folder.png</iconset>
-   </property>
    <property name="text">
-    <string/>
+    <string>Open Folder</string>
    </property>
    <property name="toolTip">
     <string>Recursively Process Videos From Folder</string>
@@ -350,6 +357,16 @@
   <action name="actionProcessVideos">
    <property name="text">
     <string>Process Videos</string>
+   </property>
+  </action>
+  <action name="actionOptions">
+   <property name="text">
+    <string>Options</string>
+   </property>
+  </action>
+  <action name="actionInfo">
+   <property name="text">
+    <string>Info</string>
    </property>
   </action>
  </widget>

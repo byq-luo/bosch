@@ -41,7 +41,8 @@ class DataPoint:
       pass
 
     # TODO
-    self.aggregatePredConfidence = random.random()
+    if random.random() < .75:
+      self.aggregatePredConfidence = random.random()
 
     # ...
     pass

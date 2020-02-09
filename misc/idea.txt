@@ -1,0 +1,3 @@
+keep two lists of vids: processed/not processed
+
+have process button that processes all unprocessed videos

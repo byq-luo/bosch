@@ -10,12 +10,9 @@ http://developer.download.nvidia.com/compute/cuda/10.1/Prod/network_installers/c
 
 ![](image.png)
 
-Now create a new conda environment
+Create a new conda environment
 
     $ conda create --name pytorch
-
-Then activate the environment
-
     $ conda activate pytorch
 
 Install python 3.7

@@ -1,17 +1,23 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem, QTableWidgetItem, QHeaderView
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem, QTableWidgetItem, QDialog
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
-import os
+from dialog_ui import Ui_Dialog
+import os, time
 
-from ClassifierRunner import ClassifierRunner
-from DataPoint import DataPoint
-from Storage import Storage
+TESTING = False # Controls whether to use mock objects or not
+DONT_PROCESS_VIDS = False
+
+if TESTING:
+  from mock.ClassifierRunner import ClassifierRunner
+  from mock.DataPoint import DataPoint
+  from mock.Storage import Storage
+else:
+  from ClassifierRunner import ClassifierRunner
+  from DataPoint import DataPoint
+  from Storage import Storage
 
 # TODO TODO background workers do not stop if GUI is closed while processing
-# TODO show parent folder of video in video list since some vids have same name?
-
-DONT_PROCESS_VIDS = False
 
 class MainWindow(QMainWindow):
   processingProgressSignal = QtCore.pyqtSignal(float, float, DataPoint)
@@ -25,17 +31,21 @@ class MainWindow(QMainWindow):
     self.ui.playButton.clicked.connect(self.ui.videoWidget.play)
     self.ui.pauseButton.clicked.connect(self.ui.videoWidget.pause)
     self.ui.horizontalSlider.sliderMoved.connect(self.ui.videoWidget.seekToPercent)
-    self.ui.processOneFileAction.triggered.connect(self.openFileNameDialog)
+    # self.ui.processOneFileAction.triggered.connect(self.openFileNameDialog)
     self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
     self.ui.videoWidget.setSlider(self.ui.horizontalSlider)
     self.ui.videoWidget.setTimeLabels(self.ui.currentVideoTime, self.ui.fullVideoTime)
     self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
     self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
+    self.ui.showLaneLinesCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLaneLines)
     self.ui.fileTableWidget.cellClicked.connect(self.videoInListClicked)
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
-    self.ui.fileTableWidget.setColumnWidth(1, 325)
+
+    #import torch
+    #if torch.cuda.is_available():
+    #  torch.cuda.get_device_name(torch.device('cuda'))
 
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
@@ -44,6 +54,14 @@ class MainWindow(QMainWindow):
 
     # just a thin wrapper around a storage device
     self.storage = Storage()
+
+    #self.dialog = QDialog()
+    #ui = Ui_Dialog()
+    #ui.setupUi(self.dialog)
+    #self.ui.actionInfo.triggered.connect(self.showInfoDialog)
+
+  #def showInfoDialog(self):
+  #  self.dialog.show()
 
   def labelInListClicked(self, row, column):
     frameIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
@@ -75,12 +93,12 @@ class MainWindow(QMainWindow):
     msg = ' ?'
     if dataPoint.aggregatePredConfidence != 0:
       msg = ' {:2.2f}'.format(dataPoint.aggregatePredConfidence)
-    nameItem = QTableWidgetItem(dataPoint.videoName)
-    nameItem.setData(Qt.UserRole, dataPoint.videoPath)
-    self.ui.fileTableWidget.setItem(rowIndex, 0, QTableWidgetItem(msg))
-    self.ui.fileTableWidget.setItem(rowIndex, 1, nameItem)
-    self.ui.fileTableWidget.resizeColumnsToContents()
-
+    name = QTableWidgetItem(dataPoint.videoName)
+    name.setData(Qt.UserRole, dataPoint.videoPath)
+    score = QTableWidgetItem(msg)
+    score.setData(Qt.UserRole, dataPoint.videoPath)
+    self.ui.fileTableWidget.setItem(rowIndex, 0, score)
+    self.ui.fileTableWidget.setItem(rowIndex, 1, name)
 
   def openFileNameDialog(self):
     options = QFileDialog.Options()
@@ -90,7 +108,7 @@ class MainWindow(QMainWindow):
                                               options=options)
     if fileName:
       dataPoint = DataPoint(fileName, self.storage)
-      self.dataPoints[fileName] = dataPoint
+      self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
 
   def openFolderNameDialog(self):
@@ -108,12 +126,14 @@ class MainWindow(QMainWindow):
         self.addToVideoList(dataPoint)
       if DONT_PROCESS_VIDS:
           return
+      self.st = time.time()
       self.classifier.processVideos(
-        self.dataPoints.values(),
+        list(self.dataPoints.values()),
         self.processingCompleteCallback,
         self.processingProgressCallback)
 
   def dummyKPI(self, dataPoint):
+    return
     # TODO the KPI computation should not be in the GUI code here
     # TODO just to get KPIs lets compare against groundtruth here
     print()
@@ -147,14 +167,15 @@ class MainWindow(QMainWindow):
     # dataPoint are different python objects.
     self.dataPoints[dataPoint.videoPath] = dataPoint
 
-    self.dummyKPI(dataPoint)
+    print(time.time() - self.st)
 
+    self.dummyKPI(dataPoint)
+    
     currentItem = self.ui.fileTableWidget.currentItem()
-    if currentItem is None:
-      return
-    currentVideoPath = currentItem.data(Qt.UserRole)
-    if currentVideoPath == dataPoint.videoPath:
-      self.setCurrentVideo(dataPoint, play=False)
+    if currentItem is not None:
+      currentVideoPath = currentItem.data(Qt.UserRole)
+      if currentVideoPath == dataPoint.videoPath:
+        self.setCurrentVideo(dataPoint, play=False)
 
 
 if __name__ == '__main__':

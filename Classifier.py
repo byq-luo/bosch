@@ -1,53 +1,55 @@
 from DataPoint import DataPoint
-from VehicleDetector import VehicleDetector
-from LaneLineDetector import LaneLineDetector
 from Video import Video
 
-# TODO this is also set in VehicleDetector
-BBOX_SCORE_THRES = .7
+import torch
 
-def processVideo(dataPoint: DataPoint,
-                 vehicleDetector: VehicleDetector,
-                 laneLineDetector: LaneLineDetector,
+# Take what we want from the features
+def _featuresToDataPoint(dp, boxesTensor, laneLinesNumpy):
+  boxesList = []
+  for boxTensor in boxesTensor:
+    box = boxTensor.tolist()
+    boxesList.append(list(map(int,box)))
+  dp.boundingBoxes.append(boxesList)
+
+  lanes = []
+  for lane in laneLinesNumpy:
+    lanes.append(list(map(int, lane)))
+  dp.laneLines.append(lanes)
+
+def processVideo(dp: DataPoint,
+                 vehicleDetector,
+                 laneLineDetector,
                  progressTracker):
-  video = Video(dataPoint.videoPath)
+  video = Video(dp.videoPath)
   totalNumFrames = video.getTotalNumFrames()
 
-  labels = []
-
   dummyLabels = [
+    'rightTO=XX,1',
+    'cutin,2',
+    'evtEnd,3',
     'rightTO=XX,4',
     'objTurnOff,5',
     'evtEnd,6',
     'rightTO=XX,7',
+    'cutout,8',
     'evtEnd,9']
-
-  keepBoxes = []
 
   frameIndex = 0
   while True:
-    isFrameAvail, frame = video.getFrame()
+    isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
     if not isFrameAvail:
       break
 
     # simulate doing some work
     frameIndex += 1
-    if frameIndex % 75 == 0:
-      labels += [(dummyLabels[frameIndex//75-1], frameIndex)]
+    if frameIndex % 30 == 0:
+      dp.predictedLabels.append((dummyLabels[(frameIndex//30-1)%len(dummyLabels)], frameIndex))
 
-    # See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
-    output = vehicleDetector.getFeaturesForFrame(frame)
-    instances = output['instances']
-    boxes = instances.pred_boxes
-    scores = instances.scores
-    #classes = instances.pred_classes
-    keepBoxes.append([list(map(int,b.tolist())) for b in boxes[scores > BBOX_SCORE_THRES]])
+    vehicleBoxes = vehicleDetector.getBoxes(frame)
+    laneLines = laneLineDetector.getLines(frame)
 
+    _featuresToDataPoint(dp, vehicleBoxes, laneLines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
 
-  # return dummy data
-  dataPoint.predictedLabels = labels
-  dataPoint.boundingBoxes = keepBoxes
-
-  return dataPoint
+  return dp
