@@ -4,6 +4,7 @@ For that you'd need to follow the Linux or Windows intall guide.
 Using detectron in this project is not supported on MacOS.
 
 Run the following commands
+
     $ conda create --name pytorch
     $ conda activate pytorch
     $ conda install python=3.7
