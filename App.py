@@ -120,6 +120,7 @@ class MainWindow(QMainWindow):
         self.processingProgressCallback)
 
   def dummyKPI(self, dataPoint):
+    return
     # TODO the KPI computation should not be in the GUI code here
     # TODO just to get KPIs lets compare against groundtruth here
     print()
