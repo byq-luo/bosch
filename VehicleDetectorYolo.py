@@ -17,6 +17,7 @@ MODEL_CFG_PATH = 'yolo/cfg/yolov3-spp.cfg'
 MODEL_WEIGHTS_PATH = 'yolo/weights/ultralytics68.pt'
 
 class VehicleDetectorYolo:
+    wantsRGB = True
     def __init__(self):
         self.model_def = MODEL_CFG_PATH
         self.weights = MODEL_WEIGHTS_PATH
@@ -48,7 +49,7 @@ class VehicleDetectorYolo:
     def getBoxes(self, frame):
         # Padded resize
         img = letterbox(frame, new_shape=self.img_size)[0]
-        img = img.transpose(2, 0, 1)  # BGR to RGB, to 3x608x608
+        img = img.transpose(2, 0, 1)  # reshape to 3x608x608
         img = np.ascontiguousarray(img, dtype=np.float16 if self.half else np.float32)  # uint8 to fp16/fp32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
 

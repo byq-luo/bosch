@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Label Generator</string>
+   <string>Dataset Annotator</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -289,6 +289,24 @@
        </widget>
       </item>
       <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <item>
+         <widget class="QPushButton" name="pushButton">
+          <property name="text">
+           <string>Insert</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_2">
+          <property name="text">
+           <string>Delete</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <widget class="QCheckBox" name="boundingBoxCheckbox">
         <property name="text">
          <string>Show Bounding Box</string>
@@ -324,31 +342,13 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="processOneFileAction"/>
-   <addaction name="separator"/>
    <addaction name="processMultipleFilesAction"/>
    <addaction name="separator"/>
    <addaction name="actionProcessVideos"/>
   </widget>
-  <action name="processOneFileAction">
-   <property name="icon">
-    <iconset>
-     <normaloff>icons/file.png</normaloff>icons/file.png</iconset>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="toolTip">
-    <string>Process One Video File</string>
-   </property>
-  </action>
   <action name="processMultipleFilesAction">
-   <property name="icon">
-    <iconset>
-     <normaloff>icons/folder.png</normaloff>icons/folder.png</iconset>
-   </property>
    <property name="text">
-    <string/>
+    <string>Open Folder</string>
    </property>
    <property name="toolTip">
     <string>Recursively Process Videos From Folder</string>
@@ -357,6 +357,16 @@
   <action name="actionProcessVideos">
    <property name="text">
     <string>Process Videos</string>
+   </property>
+  </action>
+  <action name="actionOptions">
+   <property name="text">
+    <string>Options</string>
+   </property>
+  </action>
+  <action name="actionInfo">
+   <property name="text">
+    <string>Info</string>
    </property>
   </action>
  </widget>

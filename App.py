@@ -1,10 +1,11 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem, QTableWidgetItem, QHeaderView
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem, QTableWidgetItem, QDialog
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
+from dialog_ui import Ui_Dialog
 import os, time
 
-TESTING = True # Controls whether to use mock objects or not
+TESTING = False # Controls whether to use mock objects or not
 DONT_PROCESS_VIDS = False
 
 if TESTING:
@@ -30,7 +31,7 @@ class MainWindow(QMainWindow):
     self.ui.playButton.clicked.connect(self.ui.videoWidget.play)
     self.ui.pauseButton.clicked.connect(self.ui.videoWidget.pause)
     self.ui.horizontalSlider.sliderMoved.connect(self.ui.videoWidget.seekToPercent)
-    self.ui.processOneFileAction.triggered.connect(self.openFileNameDialog)
+    # self.ui.processOneFileAction.triggered.connect(self.openFileNameDialog)
     self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
     self.ui.videoWidget.setSlider(self.ui.horizontalSlider)
     self.ui.videoWidget.setTimeLabels(self.ui.currentVideoTime, self.ui.fullVideoTime)
@@ -42,6 +43,10 @@ class MainWindow(QMainWindow):
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
 
+    #import torch
+    #if torch.cuda.is_available():
+    #  torch.cuda.get_device_name(torch.device('cuda'))
+
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
 
@@ -49,6 +54,14 @@ class MainWindow(QMainWindow):
 
     # just a thin wrapper around a storage device
     self.storage = Storage()
+
+    #self.dialog = QDialog()
+    #ui = Ui_Dialog()
+    #ui.setupUi(self.dialog)
+    #self.ui.actionInfo.triggered.connect(self.showInfoDialog)
+
+  #def showInfoDialog(self):
+  #  self.dialog.show()
 
   def labelInListClicked(self, row, column):
     frameIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)

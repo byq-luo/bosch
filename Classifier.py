@@ -1,6 +1,8 @@
 from DataPoint import DataPoint
 from Video import Video
 
+import torch
+
 # Take what we want from the features
 def _featuresToDataPoint(dp, boxesTensor, laneLinesNumpy):
   boxesList = []
@@ -34,7 +36,7 @@ def processVideo(dp: DataPoint,
 
   frameIndex = 0
   while True:
-    isFrameAvail, frame = video.getFrame()
+    isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
     if not isFrameAvail:
       break
 
