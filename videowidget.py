@@ -94,14 +94,12 @@ class VideoWidget(QWidget):
 
     scaleHorizontal = widgetWidth / vidWidth
     scaleVertical = widgetHeight / vidHeight
-    ar = vidWidth / vidHeight
     if scaleHorizontal < scaleVertical:
       scaledWidth = int(vidWidth*scaleHorizontal)
       scaledHeight = int(vidHeight*scaleHorizontal)
     else:
       scaledWidth = int(vidWidth*scaleVertical)
       scaledHeight = int(vidHeight*scaleVertical)
-
 
     image = QImage(frame.data, vidWidth, vidHeight, bytesPerLine, QImage.Format_RGB888)
     image = image.scaled(scaledWidth, scaledHeight)
