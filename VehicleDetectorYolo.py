@@ -65,6 +65,7 @@ class VehicleDetectorYolo:
                 detections = detections.float()
             detections = non_max_suppression(detections, self.conf_thres, self.iou_thres)
 
+        segmentations = [] # YOLO does not give segmentations
         if detections is not None and detections[0] is not None:
           detections = detections[0]
           # Rescale boxes from img_size to im0 size
@@ -73,5 +74,5 @@ class VehicleDetectorYolo:
           #unique_labels = detections[:, -1].cpu().unique()
           #n_cls_preds = len(unique_labels)
 
-          return detections[:,:4]
-        return torch.tensor([[0,0,0,0]])
+          return detections[:,:4], segmentations
+        return torch.tensor([[0,0,0,0]]), segmentations

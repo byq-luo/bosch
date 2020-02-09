@@ -13,6 +13,7 @@ class DataPoint:
     self.predictedLabels = []
     self.groundTruthLabels = []
     self.boundingBoxes = []
+    self.segmentations = []
     self.laneLines = []
     self.aggregatePredConfidence = 0
 

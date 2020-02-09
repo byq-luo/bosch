@@ -7,7 +7,9 @@ class VideoOverlay:
     self.shouldDrawBoxes = False
     self.shouldDrawLabels = False
     self.shouldDrawLaneLines = False
+    self.shouldDrawSegmentations = False
 
+    self.segmentationsColor = (255, 0, 0)
     self.boundingBoxColor = (0,255,0)
     self.boundingBoxThickness = 2
     self.labelColor = (255,0,0)
@@ -20,6 +22,9 @@ class VideoOverlay:
 
   def setDrawLaneLines(self, shouldDrawLaneLines: bool):
     self.shouldDrawLaneLines = shouldDrawLaneLines
+
+  def setDrawSegmentations(self, shouldDrawSegmentations: bool):
+    self.shouldDrawSegmentations = shouldDrawSegmentations
 
   def processFrame(self, frame, frameIndex, dataPoint:DataPoint):
     if self.shouldDrawBoxes:
@@ -41,6 +46,11 @@ class VideoOverlay:
     #    1.0, # thickness
     #    self.labelColor,
     #    2)
+
+    if self.shouldDrawSegmentations:
+      if frameIndex < len(dataPoint.segmentations):
+        for boundary in dataPoint.segmentations[frameIndex]:
+          cv2.drawContours(frame, boundary, 0, self.segmentationsColor, 2)
 
     if self.shouldDrawLaneLines:
       if len(dataPoint.laneLines) <= frameIndex:

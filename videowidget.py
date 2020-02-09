@@ -71,7 +71,7 @@ class VideoWidget(QWidget):
     totalSeconds = self.video.getVideoLength()
     minutes = int(totalSeconds / 60)
     seconds = int(totalSeconds % 60)
-    timeString = str(minutes) + ":" + str(seconds)
+    timeString = '{}:{:02d}'.format(minutes, seconds)
     self.fullTimeLabel.setText(timeString)
 
   def updateTimeLabel(self):

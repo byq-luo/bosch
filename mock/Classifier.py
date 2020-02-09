@@ -1,5 +1,6 @@
 from mock.DataPoint import DataPoint
 from mock.Video import Video
+import pickle
 
 def processVideo(dp: DataPoint,
                  vehicleDetector,
@@ -10,6 +11,7 @@ def processVideo(dp: DataPoint,
 
   bboxes = []
   lines = []
+  segmentations = []
 
   frameIndex = 0
   while True:
@@ -17,20 +19,23 @@ def processVideo(dp: DataPoint,
     if not isFrameAvail:
       break
 
-    vehicleBoxes = vehicleDetector.getBoxes(frame)
-
+    vehicleBoxes, vehicleSegmentations = vehicleDetector.getBoxes(frame)
     laneLines = laneLineDetector.getLines(frame)
+
+    # DO LABEL GENERATION HERE
 
     bboxes.append(vehicleBoxes)
     lines.append(laneLines)
+    segmentations.append(vehicleSegmentations)
+
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
 
-  labelsFileName = 'mock/predictedLabels.txt'
-  with open(labelsFileName) as file:
+  with open('mock/predictedLabels.txt') as file:
     dp.predictedLabels = list(zip([ln.rstrip('\n') for ln in file.readlines()], range(1, 300, 10)))
-  
+
   dp.boundingBoxes = bboxes
   dp.laneLines = lines
+  dp.segmentations = segmentations
 
   return dp
