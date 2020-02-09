@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import QPoint, QTimer
+from PyQt5.QtCore import QPoint, QTimer, Qt
 from PyQt5.QtGui import QPainter, QImage
 from App import TESTING
 
@@ -102,7 +102,7 @@ class VideoWidget(QWidget):
       scaledHeight = int(vidHeight*scaleVertical)
 
     image = QImage(frame.data, vidWidth, vidHeight, bytesPerLine, QImage.Format_RGB888)
-    image = image.scaled(scaledWidth, scaledHeight)
+    image = image.scaled(scaledWidth, scaledHeight, transformMode=Qt.SmoothTransformation)
     putImageHere = QPoint(widgetWidth // 2 - scaledWidth // 2, widgetHeight // 2 - scaledHeight // 2)
     qp.drawImage(putImageHere, image)
 
