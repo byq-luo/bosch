@@ -4,13 +4,19 @@ import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
 import os, time
 
-from ClassifierRunner import ClassifierRunner
-from DataPoint import DataPoint
-from Storage import Storage
+TESTING = True # Controls whether to use mock objects or not
+DONT_PROCESS_VIDS = False
+
+if TESTING:
+  from mock.ClassifierRunner import ClassifierRunner
+  from mock.DataPoint import DataPoint
+  from mock.Storage import Storage
+else:
+  from ClassifierRunner import ClassifierRunner
+  from DataPoint import DataPoint
+  from Storage import Storage
 
 # TODO TODO background workers do not stop if GUI is closed while processing
-
-DONT_PROCESS_VIDS = False
 
 class MainWindow(QMainWindow):
   processingProgressSignal = QtCore.pyqtSignal(float, float, DataPoint)
@@ -74,11 +80,12 @@ class MainWindow(QMainWindow):
     msg = ' ?'
     if dataPoint.aggregatePredConfidence != 0:
       msg = ' {:2.2f}'.format(dataPoint.aggregatePredConfidence)
-    nameItem = QTableWidgetItem(dataPoint.videoName)
-    nameItem.setData(Qt.UserRole, dataPoint.videoPath)
-    self.ui.fileTableWidget.setItem(rowIndex, 0, QTableWidgetItem(msg))
-    self.ui.fileTableWidget.setItem(rowIndex, 1, nameItem)
-    # self.ui.fileTableWidget.resizeColumnsToContents()
+    name = QTableWidgetItem(dataPoint.videoName)
+    name.setData(Qt.UserRole, dataPoint.videoPath)
+    score = QTableWidgetItem(msg)
+    score.setData(Qt.UserRole, dataPoint.videoPath)
+    self.ui.fileTableWidget.setItem(rowIndex, 0, score)
+    self.ui.fileTableWidget.setItem(rowIndex, 1, name)
 
   def openFileNameDialog(self):
     options = QFileDialog.Options()
