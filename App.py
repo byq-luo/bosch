@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem, QTableWidgetItem, QDialog
+from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
@@ -42,6 +43,7 @@ class MainWindow(QMainWindow):
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
+    self.setWindowIcon(QIcon('icons/bosch.ico'))
 
     #import torch
     #if torch.cuda.is_available():
