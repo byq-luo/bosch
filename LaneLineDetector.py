@@ -61,9 +61,12 @@ class LaneLineDetector:
       x1, y1, x2, y2 = line[0]
 
       # Get slope and y interception of line
-      parameters = np.polyfit((x1, x2), (y1, y2), 1)
-      slope = parameters[0]
-      y_intercept = parameters[1]
+      if x1 == x2:
+        slope = float('inf')
+        y_intercept = 0.0
+      else:
+        slope = (y2 - y1) / (x2 - x1)
+        y_intercept = slope * (0-x1) + y1
 
       # Add good lines to array
       if abs(slope) > 0.5:

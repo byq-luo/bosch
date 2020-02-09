@@ -5,17 +5,17 @@ from App_ui import Ui_MainWindow
 from dialog_ui import Ui_Dialog
 import os, time
 
-TESTING = False # Controls whether to use mock objects or not
+TESTING = True # Controls whether to use mock objects or not
 DONT_PROCESS_VIDS = False
 
 if TESTING:
-  from mock.ClassifierRunner import ClassifierRunner
   from mock.DataPoint import DataPoint
   from mock.Storage import Storage
 else:
-  from ClassifierRunner import ClassifierRunner
   from DataPoint import DataPoint
   from Storage import Storage
+
+from ClassifierRunner import ClassifierRunner
 
 # TODO TODO background workers do not stop if GUI is closed while processing
 

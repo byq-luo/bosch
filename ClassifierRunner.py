@@ -1,9 +1,15 @@
 from multiprocessing import Value, Lock
 from concurrent.futures import ProcessPoolExecutor, wait, FIRST_COMPLETED
 
-from Classifier import processVideo
-from DataPoint import DataPoint
-from Video import Video
+from App import TESTING
+if TESTING:
+  from mock.Classifier import processVideo
+  from mock.DataPoint import DataPoint
+  from mock.Video import Video
+else:
+  from Classifier import processVideo
+  from DataPoint import DataPoint
+  from Video import Video
 import time
 
 # https://elsampsa.github.io/valkka-examples/_build/html/qt_notes.html#python-multiprocessing
@@ -54,16 +60,18 @@ class _ProgressTracker(object):
       self.hasAskedForProgress.value = False
 
 # executed in the other python process
-def _loadLibs(progressTracker):
-  # from VehicleDetectorDetectron import VehicleDetectorDetectron
-  # globals()['vehicleDetector'] = VehicleDetectorDetectron()
+def _loadLibs(progressTracker, TESTING):
+  if TESTING:
+    # from VehicleDetectorDetectron import VehicleDetectorDetectron
+    from mock.VehicleDetector import VehicleDetector
+    from mock.LaneLineDetector import LaneLineDetector
+  else:
+    # from VehicleDetectorDetectron import VehicleDetectorDetectron
+    from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
+    from LaneLineDetector import LaneLineDetector
 
-  from VehicleDetectorYolo import VehicleDetectorYolo
-  globals()['vehicleDetector'] = VehicleDetectorYolo()
-
-  from LaneLineDetector import LaneLineDetector
+  globals()['vehicleDetector'] = VehicleDetector()
   globals()['laneLineDetector'] = LaneLineDetector()
-
   globals()['progressTracker'] = progressTracker
 
 def _processVideo(dataPoint: DataPoint):
@@ -91,7 +99,7 @@ class ClassifierRunner:
     self.progressTracker = _ProgressTracker()
 
     # only run one video at a time
-    self.pool = ProcessPoolExecutor(max_workers=1, initializer=_loadLibs, initargs=(self.progressTracker,))
+    self.pool = ProcessPoolExecutor(max_workers=1, initializer=_loadLibs, initargs=(self.progressTracker, TESTING))
 
   def processVideos(self, dataPoints, processingCompleteCallback, processingProgressCallback):
     from threading import Thread
