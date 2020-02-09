@@ -78,28 +78,30 @@ class VideoWidget(QWidget):
     totalSeconds = self.video.getCurrentTime()
     minutes = int(totalSeconds / 60)
     seconds = int(totalSeconds % 60)
-    format(seconds, '.2f')
-    timeString = str(minutes) + ":" + str(seconds)
+    timeString = '{}:{:02d}'.format(minutes, seconds)
     self.currentTimeLabel.setText(timeString)
 
   def updateSliderValue(self):
     currentPercent = int(100 * self.video.getFrameNumber() / self.video.getTotalNumFrames())
     self.slider.setValue(currentPercent)
 
-  def _drawImage(self, frame, qp):
+  def _drawImage(self, frame, qp:QPainter):
     vidHeight, vidWidth, vidChannels = frame.shape
     bytesPerLine = vidChannels * vidWidth
 
     widgetWidth = self.width()
     widgetHeight = self.height()
-    if widgetWidth <= widgetHeight:
-      scaledHeight = widgetWidth
-      scaledWidth = widgetWidth
-    if widgetWidth > widgetHeight:
-      scaledWidth = widgetHeight
-      scaledHeight = widgetHeight
 
-    # TODO respect aspect ratio
+    scaleHorizontal = widgetWidth / vidWidth
+    scaleVertical = widgetHeight / vidHeight
+    ar = vidWidth / vidHeight
+    if scaleHorizontal < scaleVertical:
+      scaledWidth = int(vidWidth*scaleHorizontal)
+      scaledHeight = int(vidHeight*scaleHorizontal)
+    else:
+      scaledWidth = int(vidWidth*scaleVertical)
+      scaledHeight = int(vidHeight*scaleVertical)
+
 
     image = QImage(frame.data, vidWidth, vidHeight, bytesPerLine, QImage.Format_RGB888)
     image = image.scaled(scaledWidth, scaledHeight)

@@ -6,8 +6,6 @@ class Video:
         if not self.vid.isOpened():
             raise ValueError("Unable to open video source", video_source)
 
-        self.width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = self.vid.get(cv2.CAP_PROP_FPS)
 
         # https://www.pyimagesearch.com/2017/01/09/count-the-total-number-of-frames-in-a-video-with-opencv-and-python/
