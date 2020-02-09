@@ -21,7 +21,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.fileTableWidget = QtWidgets.QTableWidget(self.centralwidget)
-        self.fileTableWidget.setMaximumSize(QtCore.QSize(425, 16777215))
+        self.fileTableWidget.setMaximumSize(QtCore.QSize(450, 16777215))
         self.fileTableWidget.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
         self.fileTableWidget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.fileTableWidget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)

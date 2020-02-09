@@ -1,9 +1,15 @@
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import QPoint, QTimer
 from PyQt5.QtGui import QPainter, QImage
+from App import TESTING
 
-from Video import Video
+if TESTING:
+  from mock.Video import Video
+else:
+  from Video import Video
+
 from VideoOverlay import VideoOverlay
+
 import time
 
 class VideoWidget(QWidget):

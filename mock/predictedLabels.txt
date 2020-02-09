@@ -1,0 +1,9 @@
+rightTO=XX,1
+cutin,2
+evtEnd,3
+rightTO=XX,4
+objTurnOff,5
+evtEnd,6
+rightTO=XX,7
+cutout,8
+evtEnd,9
