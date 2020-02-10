@@ -37,16 +37,6 @@ class VideoOverlay:
           self.boundingBoxColor,
           self.boundingBoxThickness)
 
-    # TODO and show confidences cause we can
-    #if self.shouldDrawLabels:
-    #  cv2.putText(frame,
-    #    'Moth Detected',
-    #    (x+w+10,y+h),
-    #    0,
-    #    1.0, # thickness
-    #    self.labelColor,
-    #    2)
-
     if self.shouldDrawSegmentations:
       if frameIndex < len(dataPoint.segmentations):
         for boundary in dataPoint.segmentations[frameIndex]:
