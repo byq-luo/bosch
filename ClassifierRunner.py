@@ -66,8 +66,8 @@ def _loadLibs(progressTracker, TESTING):
     from mock.VehicleDetector import VehicleDetector
     from mock.LaneLineDetector import LaneLineDetector
   else:
-    from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
-    # from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
+    #from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
+    from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
     from LaneLineDetector import LaneLineDetector
 
   globals()['vehicleDetector'] = VehicleDetector()
