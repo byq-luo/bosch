@@ -117,8 +117,9 @@ class VideoWidget(QWidget):
 
       frameIndex = self.video.getFrameNumber()
       frameAvailable, frame = self.video.getFrame()
+      currentTime = self.video.getCurrentTime()
 
-      frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint)
+      frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint, currentTime)
 
       # video has played all the way through
       if frame is None:

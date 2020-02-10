@@ -6,7 +6,7 @@ from App_ui import Ui_MainWindow
 from dialog_ui import Ui_Dialog
 import os, time
 
-TESTING = True # Controls whether to use mock objects or not
+TESTING = False # Controls whether to use mock objects or not
 DONT_PROCESS_VIDS = False
 
 if TESTING:
