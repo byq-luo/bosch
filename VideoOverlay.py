@@ -40,6 +40,7 @@ class VideoOverlay:
           self.boundingBoxThickness)
 
     if self.shouldDrawLabels:
+      # change to dataPoint.predictedLabels when we begin to generate them
       labels = dataPoint.groundTruthLabels
       currentLabel = "No Label Yet"
       for ln in labels:
@@ -54,7 +55,7 @@ class VideoOverlay:
                   (x,y-15),
                   0,
                   1,
-                  1)
+                  self.labelColor)
 
     if self.shouldDrawSegmentations:
       if frameIndex < len(dataPoint.segmentations):
