@@ -146,13 +146,13 @@ class Ui_MainWindow(object):
         self.processMultipleFilesAction.setObjectName("processMultipleFilesAction")
         self.actionProcessVideos = QtWidgets.QAction(MainWindow)
         self.actionProcessVideos.setObjectName("actionProcessVideos")
-        self.actionOptions = QtWidgets.QAction(MainWindow)
-        self.actionOptions.setObjectName("actionOptions")
         self.actionInfo = QtWidgets.QAction(MainWindow)
         self.actionInfo.setObjectName("actionInfo")
         self.toolBar.addAction(self.processMultipleFilesAction)
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.actionProcessVideos)
+        self.toolBar.addSeparator()
+        self.toolBar.addAction(self.actionInfo)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -182,8 +182,7 @@ class Ui_MainWindow(object):
         self.processMultipleFilesAction.setText(_translate("MainWindow", "Open Folder"))
         self.processMultipleFilesAction.setToolTip(_translate("MainWindow", "Recursively Process Videos From Folder"))
         self.actionProcessVideos.setText(_translate("MainWindow", "Process Videos"))
-        self.actionOptions.setText(_translate("MainWindow", "Options"))
-        self.actionInfo.setText(_translate("MainWindow", "Info"))
+        self.actionInfo.setText(_translate("MainWindow", "Statistics"))
 from videowidget import VideoWidget
 
 

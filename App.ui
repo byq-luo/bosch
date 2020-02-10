@@ -359,6 +359,8 @@
    <addaction name="processMultipleFilesAction"/>
    <addaction name="separator"/>
    <addaction name="actionProcessVideos"/>
+   <addaction name="separator"/>
+   <addaction name="actionInfo"/>
   </widget>
   <action name="processMultipleFilesAction">
    <property name="text">
@@ -373,14 +375,9 @@
     <string>Process Videos</string>
    </property>
   </action>
-  <action name="actionOptions">
-   <property name="text">
-    <string>Options</string>
-   </property>
-  </action>
   <action name="actionInfo">
    <property name="text">
-    <string>Info</string>
+    <string>Statistics</string>
    </property>
   </action>
  </widget>
