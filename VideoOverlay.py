@@ -43,10 +43,9 @@ class VideoOverlay:
       # change to dataPoint.predictedLabels when we begin to generate them
       labels = dataPoint.groundTruthLabels
       currentLabel = "No Label Yet"
-      for ln in labels:
-        lnList = ln.split(",")
-        if float(lnList[1]) < currentTime:
-          currentLabel = lnList[0]
+      for line in labels:
+        if float(line[1]) < currentTime:
+          currentLabel = line[0]
         else:
           break
 
