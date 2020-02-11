@@ -128,3 +128,18 @@ class LaneLineDetector:
     # Add two image
     final_res = cv2.add(white_res, yellow_res)
     return final_res
+
+  # Transform images for get the curve detetion work
+  def _tranform(self, frame, width, height):
+    # Two array represent a trapezoid and a rectangle
+    # 4 elements are: top-left point, top-right point, button-right point, button-left point
+    # We need the trapezoid look like the rectangle after transform
+    src = np.float32([(width*2//6, height*3//4 - int(0.096*width)), (width*4//6, height*3//4 - int(0.096*width)), (width*5//6, height*3//4), (width*1//6, height*3//4)])
+    dst = np.float32([(width*2//6, height*3//4 - int(0.096*width)), (width*4//6, height*3//4 - int(0.096*width)), (width*4//6, height*3//4), (width*2//6, height*3//4)])
+
+    # Get the transform matrix
+    m = cv2.getPerspectiveTransform(src, dst)
+    # Transform
+    transformed = cv2.warpPerspective(frame, m, (width, height), flags=cv2.INTER_LINEAR)
+
+    return transformed
