@@ -1,8 +1,6 @@
 from DataPoint import DataPoint
 from Video import Video
 
-import torch
-
 # Take what we want from the features
 def _featuresToDataPoint(dp, boxesTensor, masksList, laneLinesNumpy):
   boxesList = []
@@ -21,9 +19,16 @@ def _featuresToDataPoint(dp, boxesTensor, masksList, laneLinesNumpy):
 def processVideo(dp: DataPoint,
                  vehicleDetector,
                  laneLineDetector,
-                 progressTracker):
+                 progressTracker,
+                 TESTING):
+
   video = Video(dp.videoPath)
   totalNumFrames = video.getTotalNumFrames()
+
+  if TESTING:
+    videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
+    vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
+    laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
   # TODO predict
   labels = []
@@ -37,7 +42,7 @@ def processVideo(dp: DataPoint,
     # simulate doing some work
     frameIndex += 1
     if frameIndex % 30 == 0:
-      dp.predictedLabels.append((labels[(frameIndex//30-1)%len(labels)], frameIndex))
+      dp.predictedLabels.append((labels[(frameIndex//30-1) % len(labels)], frameIndex))
 
     vehicleBoxes, vehicleMasks = vehicleDetector.getBoxes(frame)
     laneLines = laneLineDetector.getLines(frame)

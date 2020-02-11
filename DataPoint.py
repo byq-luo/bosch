@@ -10,6 +10,7 @@ class DataPoint:
     assert(videoPath != '')
     self.videoPath = videoPath
     self.videoName = ''
+    self.videoFolder = ''
     self.predictedLabels = []
     self.groundTruthLabels = []
     self.boundingBoxes = []
@@ -20,10 +21,13 @@ class DataPoint:
     folder, nameExtension = os.path.split(videoPath)
     name, extension = os.path.splitext(nameExtension)
     self.videoName = name
+    self.videoFolder = folder
 
-    # try to load data from disk
-    labelsFileName = name.replace('m0','labels.txt')
-    labelFolder = folder.replace("video", "labels")
+    self._loadFromStorage(storage)
+
+  def _loadFromStorage(self, storage: Storage):
+    labelsFileName = self.videoName.replace('m0', 'labels.txt')
+    labelFolder = self.videoFolder.replace('video', 'labels')
     try:
       with open(labelFolder + '/' + labelsFileName) as file:
         labelLines = [ln.rstrip('\n') for ln in file.readlines()]
@@ -31,40 +35,15 @@ class DataPoint:
           label, labelTime = ln.split(',')
           labelTime = float(labelTime)
           self.groundTruthLabels.append((label, labelTime))
-
     except:
       self.groundTruthLabels = None
-
-    # try:
-    #   dataFileName = name.replace('m0', 'data.pkl')
-    #   with open(folder + '/' + dataFileName, 'rb') as file:
-    #     data = pickle.load(file)
-    #   print('DataPoint',videoPath,'loaded feature data')
-    # except:
-    #   pass
-
-
-
 
   def saveToStorage(self, storage: Storage):
     pass
 
-  def niceformat(self, labels):
-    newlabels = []
-    for label in labels:
-      label1 = ""
-      for char in label[0]:
-        if char == "=":
-          break
-        else:
-          label1+=char
-      tup = label1, label[1]
-      newlabels.append(tup)
-    return newlabels
-
   def compareLabels(self):
-    nicepredictedlabels = self.niceformat(self.predictedLabels)
-    nicegroundlabels = self.niceformat(self.groundTruthLabels)
+    nicepredictedlabels = self.predictedLabels
+    nicegroundlabels = self.groundTruthLabels
     extralabels = []
     missinglabels = []
     i = 0   # predicted label counter
@@ -109,45 +88,3 @@ class DataPoint:
     total = len(nicegroundlabels)
     total = (found-(missing + extra))/total
     return total
-
-
-
-  '''
-  def compareLabels(self):
-
-    if self.groundTruthLabels is not None and self.predictedLabels is not None:
-      missing = 0
-      extra = 0
-      total = len(self.groundTruthLabels)
-      for gLabel in self.groundTruthLabels:
-        found = False
-        for pLabel in self.predictedLabels:
-          if gLabel[0] == pLabel[0]:
-            difference = float(gLabel[1]) - float(pLabel[1])
-            if abs(difference) < 0.5:
-              found = True
-              break
-
-        if not found:
-          missing += 1
-
-      for pLabel in self.predictedLabels:
-        found = False
-        for gLabel in self.groundTruthLabels:
-          if pLabel[0] == gLabel[0]:
-            difference = float(pLabel[1]) - float(gLabel[1])
-            if abs(difference) < 0.5:
-              found = True
-              break
-        if not found:
-          extra += 1
-
-      self.aggregatePredConfidence = (total - (missing + extra)) / total
-
-
-      pass
-    else:
-      if random.random() < .75:
-        self.aggregatePredConfidence = random.random()
-    '''
-
