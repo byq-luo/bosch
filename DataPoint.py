@@ -10,7 +10,7 @@ class DataPoint:
     assert(videoPath != '')
     self.videoPath = videoPath
     self.videoName = ''
-    #self.predictedLabels = []
+    self.predictedLabels = []
     self.groundTruthLabels = []
     self.boundingBoxes = []
     self.segmentations = []
@@ -28,47 +28,22 @@ class DataPoint:
       with open(labelFolder + '/' + labelsFileName) as file:
         labelLines = [ln.rstrip('\n') for ln in file.readlines()]
         for ln in labelLines:
-          lnList = ln.split(",")
-          self.groundTruthLabels.append(lnList)
+          label, labelTime = ln.split(',')
+          labelTime = float(labelTime)
+          self.groundTruthLabels.append((label, labelTime))
 
     except:
       self.groundTruthLabels = None
 
-    try:
-      dataFileName = name.replace('m0', 'data.pkl')
-      with open(folder + '/' + dataFileName, 'rb') as file:
-        data = pickle.load(file)
-      print('DataPoint',videoPath,'loaded feature data')
-    except:
-      pass
+    # try:
+    #   dataFileName = name.replace('m0', 'data.pkl')
+    #   with open(folder + '/' + dataFileName, 'rb') as file:
+    #     data = pickle.load(file)
+    #   print('DataPoint',videoPath,'loaded feature data')
+    # except:
+    #   pass
 
-    self.predictedLabels = [
-      #["end", "1.7207001116268856"],      removed a predicted label
-      ["evtEnd", "67.0"],
-      ["rightTO=24", "90.52518677490954"],
-      ["objTurnOff", "97.06598288913878"],
-      ["evtEnd", "104.18015323449663"],
-      ["end", "108.44646106956341"],
-      ["evtEnd", "145.67672790279136"],
-      ["rightTO=1", "149.09431953928677"],
-      ["objTurnOff", "150.26606524322807"],
-      ["added this label", "24857293294"],       #added a label on
-      ["evtEnd", "151.73074737315466"],
-      ["rightTO=2", "154.85540258366478"],
-      ["lcRel", "172.7341986438553"],
-      ["evtEnd", "189.80220021408857"],
-      ["rightTO=10", "189.90754629604734"],
-      ["lcRel", "190.15477445747212"],
-      ["evtEnd", "196.7042976764161"],
-      ["rightTO=18", "196.88222310522156"],
-      ["cutout", "275.67011726722797"],
-      ["lcRel", "275.9586137837218"],
-      ["evtEnd", "280.0344186642869"],
-      ["lcRel", "293.68984732511444"],
-      ["cutin", "296.79716403023616"],
-      ["evtEnd", "300.27941885114313"]]
 
-    self.compareLabels()
 
 
   def saveToStorage(self, storage: Storage):

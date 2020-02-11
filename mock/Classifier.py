@@ -32,7 +32,11 @@ def processVideo(dp: DataPoint,
     progressTracker.incrementNumFramesProcessed()
 
   with open('mock/predictedLabels.txt') as file:
-    dp.predictedLabels = list(zip([ln.rstrip('\n') for ln in file.readlines()], range(1, 300, 10)))
+    labelLines = [ln.rstrip('\n') for ln in file.readlines()]
+    for ln in labelLines:
+      label, labelTime = ln.split(',')
+      labelTime = float(labelTime)
+      dp.predictedLabels.append((label, labelTime))
 
   dp.boundingBoxes = bboxes
   dp.laneLines = lines

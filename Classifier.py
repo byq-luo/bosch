@@ -25,16 +25,8 @@ def processVideo(dp: DataPoint,
   video = Video(dp.videoPath)
   totalNumFrames = video.getTotalNumFrames()
 
-  dummyLabels = [
-    'rightTO=XX,1',
-    'cutin,2',
-    'evtEnd,3',
-    'rightTO=XX,4',
-    'objTurnOff,5',
-    'evtEnd,6',
-    'rightTO=XX,7',
-    'cutout,8',
-    'evtEnd,9']
+  # TODO predict
+  labels = []
 
   frameIndex = 0
   while True:

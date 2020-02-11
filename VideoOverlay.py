@@ -27,23 +27,25 @@ class VideoOverlay:
     self.shouldDrawSegmentations = shouldDrawSegmentations
 
   def processFrame(self, frame, frameIndex, dataPoint:DataPoint, currentTime):
+
+    # TODO
     x = 30
     y = 45
+
     if self.shouldDrawBoxes:
       bboxes = dataPoint.boundingBoxes
       if len(bboxes) <= frameIndex:
         return frame
       for x1,y1,x2,y2 in bboxes[frameIndex]:
+        x, y = x1, y1-15
         cv2.rectangle(frame,
           (x1,y1), (x2,y2),
           self.boundingBoxColor,
           self.boundingBoxThickness)
 
     if self.shouldDrawLabels:
-      # change to dataPoint.predictedLabels when we begin to generate them
-      labels = dataPoint.groundTruthLabels
       currentLabel = "No Label Yet"
-      for line in labels:
+      for line in dataPoint.predictedLabels:
         if float(line[1]) < currentTime:
           currentLabel = line[0]
         else:
@@ -51,9 +53,8 @@ class VideoOverlay:
 
       cv2.putText(frame,
                   currentLabel,
-                  (x,y-15),
-                  0,
-                  1,
+                  (x,y),
+                  0, 1,
                   self.labelColor)
 
     if self.shouldDrawSegmentations:

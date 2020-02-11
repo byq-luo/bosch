@@ -4,10 +4,9 @@ from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
 from dialog_ui import Ui_Dialog
-import os, time
+import time
 
-TESTING = False # Controls whether to use mock objects or not
-DONT_PROCESS_VIDS = False
+TESTING = True # Controls whether to use mock objects or not
 
 if TESTING:
   from mock.DataPoint import DataPoint
@@ -55,9 +54,6 @@ class MainWindow(QMainWindow):
     # just a thin wrapper around a storage device
     self.storage = Storage()
 
-    #import torch
-    #if torch.cuda.is_available():
-    #  torch.cuda.get_device_name(torch.device('cuda'))
     self.dialog = QDialog()
     ui = Ui_Dialog()
     ui.setupUi(self.dialog)
@@ -126,8 +122,6 @@ class MainWindow(QMainWindow):
         dataPoint = DataPoint(videoPath, self.storage)
         self.dataPoints[dataPoint.videoPath] = dataPoint
         self.addToVideoList(dataPoint)
-      if DONT_PROCESS_VIDS:
-          return
       self.st = time.time()
       self.classifier.processVideos(
         list(self.dataPoints.values()),
@@ -168,6 +162,8 @@ class MainWindow(QMainWindow):
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
     self.dataPoints[dataPoint.videoPath] = dataPoint
+
+    self.compareLabels()
 
     print(time.time() - self.st)
 
