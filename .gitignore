@@ -2,3 +2,5 @@ venv
 .idea
 __pycache__
 .vscode
+yolo/old/weights/*
+yolo/weights/*

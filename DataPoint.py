@@ -13,6 +13,7 @@ class DataPoint:
     self.predictedLabels = []
     self.groundTruthLabels = []
     self.boundingBoxes = []
+    self.segmentations = []
     self.laneLines = []
     self.aggregatePredConfidence = 0
 
@@ -22,11 +23,9 @@ class DataPoint:
 
     # try to load data from disk
     labelsFileName = name.replace('m0','labels.txt')
-    labelFolder = folder.replace('video', 'labels')
-
+    labelFolder = folder.replace("video", "labels")
     try:
-      with open(folder + '/' + labelsFileName) as file:
-      #with open(labelFolder + '/' + labelsFileName) as file:
+      with open(labelFolder + '/' + labelsFileName) as file:
         self.groundTruthLabels = [ln.rstrip('\n') for ln in file.readlines()]
 
     except:

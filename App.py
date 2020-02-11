@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem, QTableWidgetItem, QDialog
+from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
@@ -9,13 +10,13 @@ TESTING = False # Controls whether to use mock objects or not
 DONT_PROCESS_VIDS = False
 
 if TESTING:
-  from mock.ClassifierRunner import ClassifierRunner
   from mock.DataPoint import DataPoint
   from mock.Storage import Storage
 else:
-  from ClassifierRunner import ClassifierRunner
   from DataPoint import DataPoint
   from Storage import Storage
+
+from ClassifierRunner import ClassifierRunner
 
 # TODO TODO background workers do not stop if GUI is closed while processing
 
@@ -38,14 +39,13 @@ class MainWindow(QMainWindow):
     self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
     self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
     self.ui.showLaneLinesCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLaneLines)
+    self.ui.showSegmentationsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawSegmentations)
     self.ui.fileTableWidget.cellClicked.connect(self.videoInListClicked)
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
-
-    #import torch
-    #if torch.cuda.is_available():
-    #  torch.cuda.get_device_name(torch.device('cuda'))
+    self.setWindowIcon(QIcon('icons/bosch.ico'))
+    self.ui.actionInfo.triggered.connect(self.showInfoDialog)
 
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
@@ -55,13 +55,15 @@ class MainWindow(QMainWindow):
     # just a thin wrapper around a storage device
     self.storage = Storage()
 
-    #self.dialog = QDialog()
-    #ui = Ui_Dialog()
-    #ui.setupUi(self.dialog)
-    #self.ui.actionInfo.triggered.connect(self.showInfoDialog)
+    #import torch
+    #if torch.cuda.is_available():
+    #  torch.cuda.get_device_name(torch.device('cuda'))
+    self.dialog = QDialog()
+    ui = Ui_Dialog()
+    ui.setupUi(self.dialog)
 
-  #def showInfoDialog(self):
-  #  self.dialog.show()
+  def showInfoDialog(self):
+    self.dialog.show()
 
   def labelInListClicked(self, row, column):
     frameIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)

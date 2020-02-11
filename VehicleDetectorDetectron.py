@@ -5,6 +5,9 @@ from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog
 
+import cv2
+import numpy as np
+
 BBOX_SCORE_THRESH = .8
 
 class VehicleDetectorDetectron:
@@ -46,11 +49,22 @@ class VehicleDetectorDetectron:
     vehicleFeatures = self.predictor(frame)
     # See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
     instances = vehicleFeatures['instances']
-    boxes = instances.pred_boxes
-    scores = instances.scores
-    #classes = instances.pred_classes
-    keepBoxes = boxes[scores > BBOX_SCORE_THRESH]
+    keepScores = instances.scores > BBOX_SCORE_THRESH
+    boxes = instances.pred_boxes[keepScores]
+    masks = instances.pred_masks[keepScores]
+
+    boundaries = self._getMaskBoundaries(masks)
 
     # Should rename function if we decide to also return segmentations
 
-    return keepBoxes
+    return boxes, boundaries
+
+  def _getMaskBoundaries(self, masks):
+    #contours, hierarchy = cv2.findContours(np.uint8(mask.cpu().numpy()), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #return contours[0]
+
+    boundaries = []
+    for mask in masks:
+      contour, hierarchy = cv2.findContours(np.uint8(mask.cpu().numpy()), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+      boundaries.append(contour)
+    return boundaries

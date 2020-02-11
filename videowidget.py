@@ -71,7 +71,7 @@ class VideoWidget(QWidget):
     totalSeconds = self.video.getVideoLength()
     minutes = int(totalSeconds / 60)
     seconds = int(totalSeconds % 60)
-    timeString = str(minutes) + ":" + str(seconds)
+    timeString = '{}:{:02d}'.format(minutes, seconds)
     self.fullTimeLabel.setText(timeString)
 
   def updateTimeLabel(self):
@@ -117,8 +117,9 @@ class VideoWidget(QWidget):
 
       frameIndex = self.video.getFrameNumber()
       frameAvailable, frame = self.video.getFrame()
+      currentTime = self.video.getCurrentTime()
 
-      frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint)
+      frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint, currentTime)
 
       # video has played all the way through
       if frame is None:

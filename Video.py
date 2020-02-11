@@ -20,6 +20,8 @@ class Video:
         if self.vid.isOpened():
             isFrameAvailable, frame = self.vid.read()
             if isFrameAvailable:
+                # TODO TODO TODO for artwork creation only
+                frame = frame[:675, :]
                 if convRGB:
                     return (isFrameAvailable, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 else:
