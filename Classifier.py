@@ -37,7 +37,7 @@ def processVideo(dp: DataPoint,
     # simulate doing some work
     frameIndex += 1
     if frameIndex % 30 == 0:
-      dp.predictedLabels.append((dummyLabels[(frameIndex//30-1)%len(dummyLabels)], frameIndex))
+      dp.predictedLabels.append((labels[(frameIndex//30-1)%len(labels)], frameIndex))
 
     vehicleBoxes, vehicleMasks = vehicleDetector.getBoxes(frame)
     laneLines = laneLineDetector.getLines(frame)
