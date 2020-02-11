@@ -1,10 +1,12 @@
 import numpy as np
 import cv2
 
+
 class LaneLineDetector:
   # Returns a 2x4 numpy array
   def getLines(self, frame):
-    canny = self._doCanny(frame, kernel_size=5)
+    color = self._colorDetection(frame)
+    canny = self._doCanny(color, kernel_size=5)
     height, width, depth = frame.shape
     polygon = self._doPolygon(canny, width, height)
 
@@ -105,17 +107,41 @@ class LaneLineDetector:
 
   # Detect lane colors: white and yellow
   def _colorDetection(self, frame):
-    # Color boundaries for white and yellow lane color
-    boundaries = [([224, 224, 224], [255, 255, 255]), ([0, 204, 204], [100, 255, 255])]
+    # Change image color mode from RGB to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    for (lower, upper) in boundaries:
-      lower = np.array(lower, dtype="uint8")
-      upper = np.array(upper, dtype="uint8")
+    # Define range of yellow and white color in HSV
+    lower_yellow = np.array([15, 40, 100])
+    upper_yellow = np.array([34, 255, 255])
 
-      # find the colors within the specified boundaries and apply
-      # the mask
-      mask = cv2.inRange(frame, lower, upper)
-      output = cv2.bitwise_and(frame, frame, mask=mask)
+    lower_white = np.array([0, 0, 180])
+    upper_white = np.array([179, 30, 255])
 
-      # show the images
-      #cv2.imshow("images", np.hstack([frame, output]))
+    # Two masks for yellow and white
+    mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+    mask_white = cv2.inRange(hsv, lower_white, upper_white)
+
+    # Bitwise-AND mask and original image, get the yellow only image and white only image
+    white_res = cv2.bitwise_and(frame, frame, mask=mask_white)
+    yellow_res = cv2.bitwise_and(frame, frame, mask=mask_yellow)
+
+    # Add two image
+    final_res = cv2.add(white_res, yellow_res)
+    return final_res
+
+  # Transform images for get the curve detetion work
+  def _tranform(self, frame, width, height):
+    # Two array represent a trapezoid and a rectangle
+    # 4 elements are: top-left point, top-right point, button-right point, button-left point
+    # We need the trapezoid look like the rectangle after transform
+    # The trapezoid have two 45 degree angle at button, calculation here for work for different size of video
+    # 0.096 is sqrt(3)/18, which is height of trapezoid divided by width of video
+    src = np.float32([(width*2//6, height*3//4 - int(0.096*width)), (width*4//6, height*3//4 - int(0.096*width)), (width*5//6, height*3//4), (width*1//6, height*3//4)])
+    dst = np.float32([(width*2//6, height*3//4 - int(0.096*width)), (width*4//6, height*3//4 - int(0.096*width)), (width*4//6, height*3//4), (width*2//6, height*3//4)])
+
+    # Get the transform matrix
+    m = cv2.getPerspectiveTransform(src, dst)
+    # Transform
+    transformed = cv2.warpPerspective(frame, m, (width, height), flags=cv2.INTER_LINEAR)
+
+    return transformed
