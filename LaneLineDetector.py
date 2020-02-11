@@ -134,6 +134,8 @@ class LaneLineDetector:
     # Two array represent a trapezoid and a rectangle
     # 4 elements are: top-left point, top-right point, button-right point, button-left point
     # We need the trapezoid look like the rectangle after transform
+    # The trapezoid have two 45 degree angle at button, calculation here for work for different size of video
+    # 0.096 is sqrt(3)/18, which is height of trapezoid divided by width of video
     src = np.float32([(width*2//6, height*3//4 - int(0.096*width)), (width*4//6, height*3//4 - int(0.096*width)), (width*5//6, height*3//4), (width*1//6, height*3//4)])
     dst = np.float32([(width*2//6, height*3//4 - int(0.096*width)), (width*4//6, height*3//4 - int(0.096*width)), (width*4//6, height*3//4), (width*2//6, height*3//4)])
 
