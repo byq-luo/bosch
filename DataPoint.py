@@ -44,7 +44,7 @@ class DataPoint:
 
     self.predictedLabels = [
       #["end", "1.7207001116268856"],      removed a predicted label
-      ["evtEnd", "67.56784248350611"],
+      ["evtEnd", "67.0"],
       ["rightTO=24", "90.52518677490954"],
       ["objTurnOff", "97.06598288913878"],
       ["evtEnd", "104.18015323449663"],
