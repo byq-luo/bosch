@@ -153,6 +153,11 @@ class MainWindow(QMainWindow):
         self.setCurrentVideo(dataPoint, play=False)
 
 if __name__ == '__main__':
+  # this solves a gross bug in cv2.cvtColor on macOS
+  # See https://github.com/opencv/opencv/issues/5150
+  import multiprocessing as mp
+  mp.set_start_method('spawn')
+  
   import sys
   app = QApplication(sys.argv)
   window = MainWindow()
