@@ -44,9 +44,9 @@ class MainWindow(QMainWindow):
     # just a thin wrapper around a storage device
     self.storage = Storage()
 
-    # If we are in TESTING mode just load videos from the testing folder
+    # If we are in TESTING mode just load videos from the precomputed folder
     if TESTING:
-      self.loadVideosFromFolder('testing/videos')
+      self.loadVideosFromFolder('precomputed/videos')
     else:
       self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
 

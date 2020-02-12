@@ -55,8 +55,8 @@ class _ProgressTracker(object):
 # executed in the other python process
 def _loadLibs(progressTracker, TESTING):
   if TESTING:
-    from testing.VehicleDetector import VehicleDetector
-    from testing.LaneLineDetector import LaneLineDetector
+    from precomputed.VehicleDetector import VehicleDetector
+    from precomputed.LaneLineDetector import LaneLineDetector
   else:
     #from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
     from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
