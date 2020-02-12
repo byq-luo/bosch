@@ -40,6 +40,11 @@ class VideoWidget(QWidget):
     self.didSeek = True
     self.update()
 
+  def seekToTime(self, t):
+    self.video.setFrameNumber(int(t * self.video.getFps()))
+    self.didSeek = True
+    self.update()
+
   def seekToPercent(self, percent):
     if self.video is None:
       return
