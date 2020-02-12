@@ -74,5 +74,5 @@ class VehicleDetectorYolo:
           #unique_labels = detections[:, -1].cpu().unique()
           #n_cls_preds = len(unique_labels)
 
-          return detections[:,:4], segmentations
-        return torch.tensor([[0,0,0,0]]), segmentations
+          return detections[:,:4].cpu().numpy(), segmentations
+        return numpy([[0,0,0,0]]), segmentations

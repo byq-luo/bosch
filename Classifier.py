@@ -51,11 +51,12 @@ def processVideo(dp: DataPoint,
     _featuresToDataPoint(dp, vehicleBoxes, vehicleMasks, laneLines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
-  
+
   return dp
 
 
 # For precomputing features
+#boxes, lines, masks = [], [], []
 #boxes.append(vehicleBoxes)
 #masks.append(vehicleMasks)
 #lines.append(laneLines)

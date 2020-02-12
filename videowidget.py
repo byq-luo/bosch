@@ -11,6 +11,8 @@ class VideoWidget(QWidget):
 
   def initUI(self):
     self.video = None
+    self.dataPoint = None
+
     self.isPlaying = False
     self.didSeek = False
 

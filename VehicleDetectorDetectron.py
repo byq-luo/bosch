@@ -33,7 +33,7 @@ class VehicleDetectorDetectron:
     boxes = instances.pred_boxes[keepScores]
     masks = instances.pred_masks[keepScores]
     boundaries = self._getMaskBoundaries(masks)
-    return boxes, boundaries
+    return boxes.tensor.cpu().numpy(), boundaries
 
   def _getMaskBoundaries(self, masks):
     boundaries = []
