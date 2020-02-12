@@ -25,8 +25,8 @@ def processVideo(dp: DataPoint,
   video = Video(dp.videoPath)
   totalNumFrames = video.getTotalNumFrames()
 
+  videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
   if TESTING:
-    videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
     laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
@@ -38,17 +38,28 @@ def processVideo(dp: DataPoint,
     isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
     if not isFrameAvail:
       break
+    frameIndex += 1
+
+    vehicleBoxes, vehicleMasks = vehicleDetector.getFeatures(frame)
+    laneLines = laneLineDetector.getLines(frame)
 
     # simulate doing some work
-    frameIndex += 1
+    fakeLabel = ('fake label ' + str(frameIndex), frameIndex / totalNumFrames)
     if frameIndex % 30 == 0:
-      dp.predictedLabels.append((labels[(frameIndex//30-1) % len(labels)], frameIndex))
-
-    vehicleBoxes, vehicleMasks = vehicleDetector.getBoxes(frame)
-    laneLines = laneLineDetector.getLines(frame)
+      dp.predictedLabels.append(fakeLabel)
 
     _featuresToDataPoint(dp, vehicleBoxes, vehicleMasks, laneLines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
-
+  
   return dp
+
+
+# For precomputing features
+#boxes.append(vehicleBoxes)
+#masks.append(vehicleMasks)
+#lines.append(laneLines)
+#...
+#import pickle
+#with open(videoFeaturesPath, 'wb') as file:
+#  pickle.dump([boxes, masks, lines], file)

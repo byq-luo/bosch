@@ -1,12 +1,9 @@
 from Storage import Storage
-import pickle
-import os
-
-import random
+import os, pickle, random
 
 # This class is a relationship between a video and its data
 class DataPoint:
-  def __init__(self, videoPath: str, storage: Storage):
+  def __init__(self, videoPath: str):
     assert(videoPath != '')
     self.videoPath = videoPath
     self.videoName = ''
@@ -23,11 +20,12 @@ class DataPoint:
     self.videoName = name
     self.videoFolder = folder
 
-    self._loadFromStorage(storage)
+    self._loadFromDisk()
 
-  def _loadFromStorage(self, storage: Storage):
+  def _loadFromDisk(self):
     labelsFileName = self.videoName.replace('m0', 'labels.txt')
     labelFolder = self.videoFolder.replace('video', 'labels')
+    #labelsPath = self.videoFolder.replace('video/', 'labels/').replace('m0.avi', 'labels.txt')
     try:
       with open(labelFolder + '/' + labelsFileName) as file:
         labelLines = [ln.rstrip('\n') for ln in file.readlines()]

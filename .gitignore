@@ -4,3 +4,6 @@ __pycache__
 .vscode
 yolo/old/weights/*
 yolo/weights/*
+testing/videos/*
+video/*
+images/*

@@ -5,18 +5,15 @@ import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
 from dialog_ui import Ui_Dialog
 
-TESTING = True # Controls whether to use testing objects or not
-from Storage import Storage
+TESTING = True # Controls whether to use precomputed features
 
-from DataPoint import DataPoint
 from ClassifierRunner import ClassifierRunner
+from DataPoint import DataPoint
+from Storage import Storage
 
 # TODO TODO background workers do not stop if GUI is closed while processing
 
 class MainWindow(QMainWindow):
-  processingProgressSignal = QtCore.pyqtSignal(float, float, DataPoint)
-  processingCompleteSignal = QtCore.pyqtSignal(DataPoint)
-
   def __init__(self):
     super(MainWindow, self).__init__()
     self.ui = Ui_MainWindow()
@@ -62,15 +59,15 @@ class MainWindow(QMainWindow):
 
   def labelInListClicked(self, row, column):
     frameIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
-    self.ui.videoWidget.seekToFrame(frameIndex)
+    self.ui.videoWidget.seekToTime(frameIndex)
 
   def setLabelList(self, dataPoint):
     self.ui.labelTableWidget.setRowCount(0)
-    for label, frameIndex in dataPoint.predictedLabels:
+    for label, labelTime in dataPoint.predictedLabels:
       rowIndex = self.ui.labelTableWidget.rowCount()
       self.ui.labelTableWidget.insertRow(rowIndex)
       item = QTableWidgetItem(label)
-      item.setData(Qt.UserRole, frameIndex)
+      item.setData(Qt.UserRole, labelTime)
       self.ui.labelTableWidget.setItem(rowIndex, 0, item)
 
   def videoInListClicked(self, row, column):
@@ -100,7 +97,7 @@ class MainWindow(QMainWindow):
   def loadVideosFromFolder(self, folder):
     videoPaths = self.storage.recursivelyFindVideosInFolder(folder)
     for videoPath in videoPaths:
-      dataPoint = DataPoint(videoPath, self.storage)
+      dataPoint = DataPoint(videoPath)
       self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
 
@@ -117,7 +114,7 @@ class MainWindow(QMainWindow):
                                               filter="AVI/MKV Files (*.avi *.mkv)",\
                                               options=options)
     if fileName:
-      dataPoint = DataPoint(fileName, self.storage)
+      dataPoint = DataPoint(fileName)
       self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
 
@@ -130,12 +127,14 @@ class MainWindow(QMainWindow):
       self.loadVideosFromFolder(folderName)
 
   # put the work onto the gui thread
+  processingProgressSignal = QtCore.pyqtSignal(float, float, DataPoint)
   def processingProgressCallback(self, totalPercentDone: float, currentPercentDone: float, dataPoint: DataPoint):
     self.processingProgressSignal.emit(totalPercentDone, currentPercentDone, dataPoint)
   def processingProgressUpdate(self, totalPercentDone: float, currentPercentDone: float, dataPoint: DataPoint):
     msg = 'Total : {:3d}%   |   Current : {:3d}%   |   Video : {}'.format(int(totalPercentDone*100),int(currentPercentDone*100),dataPoint.videoPath)
     self.ui.statusbar.showMessage(msg, 3000)
 
+  processingCompleteSignal = QtCore.pyqtSignal(DataPoint)
   def processingCompleteCallback(self, dataPoint: DataPoint):
     self.processingCompleteSignal.emit(dataPoint)
   def processingComplete(self, dataPoint: DataPoint):
@@ -145,7 +144,7 @@ class MainWindow(QMainWindow):
     # dataPoint are different python objects.
     self.dataPoints[dataPoint.videoPath] = dataPoint
 
-    dataPoint.compareLabels()
+    #dataPoint.compareLabels()
 
     currentItem = self.ui.fileTableWidget.currentItem()
     if currentItem is not None:

@@ -46,7 +46,7 @@ class VehicleDetectorYolo:
         if self.half:
             self.model.half()
 
-    def getBoxes(self, frame):
+    def getFeatures(self, frame):
         # Padded resize
         img = letterbox(frame, new_shape=self.img_size)[0]
         img = img.transpose(2, 0, 1)  # reshape to 3x608x608
