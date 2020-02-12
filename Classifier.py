@@ -23,12 +23,13 @@ def processVideo(dp: DataPoint,
                  TESTING):
 
   video = Video(dp.videoPath)
+
   totalNumFrames = video.getTotalNumFrames()
 
   videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
   if TESTING:
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
-    laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
+    # laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
   # TODO predict
   labels = []

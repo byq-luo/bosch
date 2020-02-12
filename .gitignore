@@ -9,3 +9,4 @@ video/*
 images/*
 *.jpg
 *.avi
+.DS_Store
