@@ -51,7 +51,7 @@ class VideoWidget(QWidget):
     if self.video is None:
       return
     totalNumFrames = self.video.getTotalNumFrames()
-    frameIndex = int(percent / 100 * totalNumFrames)
+    frameIndex = int(percent / 1000 * totalNumFrames)
     self.seekToFrame(frameIndex)
 
   def setSlider(self, slider):
@@ -81,7 +81,7 @@ class VideoWidget(QWidget):
     self.currentTimeLabel.setText(timeString)
 
   def updateSliderValue(self):
-    currentPercent = int(100 * self.video.getFrameNumber() / self.video.getTotalNumFrames())
+    currentPercent = int(1000 * self.video.getFrameNumber() / self.video.getTotalNumFrames())
     self.slider.setValue(currentPercent)
 
   def _drawImage(self, frame, qp:QPainter):

@@ -2,13 +2,11 @@
 
 # Form implementation generated from reading ui file 'App.ui'
 #
-# Created by: PyQt5 UI code generator 5.13.0
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
-
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QListWidgetItem
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -62,6 +60,7 @@ class Ui_MainWindow(object):
         spacerItem1 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_3.addItem(spacerItem1)
         self.horizontalSlider = QtWidgets.QSlider(self.centralwidget)
+        self.horizontalSlider.setMaximum(999)
         self.horizontalSlider.setOrientation(QtCore.Qt.Horizontal)
         self.horizontalSlider.setInvertedAppearance(False)
         self.horizontalSlider.setInvertedControls(False)
@@ -183,8 +182,8 @@ class Ui_MainWindow(object):
         self.processMultipleFilesAction.setToolTip(_translate("MainWindow", "Recursively Process Videos From Folder"))
         self.actionProcessVideos.setText(_translate("MainWindow", "Process Videos"))
         self.actionInfo.setText(_translate("MainWindow", "Statistics"))
-from videowidget import VideoWidget
 
+from videowidget import VideoWidget
 
 if __name__ == "__main__":
     import sys
@@ -194,3 +193,4 @@ if __name__ == "__main__":
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
+

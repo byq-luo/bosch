@@ -2,7 +2,7 @@ from DataPoint import DataPoint
 from Video import Video
 
 # Take what we want from the features
-def _featuresToDataPoint(dp, boxesTensor, masksList, laneLinesNumpy):
+def _fillDataPoint(dp, boxesTensor, masksList, laneLinesNumpy):
   boxesList = []
   for boxTensor in boxesTensor:
     box = boxTensor.tolist()
@@ -48,7 +48,7 @@ def processVideo(dp: DataPoint,
     if frameIndex % 30 == 0:
       dp.predictedLabels.append(fakeLabel)
 
-    _featuresToDataPoint(dp, vehicleBoxes, vehicleMasks, laneLines)
+    _fillDataPoint(dp, vehicleBoxes, vehicleMasks, laneLines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
 
