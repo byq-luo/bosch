@@ -146,9 +146,9 @@ class MainWindow(QMainWindow):
 
     #dataPoint.compareLabels()
 
-    currentItem = self.ui.fileTableWidget.currentItem()
+    currentItem = self.ui.videoWidget.dataPoint
     if currentItem is not None:
-      currentVideoPath = currentItem.data(Qt.UserRole)
+      currentVideoPath = self.ui.videoWidget.dataPoint.videoPath
       if currentVideoPath == dataPoint.videoPath:
         self.setCurrentVideo(dataPoint, play=False)
 
