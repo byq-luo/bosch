@@ -1,20 +1,13 @@
 from multiprocessing import Value, Lock
-from concurrent.futures import ProcessPoolExecutor, wait, FIRST_COMPLETED
+from concurrent.futures import ProcessPoolExecutor
 
-from App import TESTING
-if TESTING:
-  from mock.Classifier import processVideo
-  from mock.DataPoint import DataPoint
-  from mock.Video import Video
-else:
-  from Classifier import processVideo
-  from DataPoint import DataPoint
-  from Video import Video
 import time
+from DataPoint import DataPoint
+from Classifier import processVideo
+from Video import Video
 
 # https://elsampsa.github.io/valkka-examples/_build/html/qt_notes.html#python-multiprocessing
 # https://stackoverflow.com/questions/15520957/python-multiprocessing-in-pyqt-application?rq=1
-
 # https://docs.python.org/3.7/library/multiprocessing.html#multiprocessing.Value
 # https://eli.thegreenplace.net/2012/01/04/shared-counter-with-pythons-multiprocessing
 class _ProgressTracker(object):
@@ -62,21 +55,21 @@ class _ProgressTracker(object):
 # executed in the other python process
 def _loadLibs(progressTracker, TESTING):
   if TESTING:
-    # from VehicleDetectorDetectron import VehicleDetectorDetectron
-    from mock.VehicleDetector import VehicleDetector
-    from mock.LaneLineDetector import LaneLineDetector
+    from testing.VehicleDetector import VehicleDetector
+    from testing.LaneLineDetector import LaneLineDetector
   else:
-    from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
-    # from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
+    #from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
+    from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
     from LaneLineDetector import LaneLineDetector
 
+  globals()['TESTING'] = TESTING
   globals()['vehicleDetector'] = VehicleDetector()
   globals()['laneLineDetector'] = LaneLineDetector()
   globals()['progressTracker'] = progressTracker
 
 def _processVideo(dataPoint: DataPoint):
   # accesses the globals assigned above
-  return processVideo(dataPoint, vehicleDetector, laneLineDetector, progressTracker)
+  return processVideo(dataPoint, vehicleDetector, laneLineDetector, progressTracker, TESTING)
 
 def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool):
   assert(dataPoints != [])
@@ -93,9 +86,7 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool)
   progressTracker.reset()
 
 class ClassifierRunner:
-  # These members cannot be globals in this file since multiprocessing forks this python
-  # exe to create the new processes? So code in global scope would execute twice????????
-  def __init__(self):
+  def __init__(self, TESTING):
     self.progressTracker = _ProgressTracker()
 
     # only run one video at a time

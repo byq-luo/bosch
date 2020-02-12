@@ -1,16 +1,8 @@
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import QPoint, QTimer, Qt
 from PyQt5.QtGui import QPainter, QImage
-from App import TESTING
-
-if TESTING:
-  from mock.Video import Video
-else:
-  from Video import Video
-
 from VideoOverlay import VideoOverlay
-
-import time
+from Video import Video
 
 class VideoWidget(QWidget):
   def __init__(self, centralWidget):
@@ -117,8 +109,9 @@ class VideoWidget(QWidget):
 
       frameIndex = self.video.getFrameNumber()
       frameAvailable, frame = self.video.getFrame()
+      currentTime = self.video.getCurrentTime()
 
-      frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint)
+      frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint, currentTime)
 
       # video has played all the way through
       if frame is None:
