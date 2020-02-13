@@ -24,6 +24,12 @@
 ### HIGHEST PRIO
 * Get classifier working.
 
+* Only return top 5 bounding boxes sorted by area.
+
+* Only return bounding boxes for vehicles
+
+* Sometimes a bounding box is given that covers the dash of the host vehicle. This box has width ~= width of screen. Do not return this bbox.
+
 * Filter object detections if bounding boxes are too small?
 
 * Given predictedLabels and groundTruth labels, how do we actually compute an accuracy?
