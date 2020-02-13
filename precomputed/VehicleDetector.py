@@ -9,13 +9,12 @@ class VehicleDetector:
 
     def getFeatures(self, frame):
         bboxes = self.bboxes[self.frameNumber]
-        segmentations = self.segmentations[self.frameNumber % len(self.segmentations)]
         self.frameNumber = (self.frameNumber + 1) % len(self.bboxes)
+        segmentations = []
         return bboxes, segmentations
 
     def loadFeaturesFromDisk(self, featuresPath):
         assert(self.frameNumber==0)
         with open(featuresPath, 'rb') as file:
-            bboxes, segmentations, lines = pickle.load(file)
+            bboxes = pickle.load(file)
             self.bboxes = bboxes
-            self.segmentations = segmentations

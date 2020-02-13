@@ -75,4 +75,4 @@ class VehicleDetectorYolo:
           #n_cls_preds = len(unique_labels)
 
           return detections[:,:4].cpu().numpy(), segmentations
-        return numpy([[0,0,0,0]]), segmentations
+        return np.array([[0,0,0,0]]), segmentations
