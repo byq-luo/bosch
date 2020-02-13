@@ -17,4 +17,6 @@ class VehicleDetector:
     def loadFeaturesFromDisk(self, featuresPath):
         assert(self.frameNumber==0)
         with open(featuresPath, 'rb') as file:
-            self.bboxes = pickle.load(file)[0][0]
+            self.bboxes = pickle.load(file)[0]
+            if type(self.bboxes[0]) == list: # TODO this can be removed once all the pkls contain the same obj types
+                self.bboxes = self.bboxes[0]
