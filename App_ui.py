@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'App.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -118,9 +120,6 @@ class Ui_MainWindow(object):
         self.pushButton_2.setObjectName("pushButton_2")
         self.horizontalLayout_4.addWidget(self.pushButton_2)
         self.verticalLayout.addLayout(self.horizontalLayout_4)
-        self.checkBox = QtWidgets.QCheckBox(self.centralwidget)
-        self.checkBox.setObjectName("checkBox")
-        self.verticalLayout.addWidget(self.checkBox)
         self.showSegmentationsCheckbox = QtWidgets.QCheckBox(self.centralwidget)
         self.showSegmentationsCheckbox.setObjectName("showSegmentationsCheckbox")
         self.verticalLayout.addWidget(self.showSegmentationsCheckbox)
@@ -172,7 +171,6 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "Predictions"))
         self.pushButton.setText(_translate("MainWindow", "Insert"))
         self.pushButton_2.setText(_translate("MainWindow", "Delete"))
-        self.checkBox.setText(_translate("MainWindow", "Compute Segmentations"))
         self.showSegmentationsCheckbox.setText(_translate("MainWindow", "Show Segmentations"))
         self.boundingBoxCheckbox.setText(_translate("MainWindow", "Show Bounding Box"))
         self.showLabelsCheckbox.setText(_translate("MainWindow", "Show Current Label"))
@@ -182,8 +180,8 @@ class Ui_MainWindow(object):
         self.processMultipleFilesAction.setToolTip(_translate("MainWindow", "Recursively Process Videos From Folder"))
         self.actionProcessVideos.setText(_translate("MainWindow", "Process Videos"))
         self.actionInfo.setText(_translate("MainWindow", "Statistics"))
-
 from videowidget import VideoWidget
+
 
 if __name__ == "__main__":
     import sys
@@ -193,4 +191,3 @@ if __name__ == "__main__":
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
-

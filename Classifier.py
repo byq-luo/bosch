@@ -23,7 +23,6 @@ def processVideo(dp: DataPoint,
                  TESTING):
 
   video = Video(dp.videoPath)
-
   totalNumFrames = video.getTotalNumFrames()
 
   videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
@@ -44,10 +43,10 @@ def processVideo(dp: DataPoint,
     vehicleBoxes, vehicleMasks = vehicleDetector.getFeatures(frame)
     laneLines = laneLineDetector.getLines(frame)
 
-    # simulate doing some work
-    fakeLabel = ('fake label ' + str(frameIndex), frameIndex / totalNumFrames)
-    if frameIndex % 30 == 0:
-      dp.predictedLabels.append(fakeLabel)
+    ## simulate doing some work
+    #fakeLabel = ('fake label ' + str(frameIndex), frameIndex / totalNumFrames)
+    #if frameIndex % 30 == 0:
+    #  dp.predictedLabels.append(fakeLabel)
 
     _fillDataPoint(dp, vehicleBoxes, vehicleMasks, laneLines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)

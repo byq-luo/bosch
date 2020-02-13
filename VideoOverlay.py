@@ -34,14 +34,13 @@ class VideoOverlay:
 
     if self.shouldDrawBoxes:
       bboxes = dataPoint.boundingBoxes
-      if len(bboxes) <= frameIndex:
-        return frame
-      for x1,y1,x2,y2 in bboxes[frameIndex]:
-        x, y = x1, y1-15
-        cv2.rectangle(frame,
-          (x1,y1), (x2,y2),
-          self.boundingBoxColor,
-          self.boundingBoxThickness)
+      if len(bboxes) > frameIndex:
+        for x1,y1,x2,y2 in bboxes[frameIndex]:
+          x, y = x1, y1-15
+          cv2.rectangle(frame,
+            (x1,y1), (x2,y2),
+            self.boundingBoxColor,
+            self.boundingBoxThickness)
 
     if self.shouldDrawLabels:
       currentLabel = "No Label Yet"
@@ -50,7 +49,6 @@ class VideoOverlay:
           currentLabel = line[0]
         else:
           break
-
       cv2.putText(frame,
                   currentLabel,
                   (x,y),
@@ -63,10 +61,14 @@ class VideoOverlay:
           cv2.drawContours(frame, boundary, 0, self.segmentationsColor, 2)
 
     if self.shouldDrawLaneLines:
-      if len(dataPoint.laneLines) <= frameIndex:
-        return frame
-      lines = dataPoint.laneLines[frameIndex]
-      for x1, y1, x2, y2 in lines:
-        cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+      if len(dataPoint.laneLines) < frameIndex:
+        lines = dataPoint.laneLines[frameIndex]
+        for x1, y1, x2, y2 in lines:
+          cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+    frame = cv2.copyMakeBorder(frame, 
+                    3, 3, 3, 3, 
+                    cv2.BORDER_CONSTANT, 
+                    value=(0,0,0))
 
     return frame

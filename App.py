@@ -148,18 +148,16 @@ class MainWindow(QMainWindow):
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
 
-    # TODO
-    # self.dataPoints[dataPoint.videoPath] = dataPoint
+    self.dataPoints[dataPoint.videoPath] = dataPoint
 
     # TODO
     #dataPoint.compareLabels()
 
-    # TODO
-    #currentItem = self.ui.videoWidget.dataPoint
-    #if currentItem is not None:
-    #  currentVideoPath = self.ui.videoWidget.dataPoint.videoPath
-    #  if currentVideoPath == dataPoint.videoPath:
-    #    self.setCurrentVideo(dataPoint, play=False)
+    currentItem = self.ui.videoWidget.dataPoint
+    if currentItem is not None:
+      currentVideoPath = self.ui.videoWidget.dataPoint.videoPath
+      if currentVideoPath == dataPoint.videoPath:
+        self.setCurrentVideo(dataPoint, play=False)
 
 if __name__ == '__main__':
   # this solves a gross bug in cv2.cvtColor on macOS

@@ -310,13 +310,6 @@
        </layout>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox">
-        <property name="text">
-         <string>Compute Segmentations</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QCheckBox" name="showSegmentationsCheckbox">
         <property name="text">
          <string>Show Segmentations</string>
