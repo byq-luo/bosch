@@ -1,6 +1,7 @@
 # yolo code from https://github.com/eriklindernoren/PyTorch-YOLOv3
 
 import pickle
+import numpy as np
 
 class VehicleDetector:
     wantsRGB = True
@@ -16,5 +17,4 @@ class VehicleDetector:
     def loadFeaturesFromDisk(self, featuresPath):
         assert(self.frameNumber==0)
         with open(featuresPath, 'rb') as file:
-            bboxes = pickle.load(file)
-            self.bboxes = bboxes
+            self.bboxes = pickle.load(file)[0][0]
