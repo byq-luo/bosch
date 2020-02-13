@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
 from dialog_ui import Ui_Dialog
+import os
 
 TESTING = True # Controls whether to use precomputed features
 
