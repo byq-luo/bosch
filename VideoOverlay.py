@@ -61,7 +61,7 @@ class VideoOverlay:
           cv2.drawContours(frame, boundary, 0, self.segmentationsColor, 2)
 
     if self.shouldDrawLaneLines:
-      if len(dataPoint.laneLines) < frameIndex:
+      if len(dataPoint.laneLines) > frameIndex:
         lines = dataPoint.laneLines[frameIndex]
         for x1, y1, x2, y2 in lines:
           cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
