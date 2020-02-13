@@ -43,7 +43,9 @@ class VideoWidget(QWidget):
     self.update()
 
   def seekToTime(self, t):
-    self.video.setFrameNumber(int(t * self.video.getFps()))
+    frameNum = int(t * self.video.getFps())
+    numFrames = self.video.getTotalNumFrames()
+    self.video.setFrameNumber(min(frameNum, numFrames-1))
     self.didSeek = True
     self.update()
 

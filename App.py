@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
     for label, labelTime in dataPoint.predictedLabels:
       rowIndex = self.ui.labelTableWidget.rowCount()
       self.ui.labelTableWidget.insertRow(rowIndex)
-      item = QTableWidgetItem(label)
+      item = QTableWidgetItem('{:10s} {}'.format(label, int(labelTime)))
       item.setData(Qt.UserRole, labelTime)
       self.ui.labelTableWidget.setItem(rowIndex, 0, item)
 
@@ -147,15 +147,19 @@ class MainWindow(QMainWindow):
     # id(oldVid) != id(dataPoint) so changes made to dataPoint in
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
-    self.dataPoints[dataPoint.videoPath] = dataPoint
 
+    # TODO
+    # self.dataPoints[dataPoint.videoPath] = dataPoint
+
+    # TODO
     #dataPoint.compareLabels()
 
-    currentItem = self.ui.videoWidget.dataPoint
-    if currentItem is not None:
-      currentVideoPath = self.ui.videoWidget.dataPoint.videoPath
-      if currentVideoPath == dataPoint.videoPath:
-        self.setCurrentVideo(dataPoint, play=False)
+    # TODO
+    #currentItem = self.ui.videoWidget.dataPoint
+    #if currentItem is not None:
+    #  currentVideoPath = self.ui.videoWidget.dataPoint.videoPath
+    #  if currentVideoPath == dataPoint.videoPath:
+    #    self.setCurrentVideo(dataPoint, play=False)
 
 if __name__ == '__main__':
   # this solves a gross bug in cv2.cvtColor on macOS

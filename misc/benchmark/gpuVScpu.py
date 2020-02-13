@@ -16,10 +16,9 @@ from Video import Video
 
 #from VehicleDetectorDetectron import VehicleDetectorDetectron as Detector
 from VehicleDetectorYolo import VehicleDetectorYolo as Detector
-useGpu=False
 
 video = Video('video/Gen5_RU_2019-10-07_07-56-42-0001_m0.avi')
-detector = Detector(useGpu=useGpu)
+detector = Detector()
 for i in tqdm(range(video.getTotalNumFrames())):
     end, frame = video.getFrame(convRGB=detector.wantsRGB)
     features = detector.getFeatures(frame)
