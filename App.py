@@ -97,6 +97,10 @@ class MainWindow(QMainWindow):
   def loadVideosFromFolder(self, folder):
     videoPaths = self.storage.recursivelyFindVideosInFolder(folder)
     for videoPath in videoPaths:
+      if TESTING: # Do not load videos that have no precomputed boxes in TESTING mode
+        videoFeaturesPath = videoPath.replace('videos/', 'features/').replace('.avi', '.pkl')
+        if not os.path.isfile(videoFeaturesPath):
+          continue
       dataPoint = DataPoint(videoPath)
       self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
