@@ -35,7 +35,7 @@
 * Given predictedLabels and groundTruth labels, how do we actually compute an accuracy?
 
 ### MED PRIO
-* Quantify perf difference between (OS, ComputeDevice, YOLOvsDETECTRON). There are 8 different combinations here.
+* Batch process images instead of processing them one by one.
 
 * Labels are not parsed from disk properly or represented in memory properly. A label should have type similar to tuple(str, float)
 
