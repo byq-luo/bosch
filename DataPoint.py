@@ -14,6 +14,7 @@ class DataPoint:
     self.segmentations = []
     self.laneLines = []
     self.aggregatePredConfidence = 0
+    self.initialLabelTime = None
 
     folder, nameExtension = os.path.split(videoPath)
     name, extension = os.path.splitext(nameExtension)
@@ -30,8 +31,10 @@ class DataPoint:
         for ln in labelLines:
           label, labelTime = ln.split(',')
           label = label.split('=')[0]
-          labelTime = float(labelTime)
-          self.groundTruthLabels.append((label, labelTime))
+          labelTime = int(float(labelTime))
+          if self.initialLabelTime is None:
+            self.initialLabelTime = labelTime
+          self.groundTruthLabels.append((label, labelTime - self.initialLabelTime))
     except:
       self.groundTruthLabels = []
     
