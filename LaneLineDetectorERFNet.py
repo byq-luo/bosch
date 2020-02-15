@@ -1,8 +1,5 @@
 import torch
-import torchvision
-import torch.nn.parallel
 import torch.backends.cudnn as cudnn
-import torch.optim
 import cv2
 from erfnet.models.erfnet import ERFNet
 import torch.nn.functional as F
