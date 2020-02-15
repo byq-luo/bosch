@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Dialog</class>
- <widget class="QDialog" name="Dialog">
+ <class>StatsDialog</class>
+ <widget class="QDialog" name="StatsDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>442</width>
-    <height>189</height>
+    <width>950</width>
+    <height>350</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,7 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
+    <layout class="QVBoxLayout" name="statsLayout">
      <item>
       <widget class="QLabel" name="label_8">
        <property name="text">
@@ -54,7 +54,7 @@
      <item>
       <widget class="QLabel" name="label_7">
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Average video length: &lt;/span&gt;20m&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Average video length: &lt;/span&gt;5m&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
@@ -68,7 +68,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QWidget" name="widget" native="true"/>
+    <layout class="QVBoxLayout" name="plotLayout"/>
    </item>
   </layout>
  </widget>

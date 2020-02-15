@@ -24,9 +24,7 @@
 ### HIGHEST PRIO
 * Get classifier working.
 
-* Only return top 5 bounding boxes sorted by area.
-
-* Only return bounding boxes for vehicles
+* Only return top 5 bounding boxes sorted by area?
 
 * Sometimes a bounding box is given that covers the dash of the host vehicle. This box has width ~= width of screen. Do not return this bbox.
 
@@ -37,11 +35,11 @@
 ### MED PRIO
 * Batch process images instead of processing them one by one.
 
+* Only return bounding boxes for vehicles.
+
 * Labels are not parsed from disk properly or represented in memory properly. A label should have type similar to tuple(str, float)
 
 * We load any and every video from disk. Instead, in TRAINING mode do not load vids that are missing ground truth labels
-
-* Make 'process videos' button start the processing rather than the open folder button
 
 * Score in video list should be something like
 
@@ -54,6 +52,6 @@
 
 ### LOWER PRIO
 
-* Remove frame slice in Video .py after mock/video.avi is replaced with a video from our dataset
+* Could learn a classifier to determine if car in bounding box is facing towards or away from us. Or if it is horizontal (like we are at an intersection). Or maybe there is some logical way to determine if the car is facing us or not.
 
-* Increase performance of detection. Classifier runs the vehicle and lane detectors in an interleaved way. We should try running the vehicle detector first and the running the lane line detector. The lane line detector runs only on the cpu, so I wonder if we could get performance benefit by running it in parallel (in a separate process, might be a challenge)
+* Increase performance of detection? Classifier runs the vehicle and lane detectors in an interleaved way. We should try running the vehicle detector first and the running the lane line detector. The lane line detector runs only on the cpu, so I wonder if we could get performance benefit by running it in parallel (in a separate process, might be a challenge)?
