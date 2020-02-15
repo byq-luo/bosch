@@ -33,12 +33,11 @@ def processVideo(dp: DataPoint,
   # TODO predict
   labels = []
 
-  frameIndex = 0
-  while True:
+  for frameIndex in range(totalNumFrames):
     isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
     if not isFrameAvail:
-      break
-    frameIndex += 1
+        print('Video='+dp.videoPath+' returned no frame for index='+str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
+        continue
 
     vehicleBoxes, vehicleMasks = vehicleDetector.getFeatures(frame)
     laneLines = laneLineDetector.getLines(frame)

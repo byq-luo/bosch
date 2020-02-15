@@ -2,6 +2,8 @@
 
 ### MED PRIO
 
+* Possibly len(dp.boundingBoxes) != video.totalNumFrames. Look in Classifier.py where we check 'if not isFrameAvail:'.
+
 * Video list bug
 
       1. Start app with TESTING=True

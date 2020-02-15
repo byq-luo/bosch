@@ -31,6 +31,7 @@ class MainWindow(QMainWindow):
     self.ui.showSegmentationsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawSegmentations)
     self.ui.fileTableWidget.cellClicked.connect(self.videoInListClicked)
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
+    self.ui.labelTableWidget.itemChanged.connect(self.labelInListChanged)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
     self.setWindowIcon(QIcon('icons/bosch.ico'))
@@ -59,17 +60,39 @@ class MainWindow(QMainWindow):
     self.dialog.show()
 
   def labelInListClicked(self, row, column):
-    frameIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
+    videoPath, frameIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
     self.ui.videoWidget.seekToTime(frameIndex)
+
+  def labelInListChanged(self, newItem):
+    videoPath, index = newItem.data(Qt.UserRole)
+    dataPoint = self.dataPoints[videoPath]
+    try:
+      newLabel = newItem.text()
+      assert newLabel.find(" ") != -1
+      label, time = newLabel.split(" ")
+      time.strip()
+      label.strip()
+      assert label.isalpha() is True
+      finalLabel = (label, float(time))
+      dataPoint.predictedLabels[index] = finalLabel
+      newItem.setText('{:10s} {}'.format(label, time))
+
+    except:
+      label, time = dataPoint.predictedLabels[index]
+      newItem.setText('{:10s} {}'.format(label, time))
+
 
   def setLabelList(self, dataPoint):
     self.ui.labelTableWidget.setRowCount(0)
+    listIndex = 0
+    videoPath = dataPoint.videoPath
     for label, labelTime in dataPoint.predictedLabels:
       rowIndex = self.ui.labelTableWidget.rowCount()
       self.ui.labelTableWidget.insertRow(rowIndex)
-      item = QTableWidgetItem('{:10s} {}'.format(label, int(labelTime)))
-      item.setData(Qt.UserRole, labelTime)
+      item = QTableWidgetItem('{:10s} {}'.format(label, labelTime))
+      item.setData(Qt.UserRole, (videoPath, listIndex))
       self.ui.labelTableWidget.setItem(rowIndex, 0, item)
+      listIndex += 1
 
   def videoInListClicked(self, row, column):
     videoPath = self.ui.fileTableWidget.currentItem().data(Qt.UserRole)
