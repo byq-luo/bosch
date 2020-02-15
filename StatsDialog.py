@@ -9,8 +9,6 @@ import os
 
 from statsdialog_ui import Ui_StatsDialog
 
-labelCounts = {}
-
 class StatsDialog(QDialog):
     def __init__(self):
         super(StatsDialog, self).__init__()
@@ -34,6 +32,8 @@ class StatsDialog(QDialog):
         self.canvas.draw()
 
     def genFakePlot(self):
+        labelCounts = {}
+
         for ls in os.walk('labels'):
             for g in ls:
                 for f in g:
@@ -56,7 +56,7 @@ class StatsDialog(QDialog):
         ax.set_xticks(np.arange(len(bars)))
         ax.set_xticklabels(bars, rotation=45)
         ax.set_title('Predicted label frequencies')
-        # # Tweak spacing to prevent clipping of tick-labels
+        # Tweak spacing to prevent clipping of tick-labels
         fig.subplots_adjust(bottom=0.25)
 
         return fig

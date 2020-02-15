@@ -58,7 +58,9 @@ class MainWindow(QMainWindow):
     self.dialog.show()
 
   def labelInListClicked(self, row, column):
-    videoPath, frameIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
+    videoPath, labelIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
+    dp : DataPoint = self.dataPoints[videoPath]
+    frameIndex = dp.groundTruthLabels[labelIndex][1]
     self.ui.videoWidget.seekToTime(frameIndex)
 
   def labelInListChanged(self, newItem):
@@ -68,17 +70,16 @@ class MainWindow(QMainWindow):
       newLabel = newItem.text()
       assert newLabel.find(" ") != -1
       label, time = newLabel.split(" ")
-      time.strip()
-      label.strip()
+      time = time.strip()
+      label = label.strip()
       assert label.isalpha() is True
       finalLabel = (label, float(time))
       dataPoint.predictedLabels[index] = finalLabel
-      newItem.setText('{:10s} {}'.format(label, time))
-
+      # causes enters inf loop due to signals
+      # newItem.setText('{:10s} {}'.format(label, time))
     except:
       label, time = dataPoint.predictedLabels[index]
-      newItem.setText('{:10s} {}'.format(label, time))
-
+      # newItem.setText('{:10s} {}'.format(label, time))
 
   def setLabelList(self, dataPoint):
     self.ui.labelTableWidget.setRowCount(0)
@@ -87,7 +88,7 @@ class MainWindow(QMainWindow):
     for label, labelTime in dataPoint.predictedLabels:
       rowIndex = self.ui.labelTableWidget.rowCount()
       self.ui.labelTableWidget.insertRow(rowIndex)
-      item = QTableWidgetItem('{:10s} {}'.format(label, labelTime))
+      item = QTableWidgetItem(' {:10s} {:.1f}'.format(label, labelTime))
       # TODO provide a more useful time measure
       #(either use the following uncommented line or change the time representation in the video widget)
       #item = QTableWidgetItem('{:10s} {:02d}:{:02d}'.format(label, labelTime//60, labelTime%60))
