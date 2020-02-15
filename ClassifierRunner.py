@@ -20,7 +20,7 @@ class _ProgressTracker(object):
 
   def addToTotalNumFrames(self, videoPath: str):
     with self.lock:
-      assert(not self.hasAskedForProgress.value)
+      #assert(not self.hasAskedForProgress.value)
       video = Video(videoPath)
       self.totalNumFrames.value += video.getTotalNumFrames()
       del video
@@ -28,7 +28,7 @@ class _ProgressTracker(object):
   def incrementNumFramesProcessed(self):
     with self.lock:
       self.numFramesProcessed.value += 1
-      assert(self.numFramesProcessed.value <= self.totalNumFrames.value)
+      #assert(self.numFramesProcessed.value <= self.totalNumFrames.value)
 
   def setCurVidProgress(self, progress: float):
     with self.lock:
@@ -37,7 +37,7 @@ class _ProgressTracker(object):
   def getTotalProgress(self):
     with self.lock:
       self.hasAskedForProgress.value = True
-      assert(self.totalNumFrames.value != 0)
+      #assert(self.totalNumFrames.value != 0)
       return self.numFramesProcessed.value / self.totalNumFrames.value
 
   def getCurVidProgress(self):

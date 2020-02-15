@@ -27,8 +27,6 @@ class VideoOverlay:
     self.shouldDrawSegmentations = shouldDrawSegmentations
 
   def processFrame(self, frame, frameIndex, dataPoint:DataPoint, currentTime):
-
-    # TODO
     x = 30
     y = 45
 
