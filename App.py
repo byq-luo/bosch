@@ -3,14 +3,14 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
-from dialog_ui import Ui_Dialog
 import os
 
-TESTING = True # Controls whether to use precomputed features
-
+from StatsDialog import StatsDialog
 from ClassifierRunner import ClassifierRunner
 from DataPoint import DataPoint
 from Storage import Storage
+
+TESTING = True # Controls whether to use precomputed features
 
 # TODO TODO background workers do not stop if GUI is closed while processing
 
@@ -52,9 +52,7 @@ class MainWindow(QMainWindow):
     else:
       self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
 
-    self.dialog = QDialog()
-    ui = Ui_Dialog()
-    ui.setupUi(self.dialog)
+    self.dialog = StatsDialog()
 
   def showInfoDialog(self):
     self.dialog.show()
@@ -90,6 +88,9 @@ class MainWindow(QMainWindow):
       rowIndex = self.ui.labelTableWidget.rowCount()
       self.ui.labelTableWidget.insertRow(rowIndex)
       item = QTableWidgetItem('{:10s} {}'.format(label, labelTime))
+      # TODO provide a more useful time measure
+      #(either use the following uncommented line or change the time representation in the video widget)
+      #item = QTableWidgetItem('{:10s} {:02d}:{:02d}'.format(label, labelTime//60, labelTime%60))
       item.setData(Qt.UserRole, (videoPath, listIndex))
       self.ui.labelTableWidget.setItem(rowIndex, 0, item)
       listIndex += 1
