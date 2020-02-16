@@ -33,12 +33,17 @@ class VideoOverlay:
     if self.shouldDrawBoxes:
       bboxes = dataPoint.boundingBoxes
       if len(bboxes) > frameIndex:
-        for x1,y1,x2,y2 in bboxes[frameIndex]:
-          x, y = x1, y1-15
+        for (x1,y1,x2,y2),_id in bboxes[frameIndex]:
+          x, y = x1, y1-7
           cv2.rectangle(frame,
             (x1,y1), (x2,y2),
             self.boundingBoxColor,
             self.boundingBoxThickness)
+          cv2.putText(frame,
+                      str(_id),
+                      (x,y),
+                      0, .3,
+                      self.labelColor)
 
     if self.shouldDrawLabels:
       currentLabel = "No Label Yet"

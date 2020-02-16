@@ -16,15 +16,21 @@ from Video import Video
 MODEL_CFG_PATH = 'yolo/cfg/yolov3-spp.cfg'
 MODEL_WEIGHTS_PATH = 'yolo/weights/ultralytics68.pt'
 
+
+def eq(x, y, eps=.00001):
+    return abs(x-y) < eps
+
+
 class VehicleDetectorYolo:
     wantsRGB = True
+
     def __init__(self):
         self.model_def = MODEL_CFG_PATH
         self.weights = MODEL_WEIGHTS_PATH
-        self.conf_thres=0.5
-        self.iou_thres=0.5
-        self.batch_size=1
-        self.img_size=608
+        self.conf_thres = 0.5
+        self.iou_thres = 0.5
+        self.batch_size = 1
+        self.img_size = 608
         self.half = False
 
         self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
@@ -42,7 +48,8 @@ class VehicleDetectorYolo:
         self.model.to(self.device).eval()
 
         # Half precision
-        self.half = self.half and self.device.type != 'cpu'  # half precision only supported on CUDA
+        # half precision only supported on CUDA
+        self.half = self.half and self.device.type != 'cpu'
         if self.half:
             self.model.half()
 
@@ -65,14 +72,19 @@ class VehicleDetectorYolo:
                 detections = detections.float()
             detections = non_max_suppression(detections, self.conf_thres, self.iou_thres)
 
-        segmentations = [] # YOLO does not give segmentations
+        segmentations = []  # YOLO does not give segmentations
         if detections is not None and detections[0] is not None:
-          detections = detections[0]
-          # Rescale boxes from img_size to im0 size
-          detections[:, :4] = scale_coords(img.shape[2:], detections[:, :4], frame.shape[:2]).round()
+            detections = detections[0]
+            # Rescale boxes from img_size to im0 size
+            detections[:, :4] = scale_coords(img.shape[2:], detections[:, :4], frame.shape[:2]).round()
 
-          #unique_labels = detections[:, -1].cpu().unique()
-          #n_cls_preds = len(unique_labels)
+            # we only care about labels 2, 3, 5, 7. See https://github.com/ultralytics/yolov3/blob/master/data/coco.names
+            #unique_labels = detections[:, -1].cpu().unique()
+            #n_cls_preds = len(unique_labels)
 
-          return detections[:,:4].cpu().numpy(), segmentations
-        return np.array([[0,0,0,0]]), segmentations
+            keepBoxes = []
+            for x1, y1, x2, y2, score, clazz in detections.cpu().numpy():
+                if eq(clazz, 2) or eq(clazz, 3) or eq(clazz, 5) or eq(clazz, 7):
+                    keepBoxes.append((x1, y1, x2, y2))
+            return np.array(keepBoxes), segmentations
+        return np.array([]), segmentations

@@ -117,16 +117,17 @@ class VideoWidget(QWidget):
       self.didSeek = False
 
       frameIndex = self.video.getFrameNumber()
-      frameAvailable, frame = self.video.getFrame()
+      isFrameAvail, frame = self.video.getFrame()
       currentTime = self.video.getCurrentTime()
-
-      frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint, currentTime)
 
       # video has played all the way through
       if frame is None:
         self.pause()
         self.video.setFrameNumber(0)
-      elif frameAvailable:
+      elif isFrameAvail:
+        # TODO see Classifier
+        # frame = frame[190:190+170,100:620].copy()
+        frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint, currentTime)
         self.previousFrame = frame
         self._drawImage(frame, qp)
     elif self.previousFrame is not None:
