@@ -11,7 +11,7 @@ class VideoOverlay:
 
     self.segmentationsColor = (255, 0, 0)
     self.boundingBoxColor = (0,255,0)
-    self.boundingBoxThickness = 2
+    self.boundingBoxThickness = 1
     self.labelColor = (255,0,0)
 
   def setDrawLabels(self, shouldDrawLabels: bool):
@@ -33,11 +33,15 @@ class VideoOverlay:
     if self.shouldDrawBoxes:
       bboxes = dataPoint.boundingBoxes
       if len(bboxes) > frameIndex:
-        for (x1,y1,x2,y2),_id in bboxes[frameIndex]:
+        for (bx1,by1,bx2,by2),(x1,y1,x2,y2),_id in bboxes[frameIndex]:
           x, y = x1, y1-7
           cv2.rectangle(frame,
             (x1,y1), (x2,y2),
             self.boundingBoxColor,
+            self.boundingBoxThickness)
+          cv2.rectangle(frame,
+            (bx1,by1), (bx2,by2),
+            (0,0,255),
             self.boundingBoxThickness)
           cv2.putText(frame,
                       str(_id),

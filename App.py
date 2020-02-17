@@ -1,3 +1,6 @@
+import sys
+sys.path.append('deepsort')
+
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QDialog
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
@@ -10,7 +13,7 @@ from ClassifierRunner import ClassifierRunner
 from DataPoint import DataPoint
 from Storage import Storage
 
-TESTING = True # Controls whether to use precomputed features
+TESTING = False # Controls whether to use precomputed features
 
 # TODO TODO background workers do not stop if GUI is closed while processing
 
@@ -189,8 +192,8 @@ if __name__ == '__main__':
   # See https://github.com/opencv/opencv/issues/5150
   import multiprocessing as mp
   mp.set_start_method('spawn')
-  
-  import sys
+
+
   app = QApplication(sys.argv)
   window = MainWindow()
   window.show()

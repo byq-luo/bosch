@@ -57,8 +57,8 @@ def _loadLibs(progressTracker, TESTING):
   if TESTING:
     from precomputed.VehicleDetector import VehicleDetector
   else:
-    #from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
-    from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
+    from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
+    # from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
   
   from LaneLineDetector import LaneLineDetector
 

@@ -10,12 +10,14 @@ import numpy as np
 
 import pickle
 
-BBOX_SCORE_THRESH = .8
+BBOX_SCORE_THRESH = .5
 
 class VehicleDetectorDetectron:
   wantsRGB = False
   def __init__(self):
     cfg = get_cfg()
+
+    self.thangs = set()
 
     #cfg.MODEL.DEVICE = 'cpu'
 
@@ -30,10 +32,17 @@ class VehicleDetectorDetectron:
     # See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
     instances = vehicleFeatures['instances']
     keepScores = instances.scores > BBOX_SCORE_THRESH
+    scores = instances.scores[keepScores]
     boxes = instances.pred_boxes[keepScores]
+    classes = instances.pred_classes[keepScores]
+    classesnpy = classes.cpu().numpy()
     masks = instances.pred_masks[keepScores]
     boundaries = self._getMaskBoundaries(masks)
-    return boxes.tensor.cpu().numpy(), boundaries
+
+
+    boxes = boxes.tensor.cpu().numpy()
+    scores = [classesnpy[i] for i in range(len(boxes))]
+    return boxes, scores, boundaries
 
   def _getMaskBoundaries(self, masks):
     boundaries = []

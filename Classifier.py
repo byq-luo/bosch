@@ -1,4 +1,6 @@
-from VehicleTracker import VehicleTracker, Vehicle
+# from VehicleTracker import VehicleTracker
+# from VehicleTrackerDL import VehicleTracker
+from VehicleTrackerSORT import VehicleTracker
 from DataPoint import DataPoint
 from Video import Video
 
@@ -9,11 +11,10 @@ import cv2
 # TODO also make Detectron only give bounding boxes for vehicle classes
 
 # Take what we want from the features
-def _fillDataPoint(dp, vehicles, masksList, laneLinesNumpy):
+def _fillDataPoint(dp, boxes, nudgeboxes,ids, masksList, laneLinesNumpy):
   boxesList = []
-  for vehicle in vehicles:
-    box = list(vehicle.box)
-    boxesList.append((list(map(int, box)), vehicle.id))
+  for box,nbox,_id in zip(boxes, nudgeboxes,ids):
+    boxesList.append((box, list(map(int, nbox)), _id))
   dp.boundingBoxes.append(boxesList)
 
   dp.segmentations.append(masksList)
@@ -39,7 +40,7 @@ def processVideo(dp: DataPoint,
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
     # laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
-  tracker = VehicleTracker()
+  # tracker = VehicleTracker()
 
   labels = []
   currentTargetObject = None
@@ -48,20 +49,22 @@ def processVideo(dp: DataPoint,
   newTargetTimer = 10
   lastLabelProduced = None
 
+  allboxes, allboxscores, alllines, allmasks = [], [], [], []
+
   for frameIndex in range(totalNumFrames):
-    # isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
-    isFrameAvail, frame = True, None
+    isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
+    # isFrameAvail, frame = True, None
     _time = frameIndex / videoFPS
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
-      boxes, masks = [], []
+      boxes, boxscores, masks = [], [], []
       lines = []
     else:
       # TODO test if resizing the images makes performance (accuracy or speed) any better
       # TODO make ERFNet work for any input image size
       # frame = frame[190:190+170,100:620].copy()
-      boxes, masks = vehicleDetector.getFeatures(frame)
+      boxes, boxscores, masks = vehicleDetector.getFeatures(frame)
       #lines = laneLineDetector.getLines(frame)
       lines = []
 
@@ -140,24 +143,29 @@ def processVideo(dp: DataPoint,
                   labels.append(newLabel)
                   lastLabelProduced = "rightTO"
 
-              '''
+        '''
 
-      vehicles = tracker.getObjs(frame, boxes)
-      #vehicles = [Vehicle(0, b) for b in boxes]
-
-    _fillDataPoint(dp, vehicles, masks, lines)
+      allboxes.append(boxes)
+      allboxscores.append(boxscores)
+      allmasks.append(masks)
+      alllines.append(lines)
+      # nudgeboxes,ids = tracker.getObjs(frame, boxes, boxscores)
+    # _fillDataPoint(dp, boxes, nudgeboxes, ids, masks, lines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
-
+  
+  import pickle
+  with open(videoFeaturesPath, 'wb') as file:
+    pickle.dump([allboxes, allboxscores, allmasks, alllines], file)
   return dp
 
 
 # For precomputing features
-#allboxes, alllines, allmasks = [], [], []
-# allboxes.append(boxes)
-# allmasks.append(masks)
-# alllines.append(lines)
-# ...
+#allboxes, allboxscores, alllines, allmasks = [], [], [], []
+#allboxes.append(boxes)
+#allboxscores.append(boxscores)
+#allmasks.append(masks)
+#alllines.append(lines)
 #import pickle
-# with open(videoFeaturesPath, 'wb') as file:
-#  pickle.dump([allboxes, allmasks, alllines], file)
+#with open(videoFeaturesPath, 'wb') as file:
+#  pickle.dump([allboxes, allboxscores, allmasks, alllines], file)
