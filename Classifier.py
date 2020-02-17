@@ -1,6 +1,6 @@
-# from VehicleTracker import VehicleTracker
+from VehicleTracker import VehicleTracker
 # from VehicleTrackerDL import VehicleTracker
-from VehicleTrackerSORT import VehicleTracker
+# from VehicleTrackerSORT import VehicleTracker
 from DataPoint import DataPoint
 from Video import Video
 
@@ -13,8 +13,15 @@ import cv2
 # Take what we want from the features
 def _fillDataPoint(dp, boxes, nudgeboxes,ids, masksList, laneLinesNumpy):
   boxesList = []
+
+  # Sending back min length box list works good
+  if len(nudgeboxes) < len(boxes):
+    nudgeboxes += [np.array([0,0,0,0])] * (len(boxes)-len(nudgeboxes))
+    ids += ['.']
+  if len(nudgeboxes) > len(boxes):
+    boxes += [np.array([0,0,0,0])] * (len(nudgeboxes)-len(boxes))
   for box,nbox,_id in zip(boxes, nudgeboxes,ids):
-    boxesList.append((box, list(map(int, nbox)), _id))
+    boxesList.append((list(map(int,box)), list(map(int, nbox)), _id))
   dp.boundingBoxes.append(boxesList)
 
   dp.segmentations.append(masksList)
@@ -40,7 +47,7 @@ def processVideo(dp: DataPoint,
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
     # laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
-  # tracker = VehicleTracker()
+  tracker = VehicleTracker()
 
   labels = []
   currentTargetObject = None
@@ -52,8 +59,8 @@ def processVideo(dp: DataPoint,
   allboxes, allboxscores, alllines, allmasks = [], [], [], []
 
   for frameIndex in range(totalNumFrames):
-    isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
-    # isFrameAvail, frame = True, None
+    # isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
+    isFrameAvail, frame = True, None
     _time = frameIndex / videoFPS
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
@@ -145,18 +152,11 @@ def processVideo(dp: DataPoint,
 
         '''
 
-      allboxes.append(boxes)
-      allboxscores.append(boxscores)
-      allmasks.append(masks)
-      alllines.append(lines)
-      # nudgeboxes,ids = tracker.getObjs(frame, boxes, boxscores)
-    # _fillDataPoint(dp, boxes, nudgeboxes, ids, masks, lines)
+      nudgeboxes,ids = tracker.getObjs(frame, boxes, boxscores)
+    _fillDataPoint(dp, boxes, nudgeboxes, ids, masks, lines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
   
-  import pickle
-  with open(videoFeaturesPath, 'wb') as file:
-    pickle.dump([allboxes, allboxscores, allmasks, alllines], file)
   return dp
 
 

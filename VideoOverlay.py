@@ -34,7 +34,7 @@ class VideoOverlay:
       bboxes = dataPoint.boundingBoxes
       if len(bboxes) > frameIndex:
         for (bx1,by1,bx2,by2),(x1,y1,x2,y2),_id in bboxes[frameIndex]:
-          x, y = x1, y1-7
+          x, y = x1,y1-7
           cv2.rectangle(frame,
             (x1,y1), (x2,y2),
             self.boundingBoxColor,

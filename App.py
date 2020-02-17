@@ -13,7 +13,7 @@ from ClassifierRunner import ClassifierRunner
 from DataPoint import DataPoint
 from Storage import Storage
 
-TESTING = False # Controls whether to use precomputed features
+TESTING = True # Controls whether to use precomputed features
 
 # TODO TODO background workers do not stop if GUI is closed while processing
 
