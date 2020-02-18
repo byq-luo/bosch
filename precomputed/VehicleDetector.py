@@ -41,6 +41,6 @@ class VehicleDetector:
     return boxes, envelopes, scores
 
   def loadFeaturesFromDisk(self, featuresPath):
-    assert(self.frameNumber == 0)
+    self.frameNumber = 0
     with open(featuresPath, 'rb') as file:
       self.boxes, self.scores, self.envelopes, _, _ = pickle.load(file)
