@@ -5,6 +5,8 @@ from VehicleTrackerSORT import VehicleTracker
 from DataPoint import DataPoint
 from Video import Video
 
+from CONFIG import *
+
 import numpy as np
 import random
 import cv2
@@ -16,9 +18,6 @@ import cv2
 # TODO can get lane curves from prob map.
 # See https://github.com/XingangPan/SCNN/tree/master/tools
 # and https://github.com/cardwing/Codes-for-Lane-Detection
-
-
-PRECOMPUTE = False
 
 
 def _fillDataPoint(dp, rawBoxes, vehicles, envelopes, laneLines):
@@ -77,7 +76,7 @@ def processVideo(dp: DataPoint,
       vehicles = []
     else:
       rawBoxes, envelopes, boxscores = vehicleDetector.getFeatures(frame)
-      # lines = laneLineDetector.getLines(frame)
+      lines = laneLineDetector.getLines(frame)
       lines = []
       vehicles = tracker.getVehicles(frame, rawBoxes, boxscores)
       # labelGen.processFrame(vehicles, lines)
@@ -99,5 +98,5 @@ def processVideo(dp: DataPoint,
     with open(videoFeaturesPath, 'wb') as file:
       pickle.dump([allboxes, allboxscores, allenvelopes, alllines, allvehicles], file)
 
-  dp.predictedlabels = labelGen.getLabels()
+  # dp.predictedlabels = labelGen.getLabels()
   return dp
