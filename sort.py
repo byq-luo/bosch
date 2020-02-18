@@ -75,7 +75,7 @@ class KalmanBoxTracker(object):
   This class represents the internel state of individual tracked objects observed as bbox.
   """
   count = 0
-  def __init__(self,bbox):
+  def __init__(self,bbox,hit_window):
     """
     Initialises a tracker using initial bounding box.
     """
@@ -98,6 +98,7 @@ class KalmanBoxTracker(object):
     self.hits = 0
     self.hit_streak = 0
     self.age = 0
+    self.hit_window = hit_window
 
   def update(self,bbox):
     """
@@ -117,7 +118,7 @@ class KalmanBoxTracker(object):
       self.kf.x[6] *= 0.0
     self.kf.predict()
     self.age += 1
-    if(self.time_since_update>20):
+    if(self.time_since_update>self.hit_window):
       self.hit_streak = 0
     self.time_since_update += 1
     self.history.append(convert_x_to_bbox(self.kf.x))
@@ -176,7 +177,7 @@ def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
 
 
 class Sort(object):
-  def __init__(self,max_age=1,min_hits=10):
+  def __init__(self,max_age=1,min_hits=10,hit_window=10):
     """
     Sets key parameters for SORT
     """
@@ -184,6 +185,7 @@ class Sort(object):
     self.min_hits = min_hits
     self.trackers = []
     self.frame_count = 0
+    self.hit_window = hit_window
 
   def update(self,dets):
     """
@@ -217,12 +219,12 @@ class Sort(object):
 
     #create and initialise new trackers for unmatched detections
     for i in unmatched_dets:
-        trk = KalmanBoxTracker(dets[i,:]) 
+        trk = KalmanBoxTracker(dets[i,:], self.hit_window) 
         self.trackers.append(trk)
     i = len(self.trackers)
     for trk in reversed(self.trackers):
         d = trk.get_state()[0]
-        if((trk.time_since_update < 20) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits)):
+        if((trk.time_since_update < self.hit_window) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits)):
           ret.append(np.concatenate((d,[trk.id+1])).reshape(1,-1)) # +1 as MOT benchmark requires positive
         i -= 1
         #remove dead tracklet
