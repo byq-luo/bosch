@@ -3,6 +3,15 @@ import torchvision
 import numpy as np
 
 
+# GOOD settings
+# for detectron
+# no box smoothing
+# max freq of 20
+# velocity smoother = .3
+
+# Reducing velocity contribution to freq decay may help
+
+
 # def sampleBoxColor(box, frame):
 #   x1,y1,x2,y2 = box
 #   w = int(x2-x1+.5)
@@ -18,10 +27,24 @@ import numpy as np
 #   return c
 
 
+# VELOCITY_SMOOTHING = .8
+# BOX_SMOOTHING = .7
+
+# VELOCITY_SMOOTHING = .3
+# BOX_SMOOTHING = .5
+
+VELOCITY_SMOOTHING = .3
+BOX_SMOOTHING = .8
+
+
+def mix(a, b, m):
+  return (a-b)*m+b
+
+
 class Vehicle:
   def __init__(self, box, seg=None, _id=None):
     self.id = _id
-    self.freq = 3
+    self.freq = 3  # TODO give better name
     self.box = box
     # self.estBoxCol = sampleBoxColor(box, frame)
     # self.outline = seg
@@ -40,7 +63,7 @@ class VehicleTracker:
     self.objs = []
     self.next_id = 0
 
-  def getObjs(self, frame, boxes, boxscores):
+  def getVehicles(self, frame, boxes, boxscores):
     boxes = np.array(boxes)
     pairedBoxes = set()
     pairedObjs = set()
@@ -56,53 +79,28 @@ class VehicleTracker:
         values = []
         for i in range(len(boxes)):
           for j in range(len(self.objs)):
-            b1Center = boxes[i][:2] * .5 + .5 * boxes[i][2:]
-            b2Center = objs[j][:2] * .5 + .5 * objs[j][2:]
+            b1Center = (boxes[i][:2] + boxes[i][2:]) * .5
+            b2Center = (objs[j][:2] + objs[j][2:]) * .5
             diff = b1Center - b2Center
-            dist = np.linalg.norm(diff) / IOUs[i,j] # inf for non intersecting boxes
+            dist = np.linalg.norm(diff) / IOUs[i, j]  # inf for non intersecting boxes
             if dist < 50:
-              values.append((dist,i,j))
+              values.append((dist, i, j))
         values.sort()
         for dist, i, j in values:
-          b2d[i] = min(b2d.get(i,10000), dist)
+          b2d[i] = min(b2d.get(i, 10000), dist)
           if i not in pairedBoxes and j not in pairedObjs:
-            self.objs[j].freq = min(20, self.objs[j].freq + 20/(1+dist))
+            self.objs[j].freq = min(40, self.objs[j].freq + 20/(1+dist))
             # update the obj box
             diff = boxes[i] - self.objs[j].box
-            # self.objs[j].velocity = self.objs[j].velocity * .8 + .2 * (diff[:2] + diff[2:]) / 2
-            # self.objs[j].box = self.objs[j].box * .7 + .3 * boxes[i]
-            self.objs[j].velocity = self.objs[j].velocity * .3 + .7 * (diff[:2] + diff[2:]) / 2
-            self.objs[j].box = self.objs[j].box * .5 + .5 * boxes[i]
-            self.objs[j].box = boxes[i]
+            self.objs[j].velocity = mix(self.objs[j].velocity, (diff[:2] + diff[2:]) / 2, VELOCITY_SMOOTHING)
+            self.objs[j].box = mix(self.objs[j].box, boxes[i], BOX_SMOOTHING)
             pairedBoxes.add(i)
             pairedObjs.add(j)
-
-        ## IOUs = NxM, boxes = Nx4, objs = Mx4
-        ## IOUs[i,j] = intersection area over union area of boxes[i] and objs[j]
-        #IOUs = torchvision.ops.boxes.box_iou(boxesTensor, objTensor)
-        #values = []
-        #for i, r in enumerate(IOUs):
-        #  for j, iou in enumerate(r):
-        #    if iou < .3:
-        #      continue
-        #    values.append((iou, i, j))
-        #values = sorted(values, reverse=True)
-        #for iou, i, j in values:
-        #  if i not in pairedBoxes and j not in pairedObjs:
-        #    self.objs[j].freq = min(24, self.objs[j].freq + 5*iou)
-        #    # update the obj box
-        #    diff = boxes[i] - self.objs[j].box
-        #    self.objs[j].velocity = self.objs[j].velocity * .8 + .2 * (diff[:2] + diff[2:]) / 2
-        #    self.objs[j].box = self.objs[j].box * .4 + .6 * boxes[i]
-        #    self.objs[j].box = boxes[i]
-        #    self.objs[j].pbox = boxes[i]
-        #    pairedBoxes.add(i)
-        #    pairedObjs.add(j)
 
       # Check for potential new objects
       for i in range(len(boxes)):
         if i not in pairedBoxes:
-          # try to filter boxes that are represent an existing obj but for some reason
+          # try to filter boxes that represent an existing obj but for some reason
           # did not get paired. i.e. try to reduce number of box creations
           if i not in b2d or 1000 >= b2d[i] >= 20:
             self.objs.append(Vehicle(boxes[i]))
@@ -114,7 +112,7 @@ class VehicleTracker:
     if len(self.objs) > 0:
       toRemove = []
       for o in self.objs:
-        o.freq -= 1 + np.linalg.norm(o.velocity) # fast things disappear
+        o.freq -= 1 + np.linalg.norm(o.velocity)  # fast things disappear
         if o.freq <= 0:
           toRemove.append(o)
         elif o.freq >= 18 and o.id is None:  # we are confident enough in this object so give it an id
@@ -123,6 +121,4 @@ class VehicleTracker:
       for o in toRemove:
         self.objs.remove(o)
 
-    obs = [o.box for o in self.objs if o.id is not None]
-    ids = [o.id for o in self.objs if o.id is not None]
-    return obs, ids
+    return [o for o in self.objs if o.id is not None]

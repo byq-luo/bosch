@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import numpy as np
 
 
-SMOOTHING = .8
+SMOOTHING = .9
 
 
 class LaneLineDetector:
@@ -41,10 +41,9 @@ class LaneLineDetector:
     cudnn.fastest = True
     self.model.eval()
 
-  def _linesFromProb(self, prob):
+  def _lineFromProb(self, prob):
     # need to threshold before hough
     prob = (255*(prob > .05)).astype('uint8')
-
     hough = cv2.HoughLinesP(prob,
                             rho=20,
                             theta=np.pi/180,
@@ -84,36 +83,36 @@ class LaneLineDetector:
   def getLines(self, frame):
     ll, l, r, rr, lllrrr = self._getProbs(frame)
 
-    # Visualize
-    llc = cv2.resize(ll, (720, 153), interpolation=cv2.INTER_LINEAR)
-    lc = cv2.resize(l, (720, 153), interpolation=cv2.INTER_LINEAR)
-    rc = cv2.resize(r, (720, 153), interpolation=cv2.INTER_LINEAR)
-    rrc = cv2.resize(rr, (720, 153), interpolation=cv2.INTER_LINEAR)
-    frame = frame.astype('float32')
-    zz = np.zeros(frame.shape[:2])
-    for i,m in enumerate([llc, lc, rc, rrc]):
-      z = np.zeros(frame.shape[:2])
-      z[207:207+153] = 255 * m
-      if i == 0: frame += np.dstack([z,zz,zz])
-      elif i == 1: frame += np.dstack([z,z,zz])
-      elif i == 2: frame += np.dstack([zz,z,zz])
-      elif i == 3: frame += np.dstack([zz,zz,z])
-    frame = np.clip(frame, 0, 254.99).astype('uint8')
-    # return frame, []
+    # # Visualize
+    # llc = cv2.resize(ll, (720, 153), interpolation=cv2.INTER_LINEAR)
+    # lc = cv2.resize(l, (720, 153), interpolation=cv2.INTER_LINEAR)
+    # rc = cv2.resize(r, (720, 153), interpolation=cv2.INTER_LINEAR)
+    # rrc = cv2.resize(rr, (720, 153), interpolation=cv2.INTER_LINEAR)
+    # frame = frame.astype('float32')
+    # zz = np.zeros(frame.shape[:2])
+    # for i,m in enumerate([llc, lc, rc, rrc]):
+    #   z = np.zeros(frame.shape[:2])
+    #   z[207:207+153] = 255 * m
+    #   if i == 0: frame += np.dstack([z,zz,zz])
+    #   elif i == 1: frame += np.dstack([z,z,zz])
+    #   elif i == 2: frame += np.dstack([zz,z,zz])
+    #   elif i == 3: frame += np.dstack([zz,zz,z])
+    # frame = np.clip(frame, 0, 254.99).astype('uint8')
+    # # return frame, []
 
-    ll = self._linesFromProb(ll)
-    l = self._linesFromProb(l)
-    r = self._linesFromProb(r)
-    rr = self._linesFromProb(rr)
+    ll = self._lineFromProb(ll)
+    l = self._lineFromProb(l)
+    r = self._lineFromProb(r)
+    rr = self._lineFromProb(rr)
     ret = []
     for i, line in enumerate([ll, l, r, rr]):
       if line is None:
         continue
       self.smooth[i] = self.smooth[i] * SMOOTHING + (1-SMOOTHING) * line
-      ret.append(self.smooth[i])
+      ret.append((self.smooth[i].astype('int'), i))
     if not len(ret):
-      return frame, []
-    return frame, np.vstack(ret).astype('int')
+      return []
+    return ret
 
   # TODO This should work for arbitrary frame size
   def _getProbs(self, frame):

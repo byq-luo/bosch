@@ -60,7 +60,7 @@ def _loadLibs(progressTracker, TESTING):
     from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
     # from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
   
-  from LaneLineDetector import LaneLineDetector
+  from LaneLineDetectorERFNet import LaneLineDetector
 
   globals()['TESTING'] = TESTING
   globals()['vehicleDetector'] = VehicleDetector()

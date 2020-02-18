@@ -9,6 +9,7 @@ class VehicleDetector:
 
   def __init__(self):
     self.frameNumber = 0
+    # self.asdf = set()
 
   # Sometimes YOLO detects the host vehicle's dash. This function removes that detected bounding box.
   def removeBadBox(self, boxes, screenWidth):
@@ -22,9 +23,12 @@ class VehicleDetector:
   # def removeCarsNotFacingAway():
 
   def getFeatures(self, frame):
+    # boxes = self.bboxes[self.frameNumber - (self.frameNumber % 2)]
+    # scores = self.scores[self.frameNumber - (self.frameNumber % 2)]
     boxes = self.bboxes[self.frameNumber]
     scores = self.scores[self.frameNumber]
     segmentations = []
+    classes = []
 
     # Filter boxes
     # return self.removeBadBox(bboxes, frame.shape[1]), segmentations
@@ -32,7 +36,9 @@ class VehicleDetector:
     boxes = self.removeBadBox(boxes, 700)
 
     self.frameNumber = (self.frameNumber + 1) % len(self.bboxes)
-    return boxes, scores, segmentations
+
+    # TODO
+    return boxes, segmentations, scores, classes
 
   def loadFeaturesFromDisk(self, featuresPath):
     assert(self.frameNumber == 0)

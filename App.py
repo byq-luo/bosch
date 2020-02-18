@@ -63,7 +63,7 @@ class MainWindow(QMainWindow):
   def labelInListClicked(self, row, column):
     videoPath, labelIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
     dp : DataPoint = self.dataPoints[videoPath]
-    frameIndex = dp.groundTruthLabels[labelIndex][1]
+    frameIndex = dp.predictedLabels[labelIndex][1]
     self.ui.videoWidget.seekToTime(frameIndex)
 
   def labelInListChanged(self, newItem):

@@ -17,8 +17,6 @@ class VehicleDetectorDetectron:
   def __init__(self):
     cfg = get_cfg()
 
-    self.thangs = set()
-
     #cfg.MODEL.DEVICE = 'cpu'
 
     # See https://github.com/facebookresearch/detectron2/blob/master/MODEL_ZOO.md
@@ -31,22 +29,25 @@ class VehicleDetectorDetectron:
     vehicleFeatures = self.predictor(frame)
     # See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
     instances = vehicleFeatures['instances']
-    keepScores = instances.scores > BBOX_SCORE_THRESH
-    scores = instances.scores[keepScores]
-    boxes = instances.pred_boxes[keepScores]
-    classes = instances.pred_classes[keepScores]
-    classesnpy = classes.cpu().numpy()
-    masks = instances.pred_masks[keepScores]
-    boundaries = self._getMaskBoundaries(masks)
 
+    keepScores = instances.scores > BBOX_SCORE_THRESH
+
+    boxes = instances.pred_boxes[keepScores]
+    scores = instances.scores[keepScores]
+    classes = instances.pred_classes[keepScores]
+    masks = instances.pred_masks[keepScores]
+
+    envelopes = self._getEnvelopes(masks)
 
     boxes = boxes.tensor.cpu().numpy()
-    scores = [classesnpy[i] for i in range(len(boxes))]
-    return boxes, scores, boundaries
+    boxes = [boxes[i] for i in range(len(boxes))]
+    classes = classes.cpu().numpy()
+    classes = [classes[i] for i in range(len(classes))]
+    return boxes, envelopes, scores, classes
 
-  def _getMaskBoundaries(self, masks):
-    boundaries = []
+  def _getEnvelopes(self, masks):
+    envelopes = []
     for mask in masks:
       contour, hierarchy = cv2.findContours(np.uint8(mask.cpu().numpy()), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-      boundaries.append(contour)
-    return boundaries
+      envelopes.append(contour)
+    return envelopes

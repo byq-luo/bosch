@@ -38,9 +38,6 @@ class DataPoint:
     except:
       self.groundTruthLabels = []
     
-    # TODO For now just show ground truth so we can explore the labels easily
-    self.predictedLabels = self.groundTruthLabels
-
   def saveToStorage(self, storage: Storage):
     pass
 
