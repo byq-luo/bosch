@@ -73,7 +73,7 @@ class VehicleDetectorYolo:
       detections = non_max_suppression(detections, self.conf_thres, self.iou_thres)
 
     boxes, scores = [], []
-    segmentations = []  # YOLO does not give segmentations
+    envelopes = []  # YOLO does not give segmentations
     if detections is not None and detections[0] is not None:
       detections = detections[0]
       # Rescale boxes from img_size to im0 size
@@ -89,4 +89,4 @@ class VehicleDetectorYolo:
         if eq(clazz, 2) or eq(clazz, 3) or eq(clazz, 5) or eq(clazz, 7):
           boxes.append((x1, y1, x2, y2))
           scores.append(score)
-    return boxes, scores, segmentations
+    return boxes, envelopes, scores

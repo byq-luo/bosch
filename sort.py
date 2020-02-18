@@ -117,7 +117,7 @@ class KalmanBoxTracker(object):
       self.kf.x[6] *= 0.0
     self.kf.predict()
     self.age += 1
-    if(self.time_since_update>0):
+    if(self.time_since_update>20):
       self.hit_streak = 0
     self.time_since_update += 1
     self.history.append(convert_x_to_bbox(self.kf.x))
@@ -128,6 +128,11 @@ class KalmanBoxTracker(object):
     Returns the current bounding box estimate.
     """
     return convert_x_to_bbox(self.kf.x)
+
+def cent(a,b):
+  c1 = (a[:2] + a[2:4]) / 2
+  c2 = (b[:2] + b[2:4]) / 2
+  return np.linalg.norm(c1-c2) / 120
 
 def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
   """
@@ -141,7 +146,7 @@ def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
 
   for d,det in enumerate(detections):
     for t,trk in enumerate(trackers):
-      iou_matrix[d,t] = iou(det,trk)
+      iou_matrix[d,t] = iou(det,trk) - cent(det, trk)
   matched_indices = linear_assignment(-iou_matrix)
 
   unmatched_detections = []
@@ -171,7 +176,7 @@ def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
 
 
 class Sort(object):
-  def __init__(self,max_age=1,min_hits=3):
+  def __init__(self,max_age=1,min_hits=10):
     """
     Sets key parameters for SORT
     """
@@ -217,7 +222,7 @@ class Sort(object):
     i = len(self.trackers)
     for trk in reversed(self.trackers):
         d = trk.get_state()[0]
-        if((trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits)):
+        if((trk.time_since_update < 20) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits)):
           ret.append(np.concatenate((d,[trk.id+1])).reshape(1,-1)) # +1 as MOT benchmark requires positive
         i -= 1
         #remove dead tracklet

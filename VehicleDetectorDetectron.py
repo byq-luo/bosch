@@ -37,13 +37,14 @@ class VehicleDetectorDetectron:
     classes = instances.pred_classes[keepScores]
     masks = instances.pred_masks[keepScores]
 
-    envelopes = self._getEnvelopes(masks)
+    # envelopes = self._getEnvelopes(masks)
+    envelopes = []
 
     boxes = boxes.tensor.cpu().numpy()
     boxes = [boxes[i] for i in range(len(boxes))]
     classes = classes.cpu().numpy()
     classes = [classes[i] for i in range(len(classes))]
-    return boxes, envelopes, scores, classes
+    return boxes, envelopes, scores
 
   def _getEnvelopes(self, masks):
     envelopes = []

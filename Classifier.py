@@ -1,7 +1,7 @@
 from LabelGenerator import LabelGenerator
-from VehicleTracker import VehicleTracker
+# from VehicleTracker import VehicleTracker
 # from VehicleTrackerDL import VehicleTracker
-# from VehicleTrackerSORT import VehicleTracker
+from VehicleTrackerSORT import VehicleTracker
 from DataPoint import DataPoint
 from Video import Video
 
@@ -16,6 +16,9 @@ import cv2
 # TODO can get lane curves from prob map.
 # See https://github.com/XingangPan/SCNN/tree/master/tools
 # and https://github.com/cardwing/Codes-for-Lane-Detection
+
+
+PRECOMPUTE = False
 
 
 def _fillDataPoint(dp, rawBoxes, vehicles, envelopes, laneLines):
@@ -41,6 +44,7 @@ def processVideo(dp: DataPoint,
                  laneLineDetector,
                  progressTracker,
                  TESTING):
+  assert(not (TESTING and PRECOMPUTE))
 
   video = Video(dp.videoPath)
   totalNumFrames = video.getTotalNumFrames()
@@ -48,10 +52,16 @@ def processVideo(dp: DataPoint,
   videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
   if TESTING:
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
-    # laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
   tracker = VehicleTracker()
-  labelGen = LabelGenerator(video.getFps())
+  # labelGen = LabelGenerator(video.getFps())
+
+  if PRECOMPUTE:
+    allboxes = []
+    allboxscores = []
+    alllines = []
+    allenvelopes = []
+    allvehicles = []
 
   frames = []
   for frameIndex in range(totalNumFrames):
@@ -59,29 +69,35 @@ def processVideo(dp: DataPoint,
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
-      rawBoxes, envelopes, boxscores, classes = [], [], [], []
-      vehicles, lines = [], []
+      rawBoxes = []
+      boxscores = []
+      lines = []
+      classes = []
+      envelopes = []
+      vehicles = []
     else:
-      rawBoxes, envelopes, boxscores, classes = vehicleDetector.getFeatures(frame)
-      lines = laneLineDetector.getLines(frame)
+      rawBoxes, envelopes, boxscores = vehicleDetector.getFeatures(frame)
+      # lines = laneLineDetector.getLines(frame)
+      lines = []
       vehicles = tracker.getVehicles(frame, rawBoxes, boxscores)
       # labelGen.processFrame(vehicles, lines)
 
-    _fillDataPoint(dp, rawBoxes, vehicles, envelopes, lines)
+    if PRECOMPUTE:
+      allboxes.append(rawBoxes)
+      allboxscores.append(boxscores)
+      allenvelopes.append(envelopes)
+      alllines.append(lines)
+      allvehicles.append(vehicles)
+
+    if not PRECOMPUTE:
+      _fillDataPoint(dp, rawBoxes, vehicles, envelopes, lines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
 
-  dp.predictedlabels = labelGen.getLabels()
+  if PRECOMPUTE:
+    import pickle
+    with open(videoFeaturesPath, 'wb') as file:
+      pickle.dump([allboxes, allboxscores, allenvelopes, alllines, allvehicles], file)
+
+  # dp.predictedlabels = labelGen.getLabels()
   return dp
-
-# isFrameAvail, frame = True, None
-
-# For precomputing features
-#allboxes, allboxscores, alllines, envelopes = [], [], [], []
-# allboxes.append(boxes)
-# allboxscores.append(boxscores)
-# envelopes.append(envelopes)
-# alllines.append(lines)
-#import pickle
-# with open(videoFeaturesPath, 'wb') as file:
-#  pickle.dump([allboxes, allboxscores, envelopes, alllines], file)
