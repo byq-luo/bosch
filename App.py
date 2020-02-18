@@ -176,6 +176,8 @@ class MainWindow(QMainWindow):
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
 
+    dataPoint.saveToStorage(self.storage)
+
     self.dataPoints[dataPoint.videoPath] = dataPoint
 
     # TODO
