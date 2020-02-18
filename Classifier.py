@@ -75,57 +75,85 @@ def processVideo(dp: DataPoint,
       #lines = laneLineDetector.getLines(frame)
       lines = []
 
+      nudgeBoxes, ids = tracker.getObjs(frame, boxes, boxscores)
       # TODO we can the equations from the LandLineDetector.
-      if False: # for code folding in the editor
-        # get lane line equations
-        '''
-              leftXB = laneLines[0][0]
-              leftYB = laneLines[0][1]
-              leftXT = laneLines[0][2]
-              leftYT = laneLines[0][3]
+      if len(lines) > 10000: # for code folding in the editor
+
+
+        leftXB = lines[0][0]
+        leftYB = lines[0][1]
+        leftXT = lines[0][2]
+        leftYT = lines[0][3]
               
-              rightXB = laneLines[1][0]
-              rightYB = laneLines[1][1]
-              rightXT = laneLines[1][2]
-              rightYT = laneLines[1][3]
+        rightXB = lines[1][0]
+        rightYB = lines[1][1]
+        rightXT = lines[1][2]
+        rightYT = lines[1][3]
               
-              leftSlope = (leftYT - leftYB) / (leftXT - leftXB)
-              leftInt = leftYB - (leftSlope * leftXB)
+        leftSlope = (leftYT - leftYB) / (leftXT - leftXB)
+        leftInt = leftYB - (leftSlope * leftXB)
               
-              rightSlope = (rightYT - rightYB) / (rightXT - rightXB)
-              rightInt = rightYB - (rightSlope * rightXB)
-              '''
+        rightSlope = (rightYT - rightYB) / (rightXT - rightXB)
+        rightInt = rightYB - (rightSlope * rightXB)
+
 
         # This section finds all the boxes within the current lane
         # THINGS TO DO IN THIS SECTION:
         #     detect boxes that are half in the lane on left and right
         #     detect boxes completely out of lane on left and right
-        '''
-              boxesOutLaneLeft = []
-              boxesOnLeftLane = []
-              boxesInLane = []
-              boxesOnRightLane = []
-              boxesOutLaneRight = []
+
+        boxesOutLaneLeft = []
+        boxesOnLeftLane = []
+        boxesInLane = []
+        boxesOnRightLane = []
+        boxesOutLaneRight = []
+
+        boxIndex = 0
               
-              for box in vehicleBoxes:
-                insideLeftEdge = False
-                insideRightEdge = False
+        for box in nudgeBoxes:
+          lInsideLeftEdge = False
+          rInsideLeftEdge = False
+          lInsideRightEdge = False
+          rInsideRightEdge = False
+
                 
-                leftX = box[0]
-                rightX = box[2]
-                Y = box[3]
+          leftX = box[0]
+          rightX = box[2]
+          Y = box[3]
                 
-                leftLaneY = leftSlope*leftX + leftInt
-                if Y > leftLaneY:
-                  insideLeftEdge = True
-                
-                rightLaneY = rightSlope*rightX + rightInt
-                if Y > rightLaneY:
-                  insideRightEdge = True
+          lEdgeLeftLaneY = leftSlope*leftX + leftInt
+          lEdgeRightLaneY = rightSlope*leftX + rightInt
+
+          rEdgeLeftLaneY = leftSlope*rightX + leftInt
+          rEdgeRightLaneY = rightSlope*rightX + rightInt
+
+          if Y > lEdgeLeftLaneY:
+            lInsideLeftEdge = True
+
+          if Y > lEdgeRightLaneY:
+            lInsideRightEdge = True
+
+          if Y > rEdgeLeftLaneY:
+            rInsideLeftEdge = True
+
+          if Y > rEdgeRightLaneY:
+             rInsideRightEdge = True
                   
-                if insideLeftEdge and insideRightEdge:
-                  boxesInLane.append(box)
-        '''
+          if lInsideLeftEdge and rInsideRightEdge:
+            boxesInLane.append(box)
+
+          if not lInsideLeftEdge and rInsideLeftEdge:
+            boxesOnLeftLane.append(box)
+
+          if not lInsideLeftEdge and not rInsideLeftEdge:
+            boxesOutLaneLeft.append(box)
+
+          if not rInsideRightEdge and lInsideRightEdge:
+            boxesOnRightLane.append(box)
+
+          if not rInsideRightEdge and not lInsideRightEdge:
+            boxesOutLaneRight.append(box)
+
 
         # Actually produce the labels
         # THINGS TO DO IN THIS SECTION:
@@ -134,26 +162,37 @@ def processVideo(dp: DataPoint,
         #     If the new event timer reaches 0 and the target object has not returned to the lane, produce a new label
         #     Once the target object leaves the lane, start the new event timer
         #     When timer reaches 0 produce evtEnd label and set currentTargetObject to None
-        '''
-              # This section is used to determine the targetObject
-              if currentTargetObject is None:
-                y = 0
-                targetFound = False
-                for box in boxesInLane:
-                  # finds the closest target to the host vehicle
-                  if box[3] > y:
-                    currentTargetObject = box
-                    targetFound = True
-                
-                if targetFound:
-                  newLabel = ("rightTO", _time)
-                  labels.append(newLabel)
-                  lastLabelProduced = "rightTO"
 
-        '''
+        # This section is used to determine the targetObject
+        if currentTargetObject is None:
+          y = 0
+          targetFound = False
+          for box in boxesInLane:
+            # finds the closest target to the host vehicle
+            if box[3] > y:
+              currentTargetObjectBox = box
+              targetFound = True
 
-      nudgeboxes,ids = tracker.getObjs(frame, boxes, boxscores)
-    _fillDataPoint(dp, boxes, nudgeboxes, ids, masks, lines)
+          if targetFound:
+            newLabel = ("rightTO", _time)
+            labels.append(newLabel)
+            lastLabelProduced = "rightTO"
+
+        if lastLabelProduced == "rightTO":
+          pass
+
+
+        if lastLabelProduced == "objTurnOff":
+          # Check how much time is left on new event timer
+          # Also check that box is still on one of the lanes
+          pass
+
+        if lastLabelProduced == "evtEnd":
+          pass
+
+
+
+    _fillDataPoint(dp, boxes, nudgeBoxes, ids, masks, lines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
   
