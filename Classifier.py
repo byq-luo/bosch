@@ -99,6 +99,5 @@ def processVideo(dp: DataPoint,
     with open(videoFeaturesPath, 'wb') as file:
       pickle.dump([allboxes, allboxscores, allenvelopes, alllines, allvehicles], file)
 
-  # dp.predictedlabels = labelGen.getLabels()
-  dp.predictedLabels = [('dummy',12.11), ('dummy2',13.11)]
+  dp.predictedlabels = labelGen.getLabels()
   return dp
