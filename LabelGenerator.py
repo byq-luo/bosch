@@ -10,6 +10,7 @@ class LabelGenerator:
     self.targetDirection = None
     self.lastTargetPos = None
     self._time = None
+    self.buffer = 10
     self.labels = []
     self.videoFPS = videoFPS
 
@@ -102,7 +103,9 @@ class LabelGenerator:
     for vehicle in vehiclesInLane:
       # finds the closest target to the host vehicle
       if vehicle.box[3] > y:
+        y = vehicle.box[3]
         closestTarget = vehicle
+
 
     '''
     Sets a target object if there is no current target object
@@ -129,13 +132,13 @@ class LabelGenerator:
 
       # Current target object is closest in lane
       if targetInLane:
-        self.newEventTimer = 10
+        self.newEventTimer = self.buffer
         self.lastTargetPos = "In Lane"
 
       else:
         # if this is the first time it has left the host lane
-        if self.newEventTimer == 10:
-          self.newEventTimer = 9
+        if self.newEventTimer == self.buffer:
+          self.newEventTimer = self.buffer - 1
           for vehicle in vehiclesOnLeftLane:
             if vehicle.id == self.currentTargetObject.id:
               self.targetDirection = "Left"
@@ -147,7 +150,7 @@ class LabelGenerator:
 
 
         # if the target object has already started leaving the lane
-        elif self.newEventTimer > 0 and self.newEventTimer < 10:
+        elif self.newEventTimer > 0 and self.newEventTimer < self.buffer:
           if self.targetDirection == "Left":
             for vehicle in vehiclesOnLeftLane:
               if vehicle.id == self.currentTargetObject.id:
@@ -165,7 +168,7 @@ class LabelGenerator:
           newLabel = ("cutout", self._time)
           self.labels.append(newLabel)
           self.lastLabelProduced = "cutout"
-          self.newEventTimer = 10
+          self.newEventTimer = self.buffer
           if self.targetDirection == "Left":
             self.lastTargetPos = "On Left Line"
           if self.targetDirection == "Right":
@@ -198,7 +201,7 @@ class LabelGenerator:
 
       # Object is still on the lane line
       if stillOnEdge:
-        self.newEventTimer = 10
+        self.newEventTimer = self.buffer
 
 
       # Object is in neighbor lane
@@ -211,7 +214,7 @@ class LabelGenerator:
           newLabel = ("evtEnd", self._time)
           self.labels.append(newLabel)
           self.lastLabelProduced = "evtEnd"
-          self.newEventTimer = 10
+          self.newEventTimer = self.buffer
           self.currentTargetObject = None
           self.lastTargetPos = None
           self.targetDirection = None
@@ -223,7 +226,7 @@ class LabelGenerator:
 
 
         else:
-          self.newEventTimer = 10
+          self.newEventTimer = self.buffer
           del self.labels[-1]
           self.lastLabelProduced = "rightTO"
           self.lastTargetPos = "In Lane"
@@ -250,12 +253,12 @@ class LabelGenerator:
     if self.newPotentialTarget is None:
       if closerSideTarget is not None:
         self.newPotentialTarget = closerSideTarget
-        self.newTargetTimer = 9
+        self.newTargetTimer = self.buffer - 1
 
     elif self.newPotentialTarget is not None and self.lastLabelProduced != "cutin":
       if closerSideTarget is None:
         self.newPotentialTarget = None
-        self.newTargetTimer = 10
+        self.newTargetTimer = self.buffer
       else:
         if closerSideTarget.id == self.newPotentialTarget.id:
           if self.newTargetTimer > 0:
@@ -264,11 +267,11 @@ class LabelGenerator:
             newLabel = ("cutin", self._time)
             self.labels.append(newLabel)
             self.lastLabelProduced = "cutin"
-            self.newTargetTimer = 10
+            self.newTargetTimer = self.buffer
 
         else:
           self.newPotentialTarget = closerSideTarget
-          self.newTargetTimer = 9
+          self.newTargetTimer = self.buffer - 1
 
     else:
       if closerSideTarget is None:
@@ -298,15 +301,15 @@ class LabelGenerator:
           else:
             del self.labels[-1]
             self.newPotentialTarget = None
-            self.newTargetTimer = 10
+            self.newTargetTimer = self.buffer
 
       else:
         if closerSideTarget.id == self.newPotentialTarget.id:
-          self.newTargetTimer = 10
+          self.newTargetTimer = self.buffer
 
         else:
           self.newPotentialTarget = closerSideTarget
-          self.newTargetTimer = 10
+          self.newTargetTimer = self.buffer
 
 
 
