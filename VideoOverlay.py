@@ -11,8 +11,9 @@ class VideoOverlay:
 
     self.segmentationsColor = (255, 0, 0)
     self.boundingBoxColor = (0,255,0)
-    self.boundingBoxThickness = 2
+    self.boundingBoxThickness = 1
     self.labelColor = (255,0,0)
+    self.laneColors = [(255,0,0),(0,255,0),(0,0,255),(255,191,0)]
 
   def setDrawLabels(self, shouldDrawLabels: bool):
     self.shouldDrawLabels = shouldDrawLabels
@@ -27,17 +28,18 @@ class VideoOverlay:
     self.shouldDrawSegmentations = shouldDrawSegmentations
 
   def processFrame(self, frame, frameIndex, dataPoint:DataPoint, currentTime):
-    x = 30
-    y = 45
-
     if self.shouldDrawBoxes:
       bboxes = dataPoint.boundingBoxes
       if len(bboxes) > frameIndex:
-        for (x1,y1,x2,y2),_id in bboxes[frameIndex]:
-          x, y = x1, y1-7
+        for (bx1,by1,bx2,by2),(x1,y1,x2,y2),_id in bboxes[frameIndex]:
+          x, y = x1,y1-7
           cv2.rectangle(frame,
             (x1,y1), (x2,y2),
             self.boundingBoxColor,
+            self.boundingBoxThickness)
+          cv2.rectangle(frame,
+            (bx1,by1), (bx2,by2),
+            (0,0,255),
             self.boundingBoxThickness)
           cv2.putText(frame,
                       str(_id),
@@ -54,7 +56,7 @@ class VideoOverlay:
           break
       cv2.putText(frame,
                   currentLabel,
-                  (x,y),
+                  (30, 45),
                   0, 1,
                   self.labelColor)
 
@@ -66,8 +68,8 @@ class VideoOverlay:
     if self.shouldDrawLaneLines:
       if len(dataPoint.laneLines) > frameIndex:
         lines = dataPoint.laneLines[frameIndex]
-        for x1, y1, x2, y2 in lines:
-          cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        for (x1, y1, x2, y2),laneID in lines:
+          cv2.line(frame, (x1, y1), (x2, y2), self.laneColors[laneID], 2)
 
     frame = cv2.copyMakeBorder(frame, 
                     3, 3, 3, 3, 

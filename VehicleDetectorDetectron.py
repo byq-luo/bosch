@@ -10,7 +10,7 @@ import numpy as np
 
 import pickle
 
-BBOX_SCORE_THRESH = .8
+BBOX_SCORE_THRESH = .5
 
 class VehicleDetectorDetectron:
   wantsRGB = False
@@ -29,15 +29,26 @@ class VehicleDetectorDetectron:
     vehicleFeatures = self.predictor(frame)
     # See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
     instances = vehicleFeatures['instances']
-    keepScores = instances.scores > BBOX_SCORE_THRESH
-    boxes = instances.pred_boxes[keepScores]
-    masks = instances.pred_masks[keepScores]
-    boundaries = self._getMaskBoundaries(masks)
-    return boxes.tensor.cpu().numpy(), boundaries
 
-  def _getMaskBoundaries(self, masks):
-    boundaries = []
+    keepScores = instances.scores > BBOX_SCORE_THRESH
+
+    boxes = instances.pred_boxes[keepScores]
+    scores = instances.scores[keepScores]
+    classes = instances.pred_classes[keepScores]
+    masks = instances.pred_masks[keepScores]
+
+    # envelopes = self._getEnvelopes(masks)
+    envelopes = []
+
+    boxes = boxes.tensor.cpu().numpy()
+    boxes = [boxes[i] for i in range(len(boxes))]
+    classes = classes.cpu().numpy()
+    classes = [classes[i] for i in range(len(classes))]
+    return boxes, envelopes, scores
+
+  def _getEnvelopes(self, masks):
+    envelopes = []
     for mask in masks:
       contour, hierarchy = cv2.findContours(np.uint8(mask.cpu().numpy()), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-      boundaries.append(contour)
-    return boundaries
+      envelopes.append(contour)
+    return envelopes

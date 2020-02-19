@@ -4,10 +4,14 @@ from PyQt5.QtGui import QPainter, QImage
 from VideoOverlay import VideoOverlay
 from Video import Video
 
+# from LaneLineDetectorERFNet import LaneLineDetector
+# import cv2
+
 class VideoWidget(QWidget):
   def __init__(self, centralWidget):
     super().__init__()
     self.initUI()
+    # self.lane= LaneLineDetector()
 
   def initUI(self):
     self.video = None
@@ -127,7 +131,14 @@ class VideoWidget(QWidget):
       elif isFrameAvail:
         # TODO see Classifier
         # frame = frame[190:190+170,100:620].copy()
+
         frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint, currentTime)
+
+        #laneColors = [(255,0,0),(255,255,0),(0,255,0),(0,0,255)]
+        #frame, lines = self.lane.getLines(frame)
+        #for (x1, y1, x2, y2), _id in lines:
+        #  cv2.line(frame, (x1, y1), (x2, y2), laneColors[_id], 2)
+
         self.previousFrame = frame
         self._drawImage(frame, qp)
     elif self.previousFrame is not None:

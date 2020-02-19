@@ -1,15 +1,19 @@
+import sys
+sys.path.append('deepsort')
+
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QDialog
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
-from dialog_ui import Ui_Dialog
+import os
 
-TESTING = False # Controls whether to use precomputed features
-
+from StatsDialog import StatsDialog
 from ClassifierRunner import ClassifierRunner
 from DataPoint import DataPoint
 from Storage import Storage
+
+from CONFIG import *
 
 # TODO TODO background workers do not stop if GUI is closed while processing
 
@@ -30,6 +34,7 @@ class MainWindow(QMainWindow):
     self.ui.showSegmentationsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawSegmentations)
     self.ui.fileTableWidget.cellClicked.connect(self.videoInListClicked)
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
+    self.ui.labelTableWidget.itemChanged.connect(self.labelInListChanged)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
     self.setWindowIcon(QIcon('icons/bosch.ico'))
@@ -50,25 +55,49 @@ class MainWindow(QMainWindow):
     else:
       self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
 
-    self.dialog = QDialog()
-    ui = Ui_Dialog()
-    ui.setupUi(self.dialog)
+    self.dialog = StatsDialog()
 
   def showInfoDialog(self):
     self.dialog.show()
 
   def labelInListClicked(self, row, column):
-    frameIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
+    videoPath, labelIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
+    dp : DataPoint = self.dataPoints[videoPath]
+    frameIndex = dp.predictedLabels[labelIndex][1]
     self.ui.videoWidget.seekToTime(frameIndex)
+
+  def labelInListChanged(self, newItem):
+    videoPath, index = newItem.data(Qt.UserRole)
+    dataPoint = self.dataPoints[videoPath]
+    try:
+      newLabel = newItem.text()
+      assert newLabel.find(" ") != -1
+      label, time = newLabel.split(" ")
+      time = time.strip()
+      label = label.strip()
+      assert label.isalpha() is True
+      finalLabel = (label, float(time))
+      dataPoint.predictedLabels[index] = finalLabel
+      # causes enters inf loop due to signals
+      # newItem.setText('{:10s} {}'.format(label, time))
+    except:
+      label, time = dataPoint.predictedLabels[index]
+      # newItem.setText('{:10s} {}'.format(label, time))
 
   def setLabelList(self, dataPoint):
     self.ui.labelTableWidget.setRowCount(0)
+    listIndex = 0
+    videoPath = dataPoint.videoPath
     for label, labelTime in dataPoint.predictedLabels:
       rowIndex = self.ui.labelTableWidget.rowCount()
       self.ui.labelTableWidget.insertRow(rowIndex)
-      item = QTableWidgetItem(label)
-      item.setData(Qt.UserRole, labelTime)
+      item = QTableWidgetItem(' {:10s} {:.1f}'.format(label, labelTime))
+      # TODO provide a more useful time measure
+      #(either use the following uncommented line or change the time representation in the video widget)
+      #item = QTableWidgetItem('{:10s} {:02d}:{:02d}'.format(label, labelTime//60, labelTime%60))
+      item.setData(Qt.UserRole, (videoPath, listIndex))
       self.ui.labelTableWidget.setItem(rowIndex, 0, item)
+      listIndex += 1
 
   def videoInListClicked(self, row, column):
     videoPath = self.ui.fileTableWidget.currentItem().data(Qt.UserRole)
@@ -97,6 +126,10 @@ class MainWindow(QMainWindow):
   def loadVideosFromFolder(self, folder):
     videoPaths = self.storage.recursivelyFindVideosInFolder(folder)
     for videoPath in videoPaths:
+      if TESTING: # Do not load videos that have no precomputed boxes in TESTING mode
+        videoFeaturesPath = videoPath.replace('videos/', 'features/').replace('.avi', '.pkl')
+        if not os.path.isfile(videoFeaturesPath):
+          continue
       dataPoint = DataPoint(videoPath)
       self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
@@ -142,8 +175,12 @@ class MainWindow(QMainWindow):
     # id(oldVid) != id(dataPoint) so changes made to dataPoint in
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
+
+    dataPoint.saveToStorage(self.storage)
+
     self.dataPoints[dataPoint.videoPath] = dataPoint
 
+    # TODO
     #dataPoint.compareLabels()
 
     currentItem = self.ui.videoWidget.dataPoint
@@ -157,8 +194,8 @@ if __name__ == '__main__':
   # See https://github.com/opencv/opencv/issues/5150
   import multiprocessing as mp
   mp.set_start_method('spawn')
-  
-  import sys
+
+
   app = QApplication(sys.argv)
   window = MainWindow()
   window.show()

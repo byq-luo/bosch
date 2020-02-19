@@ -13,3 +13,7 @@ class Storage:
 
   def __recursivelyWalk(self, rootFolder):
     return os.walk(rootFolder)
+
+  def writeListToFile(self, lines : list, filename: str):
+    with open(filename, 'w') as file:
+      file.writelines(lines)

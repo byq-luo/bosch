@@ -21,12 +21,13 @@ class DataPoint:
     self.videoName = name
     self.videoFolder = folder
 
+    self.labelsPath = self.videoPath.replace('videos/', 'labels/').replace('m0.avi', 'labels.txt')
+
     self._loadFromDisk()
 
   def _loadFromDisk(self):
-    labelsPath = self.videoPath.replace('videos/', 'labels/').replace('m0.avi', 'labels.txt')
     try:
-      with open(labelsPath) as file:
+      with open(self.labelsPath) as file:
         labelLines = [ln.rstrip('\n') for ln in file.readlines()]
         for ln in labelLines:
           label, labelTime = ln.split(',')
@@ -37,12 +38,18 @@ class DataPoint:
           self.groundTruthLabels.append((label, labelTime - self.initialLabelTime))
     except:
       self.groundTruthLabels = []
-    
-    # TODO For now just show ground truth so we can explore the labels easily
-    self.predictedLabels = self.groundTruthLabels
+
+  def labelsToOutputFormat(self, labels):
+    ret = []
+    for label,labelTime in labels:
+      if label=='rightTO':
+        label = label + '=XX'
+      ret.append(label + ',' + str(labelTime) + '\n')
+    return ret
 
   def saveToStorage(self, storage: Storage):
-    pass
+    labels = self.labelsToOutputFormat(self.predictedLabels)
+    storage.writeListToFile(labels, self.labelsPath)
 
   def compareLabels(self):
     nicepredictedlabels = self.predictedLabels
