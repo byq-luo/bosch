@@ -53,7 +53,7 @@ def processVideo(dp: DataPoint,
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
   tracker = VehicleTracker()
-  # labelGen = LabelGenerator(video.getFps())
+  labelGen = LabelGenerator(video.getFps())
 
   if PRECOMPUTE:
     allboxes = []
@@ -79,7 +79,7 @@ def processVideo(dp: DataPoint,
       lines = laneLineDetector.getLines(frame)
       lines = []
       vehicles = tracker.getVehicles(frame, rawBoxes, boxscores)
-      # labelGen.processFrame(vehicles, lines)
+      labelGen.processFrame(vehicles, lines, frameIndex)
 
     if PRECOMPUTE:
       allboxes.append(rawBoxes)
