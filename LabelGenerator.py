@@ -5,6 +5,7 @@ class LabelGenerator:
     self.currentTargetObject = None
     self.newPotentialTarget = None
     self.newEventTimer = 10
+    self.newTargetTimer = 10
     self.lastLabelProduced = None
     self.targetDirection = None
     self.lastTargetPos = None
@@ -128,46 +129,46 @@ class LabelGenerator:
       if targetInLane:
         self.newEventTimer = 10
         self.lastTargetPos = "In Lane"
-        return
 
-      # if this is the first time it has left the host lane
-      if self.newEventTimer == 10:
-        self.newEventTimer = 9
-        for vehicle in vehiclesOnLeftLane:
-          if vehicle.id == self.currentTargetObject.id:
-            self.targetDirection = "Left"
-            return
-
-        for vehicle in vehiclesOnRightLane:
-          if vehicle.id == self.currentTargetObject.id:
-            self.targetDirection = "Right"
-            return
-
-      # if the target object has already started leaving the lane
-      elif self.newEventTimer > 0 and self.newEventTimer < 10:
-        if self.targetDirection == "Left":
+      else:
+        # if this is the first time it has left the host lane
+        if self.newEventTimer == 10:
+          self.newEventTimer = 9
           for vehicle in vehiclesOnLeftLane:
             if vehicle.id == self.currentTargetObject.id:
-              self.newEventTimer -= 1
-              return
+              self.targetDirection = "Left"
 
-        if self.targetDirection == "Right":
+
           for vehicle in vehiclesOnRightLane:
             if vehicle.id == self.currentTargetObject.id:
-              self.newEventTimer -= 1
-              return
+              self.targetDirection = "Right"
 
-      # if the target has left the lane
-      else:
-        newLabel = ("cutout", self._time)
-        self.labels.append(newLabel)
-        self.lastLabelProduced = "cutout"
-        self.newEventTimer = 10
-        if self.targetDirection == "Left":
-          self.lastTargetPos = "On Left Line"
-        if self.targetDirection == "Right":
-          self.lastTargetPos = "On Right Line"
-        return
+
+        # if the target object has already started leaving the lane
+        elif self.newEventTimer > 0 and self.newEventTimer < 10:
+          if self.targetDirection == "Left":
+            for vehicle in vehiclesOnLeftLane:
+              if vehicle.id == self.currentTargetObject.id:
+                self.newEventTimer -= 1
+
+
+          if self.targetDirection == "Right":
+            for vehicle in vehiclesOnRightLane:
+              if vehicle.id == self.currentTargetObject.id:
+                self.newEventTimer -= 1
+
+
+        # if the target has left the lane
+        else:
+          newLabel = ("cutout", self._time)
+          self.labels.append(newLabel)
+          self.lastLabelProduced = "cutout"
+          self.newEventTimer = 10
+          if self.targetDirection == "Left":
+            self.lastTargetPos = "On Left Line"
+          if self.targetDirection == "Right":
+            self.lastTargetPos = "On Right Line"
+
 
 
     '''
@@ -196,13 +197,13 @@ class LabelGenerator:
       # Object is still on the lane line
       if stillOnEdge:
         self.newEventTimer = 10
-        return
+
 
       # Object is in neighbor lane
-      if inOutsideLane:
+      elif inOutsideLane:
         if self.newEventTimer > 0:
           self.newEventTimer -= 1
-          return
+
 
         else:
           newLabel = ("evtEnd", self._time)
@@ -212,12 +213,12 @@ class LabelGenerator:
           self.currentTargetObject = None
           self.lastTargetPos = None
           self.targetDirection = None
-          return
 
-      if targetInLane:
+
+      else:
         if self.newEventTimer > 0:
           self.newEventTimer -= 1
-          return
+
 
         else:
           self.newEventTimer = 10
@@ -225,4 +226,31 @@ class LabelGenerator:
           self.lastLabelProduced = "rightTO"
           self.lastTargetPos = "In Lane"
           self.targetDirection = None
+
+
+    closerSideTarget = None
+    if targetInLane:
+      for vehicle in vehiclesOnLeftLane:
+        # finds the closest target to the host vehicle
+        if vehicle.box[3] > y:
+          closerSideTarget = vehicle
+          y = vehicle.box[3]
+
+      for vehicle in vehiclesOnRightLane:
+        if vehicle.box[3] > y:
+          closerSideTarget = vehicle
+          y = vehicle.box[3]
+
+    if self.newPotentialTarget is None:
+      if closerSideTarget is not None:
+        self.newPotentialTarget = closerSideTarget
+        self.newTargetTimer = 9
+
+    else:
+      if closerSideTarget is None:
+        self.newPotentialTarget = None
+        self.newTargetTimer = 10
+      else:
+        if closerSideTarget.id == self.newPotentialTarget.id:
+          pass
 
