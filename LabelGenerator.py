@@ -14,6 +14,7 @@ class LabelGenerator:
     self.targetDirection = None
     self.lastTargetPos = None
     self._time = None
+    self.buffer = 10
     self.labels = []
     self.videoFPS = videoFPS
 
@@ -109,8 +110,10 @@ class LabelGenerator:
     for vehicle in vehiclesInLane:
       # finds the closest target to the host vehicle
       if vehicle.box[3] > y:
+        y = vehicle.box[3]
         closestTarget = vehicle
         y = vehicle.box[3]
+
 
     '''
     Sets a target object if there is no current target object
@@ -238,6 +241,9 @@ class LabelGenerator:
           self.targetDirection = None
 
 
+    '''
+    This section will track and handle new cars cutting into our lane
+    '''
     closerSideTarget = None
     if targetInLane:
       for vehicle in vehiclesOnLeftLane:
@@ -251,16 +257,67 @@ class LabelGenerator:
           closerSideTarget = vehicle
           y = vehicle.box[3]
 
+
     if self.newPotentialTarget is None:
       if closerSideTarget is not None:
         self.newPotentialTarget = closerSideTarget
         self.newTargetTimer = self.buffer-1
 
-    else:
+    elif self.newPotentialTarget is not None and self.lastLabelProduced != "cutin":
       if closerSideTarget is None:
         self.newPotentialTarget = None
         self.newTargetTimer = self.buffer
       else:
         if closerSideTarget.id == self.newPotentialTarget.id:
-          pass
+          if self.newTargetTimer > 0:
+            self.newTargetTimer -= 1
+          else:
+            newLabel = ("cutin", self._time)
+            self.labels.append(newLabel)
+            self.lastLabelProduced = "cutin"
+            self.newTargetTimer = self.buffer
+
+        else:
+          self.newPotentialTarget = closerSideTarget
+          self.newTargetTimer = self.buffer - 1
+
+    else:
+      if closerSideTarget is None:
+        newTargetInLane = False
+        for vehicle in vehiclesInLane:
+          if vehicle.id == self.newPotentialTarget.id:
+            newTargetInLane = True
+
+        if newTargetInLane:
+          if self.newTargetTimer > 0:
+            self.newTargetTimer -= 1
+
+          else:
+            newLabel = ("evtEnd", self._time)
+            self.labels.append(newLabel)
+            self.currentTargetObject = self.newPotentialTarget
+            self.newPotentialTarget = None
+            newLabel2 = ("rightTO", self._time)
+            self.labels.append(newLabel2)
+            self.lastLabelProduced = "rightTO"
+            self.lastTargetPos = "In Lane"
+
+        else:
+          if self.newTargetTimer > 0:
+            self.newTargetTimer -= 1
+
+          else:
+            del self.labels[-1]
+            self.newPotentialTarget = None
+            self.newTargetTimer = self.buffer
+
+      else:
+        if closerSideTarget.id == self.newPotentialTarget.id:
+          self.newTargetTimer = self.buffer
+
+        else:
+          self.newPotentialTarget = closerSideTarget
+          self.newTargetTimer = self.buffer
+
+
 

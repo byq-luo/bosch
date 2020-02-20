@@ -6,6 +6,7 @@ class DataPoint:
   def __init__(self, videoPath: str):
     assert(videoPath != '')
     self.videoPath = videoPath
+    self.initialLabelTime = None
     self.videoName = ''
     self.videoFolder = ''
     self.predictedLabels = []
@@ -14,8 +15,6 @@ class DataPoint:
     self.segmentations = []
     self.laneLines = []
     self.aggregatePredConfidence = 0
-    self.initialLabelTime = None
-
     folder, nameExtension = os.path.split(videoPath)
     name, extension = os.path.splitext(nameExtension)
     self.videoName = name
