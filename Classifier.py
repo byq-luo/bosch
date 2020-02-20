@@ -11,6 +11,7 @@ import numpy as np
 import random
 import cv2
 
+# TODO somehow make use of frames from the future?
 # TODO test if resizing the images makes performance (accuracy or speed) any better
 # TODO make ERFNet work for any input image size
 # TODO also make Detectron only give bounding boxes for vehicle classes
@@ -51,9 +52,10 @@ def processVideo(dp: DataPoint,
   videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
   if TESTING:
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
+    laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
   tracker = VehicleTracker()
-  # labelGen = LabelGenerator(video.getFps())
+  labelGen = LabelGenerator(video.getFps())
 
   if PRECOMPUTE:
     allboxes = []
@@ -64,7 +66,10 @@ def processVideo(dp: DataPoint,
 
   frames = []
   for frameIndex in range(totalNumFrames):
-    isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
+    if PRECOMPUTE:
+      isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
+    if TESTING:
+      isFrameAvail, frame = True, None
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
@@ -77,9 +82,8 @@ def processVideo(dp: DataPoint,
     else:
       rawBoxes, envelopes, boxscores = vehicleDetector.getFeatures(frame)
       lines = laneLineDetector.getLines(frame)
-      lines = []
       vehicles = tracker.getVehicles(frame, rawBoxes, boxscores)
-      # labelGen.processFrame(vehicles, lines)
+      labelGen.processFrame(vehicles, lines, frameIndex)
 
     if PRECOMPUTE:
       allboxes.append(rawBoxes)
@@ -98,5 +102,6 @@ def processVideo(dp: DataPoint,
     with open(videoFeaturesPath, 'wb') as file:
       pickle.dump([allboxes, allboxscores, allenvelopes, alllines, allvehicles], file)
 
-  # dp.predictedlabels = labelGen.getLabels()
+  dp.predictedLabels = labelGen.getLabels()
+  print(dp.predictedLabels)
   return dp

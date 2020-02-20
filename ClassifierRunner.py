@@ -56,11 +56,12 @@ class _ProgressTracker(object):
 def _loadLibs(progressTracker, TESTING):
   if TESTING:
     from precomputed.VehicleDetector import VehicleDetector
+    from precomputed.LaneLineDetector import LaneLineDetector
   else:
     # from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
     from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
+    from LaneLineDetectorERFNet import LaneLineDetector
   
-  from LaneLineDetectorERFNet import LaneLineDetector
 
   globals()['TESTING'] = TESTING
   globals()['vehicleDetector'] = VehicleDetector()

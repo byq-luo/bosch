@@ -1,5 +1,5 @@
 import sys
-sys.path.append('deepsort')
+# sys.path.append('deepsort')
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QDialog
 from PyQt5.QtGui import QIcon
@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
     self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
     self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
     self.ui.showLaneLinesCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLaneLines)
-    self.ui.showSegmentationsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawSegmentations)
+    # self.ui.showSegmentationsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawSegmentations)
     self.ui.fileTableWidget.cellClicked.connect(self.videoInListClicked)
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
     self.ui.labelTableWidget.itemChanged.connect(self.labelInListChanged)
@@ -176,12 +176,12 @@ class MainWindow(QMainWindow):
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
 
+    dataPoint.compareLabels()
+    # self.videoScoreChanged(dataPoint)
+
     dataPoint.saveToStorage(self.storage)
 
     self.dataPoints[dataPoint.videoPath] = dataPoint
-
-    # TODO
-    #dataPoint.compareLabels()
 
     currentItem = self.ui.videoWidget.dataPoint
     if currentItem is not None:

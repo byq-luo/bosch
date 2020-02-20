@@ -15,17 +15,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from __future__ import print_function
-
-import os.path
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from skimage import io
-from sklearn.utils.linear_assignment_ import linear_assignment
-import glob
-import time
-import argparse
+from scipy.optimize import linear_sum_assignment
 from filterpy.kalman import KalmanFilter
 
 def iou(bb_test,bb_gt):
@@ -130,10 +121,10 @@ class KalmanBoxTracker(object):
     """
     return convert_x_to_bbox(self.kf.x)
 
-def cent(a,b):
+def dist(a,b):
   c1 = (a[:2] + a[2:4]) / 2
   c2 = (b[:2] + b[2:4]) / 2
-  return np.linalg.norm(c1-c2) / 120
+  return np.linalg.norm(c1-c2) / 10
 
 def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
   """
@@ -147,8 +138,10 @@ def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
 
   for d,det in enumerate(detections):
     for t,trk in enumerate(trackers):
-      iou_matrix[d,t] = iou(det,trk) - cent(det, trk)
-  matched_indices = linear_assignment(-iou_matrix)
+      iou_matrix[d,t] = iou(det,trk)# / (1+ dist(det, trk))
+  matched_indices = linear_sum_assignment(-iou_matrix)
+  matched_indices = np.asarray(matched_indices)
+  matched_indices = np.transpose(matched_indices)
 
   unmatched_detections = []
   for d,det in enumerate(detections):
@@ -233,71 +226,3 @@ class Sort(object):
     if(len(ret)>0):
       return np.concatenate(ret)
     return np.empty((0,5))
-    
-def parse_args():
-    """Parse input arguments."""
-    parser = argparse.ArgumentParser(description='SORT demo')
-    parser.add_argument('--display', dest='display', help='Display online tracker output (slow) [False]',action='store_true')
-    args = parser.parse_args()
-    return args
-
-if __name__ == '__main__':
-  # all train
-  sequences = ['PETS09-S2L1','TUD-Campus','TUD-Stadtmitte','ETH-Bahnhof','ETH-Sunnyday','ETH-Pedcross2','KITTI-13','KITTI-17','ADL-Rundle-6','ADL-Rundle-8','Venice-2']
-  args = parse_args()
-  display = args.display
-  phase = 'train'
-  total_time = 0.0
-  total_frames = 0
-  colours = np.random.rand(32,3) #used only for display
-  if(display):
-    if not os.path.exists('mot_benchmark'):
-      print('\n\tERROR: mot_benchmark link not found!\n\n    Create a symbolic link to the MOT benchmark\n    (https://motchallenge.net/data/2D_MOT_2015/#download). E.g.:\n\n    $ ln -s /path/to/MOT2015_challenge/2DMOT2015 mot_benchmark\n\n')
-      exit()
-    plt.ion()
-    fig = plt.figure() 
-  
-  if not os.path.exists('output'):
-    os.makedirs('output')
-  
-  for seq in sequences:
-    mot_tracker = Sort() #create instance of the SORT tracker
-    seq_dets = np.loadtxt('data/%s/det.txt'%(seq),delimiter=',') #load detections
-    with open('output/%s.txt'%(seq),'w') as out_file:
-      print("Processing %s."%(seq))
-      for frame in range(int(seq_dets[:,0].max())):
-        frame += 1 #detection and frame numbers begin at 1
-        dets = seq_dets[seq_dets[:,0]==frame,2:7]
-        dets[:,2:4] += dets[:,0:2] #convert to [x1,y1,w,h] to [x1,y1,x2,y2]
-        total_frames += 1
-
-        if(display):
-          ax1 = fig.add_subplot(111, aspect='equal')
-          fn = 'mot_benchmark/%s/%s/img1/%06d.jpg'%(phase,seq,frame)
-          im =io.imread(fn)
-          ax1.imshow(im)
-          plt.title(seq+' Tracked Targets')
-
-        start_time = time.time()
-        trackers = mot_tracker.update(dets)
-        cycle_time = time.time() - start_time
-        total_time += cycle_time
-
-        for d in trackers:
-          print('%d,%d,%.2f,%.2f,%.2f,%.2f,1,-1,-1,-1'%(frame,d[4],d[0],d[1],d[2]-d[0],d[3]-d[1]),file=out_file)
-          if(display):
-            d = d.astype(np.int32)
-            ax1.add_patch(patches.Rectangle((d[0],d[1]),d[2]-d[0],d[3]-d[1],fill=False,lw=3,ec=colours[d[4]%32,:]))
-            ax1.set_adjustable('box-forced')
-
-        if(display):
-          fig.canvas.flush_events()
-          plt.draw()
-          ax1.cla()
-
-  print("Total Tracking took: %.3f for %d frames or %.1f FPS"%(total_time,total_frames,total_frames/total_time))
-  if(display):
-    print("Note: to get real runtime results run without the option: --display")
-  
-
-

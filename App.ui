@@ -268,7 +268,7 @@
        <widget class="QTableWidget" name="labelTableWidget">
         <property name="maximumSize">
          <size>
-          <width>250</width>
+          <width>270</width>
           <height>16777215</height>
          </size>
         </property>
@@ -308,13 +308,6 @@
          </widget>
         </item>
        </layout>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="showSegmentationsCheckbox">
-        <property name="text">
-         <string>Show Segmentations</string>
-        </property>
-       </widget>
       </item>
       <item>
        <widget class="QCheckBox" name="boundingBoxCheckbox">
