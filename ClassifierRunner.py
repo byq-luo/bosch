@@ -52,7 +52,7 @@ class _ProgressTracker(object):
       # find totalNumFrames first then the getProgress can be used
       self.hasAskedForProgress.value = False
 
-# executed in the other python process
+# executed in another python process
 def _loadLibs(progressTracker, TESTING):
   if TESTING:
     from precomputed.VehicleDetector import VehicleDetector
@@ -61,8 +61,6 @@ def _loadLibs(progressTracker, TESTING):
     # from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
     from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
     from LaneLineDetectorERFNet import LaneLineDetector
-  
-
   globals()['TESTING'] = TESTING
   globals()['vehicleDetector'] = VehicleDetector()
   globals()['laneLineDetector'] = LaneLineDetector()
@@ -89,7 +87,6 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool)
 class ClassifierRunner:
   def __init__(self, TESTING):
     self.progressTracker = _ProgressTracker()
-
     # only run one video at a time
     self.pool = ProcessPoolExecutor(max_workers=1, initializer=_loadLibs, initargs=(self.progressTracker, TESTING))
 
