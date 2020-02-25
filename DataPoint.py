@@ -32,9 +32,9 @@ class DataPoint:
           label, labelTime = ln.split(',')
           label = label.split('=')[0]
           labelTime = (float(labelTime))
-          if self.initialLabelTime is None:
-            self.initialLabelTime = labelTime
-          self.groundTruthLabels.append((label, labelTime - self.initialLabelTime))
+          temp = labelTime / 300
+          correctTime = (temp - int(temp)) * 300
+          self.groundTruthLabels.append((label, correctTime))
     except:
       self.groundTruthLabels = []
 
