@@ -1,2 +1,2 @@
-TESTING = True # Controls whether to use precomputed features
+TESTING = False # Controls whether to use precomputed features
 PRECOMPUTE = False

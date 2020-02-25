@@ -1,11 +1,11 @@
 from VehicleTracker import Vehicle
 
 def isLeft(a, b, c):
-  return ((b[0] - a[0])*(c[1] - a[1]) - (b[1] - a[1])*(c[0] - a[0])) > 0;
+  return ((b[0] - a[0])*(c[1] - a[1]) - (b[1] - a[1])*(c[0] - a[0])) > 0
 
 class LabelGenerator:
   def __init__(self, videoFPS):
-    self.buffer = 10
+    self.buffer = 1
     self.currentTargetObject = None
     self.newPotentialTarget = None
     self.newEventTimer = self.buffer
@@ -14,7 +14,6 @@ class LabelGenerator:
     self.targetDirection = None
     self.lastTargetPos = None
     self._time = None
-    self.buffer = 10
     self.labels = []
     self.videoFPS = videoFPS
 
@@ -27,21 +26,8 @@ class LabelGenerator:
 
     self._time = frameIndex / self.videoFPS
 
-    leftXB = lines[0][0][0]
-    leftYB = lines[0][0][1]
-    leftXT = lines[0][0][2]
-    leftYT = lines[0][0][3]
-
-    rightXB = lines[1][0][0]
-    rightYB = lines[1][0][1]
-    rightXT = lines[1][0][2]
-    rightYT = lines[1][0][3]
-
-    leftSlope = (leftYT - leftYB) / (leftXT - leftXB)
-    leftInt = leftYB - (leftSlope * leftXB)
-
-    rightSlope = (rightYT - rightYB) / (rightXT - rightXB)
-    rightInt = rightYB - (rightSlope * rightXB)
+    leftSegments, _ = lines[0]
+    rightSegments, _ = lines[1]
 
     # This section finds all the boxes within the current lane
     # THINGS TO DO IN THIS SECTION:
@@ -58,47 +44,144 @@ class LabelGenerator:
 
     for vehicle in vehicles:
       box = vehicle.box
-      lInsideLeftEdge = False
-      rInsideLeftEdge = False
-      lInsideRightEdge = False
-      rInsideRightEdge = False
 
-      leftX = box[0]
-      rightX = box[2]
-      Y = box[3]
+      x1,y1,x2,y2 = box
+      leftX = min(x1,x2)
+      rightX = max(x1,x2)
+      bottomY = max(y1,y2)
 
-      lEdgeLeftLaneY = leftSlope*leftX + leftInt
-      lEdgeRightLaneY = rightSlope*leftX + rightInt
+      lInsideLeftLaneLine = False
+      rInsideLeftLaneLine = False
+      for (sx1, sy1, sx2, sy2) in leftSegments:
+        sx2 = max(sx1, sx2)
+        sx1 = min(sx1, sx2)
+        sy2 = min(sy1, sy2)
+        sy1 = max(sy1, sy2)
+        if leftX >= sx1 and leftX <= sx2 and bottomY <= sy1 and bottomY >= sy2:
+          lInsideLeftLaneLine = not isLeft((sx1,sy1),(sx2,sy2),(leftX,bottomY))
+        elif leftX >= sx2 and bottomY <= sy1 and bottomY >= sy2:
+          lInsideLeftLaneLine = False
+        elif leftX <= sx1 and bottomY <= sy1 and bottomY >= sy2:
+          lInsideLeftLaneLine = True
 
-      rEdgeLeftLaneY = leftSlope*rightX + leftInt
-      rEdgeRightLaneY = rightSlope*rightX + rightInt
+        if rightX >= sx1 and rightX <= sx2 and bottomY <= sy1 and bottomY >= sy2:
+          rInsideLeftLaneLine = not isLeft((sx1,sy1),(sx2,sy2),(rightX,bottomY))
+        elif rightX >= sx2 and bottomY <= sy1 and bottomY >= sy2:
+          rInsideLeftLaneLine = False
+        elif rightX <= sx1 and bottomY <= sy1 and bottomY >= sy2:
+          rInsideLeftLaneLine = True
 
-      if Y > lEdgeLeftLaneY:
-        lInsideLeftEdge = True
+        if rInsideLeftLaneLine or lInsideLeftLaneLine:
+          break
 
-      if Y > lEdgeRightLaneY:
-        lInsideRightEdge = True
+      lInsideRightLaneLine = False
+      rInsideRightLaneLine = False
+      for (sx1, sy1, sx2, sy2) in rightSegments:
+        sx2 = max(sx1, sx2)
+        sx1 = min(sx1, sx2)
+        sy2 = min(sy1, sy2)
+        sy1 = max(sy1, sy2)
+        if leftX >= sx1 and leftX <= sx2 and bottomY <= sy1 and bottomY >= sy2:
+          lInsideRightLaneLine = isLeft((sx1,sy1),(sx2,sy2),(leftX,bottomY))
+        elif leftX <= sx1 and bottomY <= sy1 and bottomY >= sy2:
+          lInsideRightLaneLine = True
+        elif leftX >= sx2 and bottomY <= sy1 and bottomY >= sy2:
+          lInsideRightLaneLine = False
 
-      if Y > rEdgeLeftLaneY:
-        rInsideLeftEdge = True
+        if rightX >= sx1 and rightX <= sx2 and bottomY <= sy1 and bottomY >= sy2:
+          rInsideRightLaneLine = isLeft((sx1,sy1),(sx2,sy2),(rightX,bottomY))
+        elif rightX <= sx1 and bottomY <= sy1 and bottomY >= sy2:
+          rInsideRightLaneLine = True
+        elif rightX >= sx2 and bottomY <= sy1 and bottomY >= sy2:
+          rInsideRightLaneLine = False
+        
+        if rInsideRightLaneLine or lInsideRightLaneLine:
+          break
 
-      if Y > rEdgeRightLaneY:
-        rInsideRightEdge = True
-
-      if lInsideLeftEdge and rInsideRightEdge:
+      if lInsideLeftLaneLine and rInsideRightLaneLine:
         vehiclesInLane.append(vehicle)
-
-      if not lInsideLeftEdge and rInsideLeftEdge:
+      elif not lInsideLeftLaneLine and rInsideLeftLaneLine:
         vehiclesOnLeftLane.append(vehicle)
-
-      if not lInsideLeftEdge and not rInsideLeftEdge:
+      elif not lInsideLeftLaneLine and not rInsideLeftLaneLine:
         vehiclesOutLaneLeft.append(vehicle)
-
-      if not rInsideRightEdge and lInsideRightEdge:
+      elif not rInsideRightLaneLine and lInsideRightLaneLine:
         vehiclesOnRightLane.append(vehicle)
-
-      if not rInsideRightEdge and not lInsideRightEdge:
+      elif not rInsideRightLaneLine and not lInsideRightLaneLine:
         vehiclesOutLaneRight.append(vehicle)
+
+    #leftXB = lines[0][0][0]
+    #leftYB = lines[0][0][1]
+    #leftXT = lines[0][0][2]
+    #leftYT = lines[0][0][3]
+
+    #rightXB = lines[1][0][0]
+    #rightYB = lines[1][0][1]
+    #rightXT = lines[1][0][2]
+    #rightYT = lines[1][0][3]
+
+    #leftSlope = (leftYT - leftYB) / (leftXT - leftXB)
+    #leftInt = leftYB - (leftSlope * leftXB)
+
+    #rightSlope = (rightYT - rightYB) / (rightXT - rightXB)
+    #rightInt = rightYB - (rightSlope * rightXB)
+
+    ## This section finds all the boxes within the current lane
+    ## THINGS TO DO IN THIS SECTION:
+    ##     detect boxes that are half in the lane on left and right
+    ##     detect boxes completely out of lane on left and right
+
+    #vehiclesOutLaneLeft = []
+    #vehiclesOnLeftLane = []
+    #vehiclesInLane = []
+    #vehiclesOnRightLane = []
+    #vehiclesOutLaneRight = []
+
+    #boxIndex = 0
+
+    #for vehicle in vehicles:
+    #  box = vehicle.box
+    #  lInsideLeftEdge = False
+    #  rInsideLeftEdge = False
+    #  lInsideRightEdge = False
+    #  rInsideRightEdge = False
+
+    #  leftX = box[0]
+    #  rightX = box[2]
+    #  Y = box[3]
+
+    #  lEdgeLeftLaneY = leftSlope*leftX + leftInt
+    #  lEdgeRightLaneY = rightSlope*leftX + rightInt
+
+    #  rEdgeLeftLaneY = leftSlope*rightX + leftInt
+    #  rEdgeRightLaneY = rightSlope*rightX + rightInt
+
+    #  if Y > lEdgeLeftLaneY:
+    #    lInsideLeftEdge = True
+
+    #  if Y > lEdgeRightLaneY:
+    #    lInsideRightEdge = True
+
+    #  if Y > rEdgeLeftLaneY:
+    #    rInsideLeftEdge = True
+
+    #  if Y > rEdgeRightLaneY:
+    #    rInsideRightEdge = True
+
+    #  if lInsideLeftEdge and rInsideRightEdge:
+    #    vehiclesInLane.append(vehicle)
+
+    #  if not lInsideLeftEdge and rInsideLeftEdge:
+    #    vehiclesOnLeftLane.append(vehicle)
+
+    #  if not lInsideLeftEdge and not rInsideLeftEdge:
+    #    vehiclesOutLaneLeft.append(vehicle)
+
+    #  if not rInsideRightEdge and lInsideRightEdge:
+    #    vehiclesOnRightLane.append(vehicle)
+
+    #  if not rInsideRightEdge and not lInsideRightEdge:
+    #    vehiclesOutLaneRight.append(vehicle)
+
 
 
 
@@ -112,7 +195,6 @@ class LabelGenerator:
       if vehicle.box[3] > y:
         y = vehicle.box[3]
         closestTarget = vehicle
-        y = vehicle.box[3]
 
 
     '''

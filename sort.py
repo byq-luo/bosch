@@ -124,7 +124,7 @@ class KalmanBoxTracker(object):
 def dist(a,b):
   c1 = (a[:2] + a[2:4]) / 2
   c2 = (b[:2] + b[2:4]) / 2
-  return np.linalg.norm(c1-c2) / 10
+  return np.linalg.norm(c1-c2) / 800
 
 def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
   """
@@ -138,7 +138,7 @@ def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
 
   for d,det in enumerate(detections):
     for t,trk in enumerate(trackers):
-      iou_matrix[d,t] = iou(det,trk)# / (1+ dist(det, trk))
+      iou_matrix[d,t] = iou(det,trk) # - dist(det, trk)
   matched_indices = linear_sum_assignment(-iou_matrix)
   matched_indices = np.asarray(matched_indices)
   matched_indices = np.transpose(matched_indices)

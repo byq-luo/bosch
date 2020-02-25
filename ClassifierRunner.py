@@ -10,9 +10,11 @@ from Video import Video
 # https://stackoverflow.com/questions/15520957/python-multiprocessing-in-pyqt-application?rq=1
 # https://docs.python.org/3.7/library/multiprocessing.html#multiprocessing.Value
 # https://eli.thegreenplace.net/2012/01/04/shared-counter-with-pythons-multiprocessing
+
+
 class _ProgressTracker(object):
   def __init__(self):
-    self.numFramesProcessed = Value('i', 0) # creates an int: https://docs.python.org/2/library/array.html#module-array
+    self.numFramesProcessed = Value('i', 0)  # creates an int: https://docs.python.org/2/library/array.html#module-array
     self.totalNumFrames = Value('i', 0)
     self.currentVideoProgress = Value('f', 0.0)
     self.hasAskedForProgress = Value('i', False)
@@ -53,22 +55,26 @@ class _ProgressTracker(object):
       self.hasAskedForProgress.value = False
 
 # executed in another python process
-def _loadLibs(progressTracker, TESTING):
-  if TESTING:
+
+
+def _loadLibs(progressTracker):
+  import CONFIG
+  if CONFIG.TESTING:
     from precomputed.VehicleDetector import VehicleDetector
     from precomputed.LaneLineDetector import LaneLineDetector
   else:
     # from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
     from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
     from LaneLineDetectorERFNet import LaneLineDetector
-  globals()['TESTING'] = TESTING
   globals()['vehicleDetector'] = VehicleDetector()
   globals()['laneLineDetector'] = LaneLineDetector()
   globals()['progressTracker'] = progressTracker
 
+
 def _processVideo(dataPoint: DataPoint):
   # accesses the globals assigned above
-  return processVideo(dataPoint, vehicleDetector, laneLineDetector, progressTracker, TESTING)
+  return processVideo(dataPoint, vehicleDetector, laneLineDetector, progressTracker)
+
 
 def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool):
   assert(dataPoints != [])
@@ -84,13 +90,15 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool)
     completedCallback(future.result())
   progressTracker.reset()
 
+
 class ClassifierRunner:
-  def __init__(self, TESTING):
+  def __init__(self):
     self.progressTracker = _ProgressTracker()
     # only run one video at a time
-    self.pool = ProcessPoolExecutor(max_workers=1, initializer=_loadLibs, initargs=(self.progressTracker, TESTING))
+    self.pool = ProcessPoolExecutor(max_workers=1, initializer=_loadLibs, initargs=(self.progressTracker,))
 
   def processVideos(self, dataPoints, processingCompleteCallback, processingProgressCallback):
     from threading import Thread
-    thread = Thread(target=_run, args=(dataPoints, self.progressTracker, processingCompleteCallback, processingProgressCallback, self.pool))
+    thread = Thread(target=_run, args=(dataPoints, self.progressTracker,
+                                       processingCompleteCallback, processingProgressCallback, self.pool))
     thread.start()

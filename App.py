@@ -13,7 +13,7 @@ from ClassifierRunner import ClassifierRunner
 from DataPoint import DataPoint
 from Storage import Storage
 
-from CONFIG import *
+import CONFIG
 
 # TODO TODO background workers do not stop if GUI is closed while processing
 
@@ -44,13 +44,13 @@ class MainWindow(QMainWindow):
     # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
 
-    self.classifier = ClassifierRunner(TESTING)
+    self.classifier = ClassifierRunner()
 
     # just a thin wrapper around a storage device
     self.storage = Storage()
 
     # If we are in TESTING mode just load videos from the precomputed folder
-    if TESTING:
+    if CONFIG.TESTING:
       self.loadVideosFromFolder('precomputed/videos')
     else:
       self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
   def loadVideosFromFolder(self, folder):
     videoPaths = self.storage.recursivelyFindVideosInFolder(folder)
     for videoPath in videoPaths:
-      if TESTING: # Do not load videos that have no precomputed boxes in TESTING mode
+      if CONFIG.TESTING: # Do not load videos that have no precomputed boxes in TESTING mode
         videoFeaturesPath = videoPath.replace('videos/', 'features/').replace('.avi', '.pkl')
         if not os.path.isfile(videoFeaturesPath):
           continue

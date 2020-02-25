@@ -5,7 +5,7 @@ from VehicleTrackerSORT import VehicleTracker
 from DataPoint import DataPoint
 from Video import Video
 
-from CONFIG import *
+import CONFIG
 
 import numpy as np
 import random
@@ -42,22 +42,21 @@ def _fillDataPoint(dp, rawBoxes, vehicles, envelopes, laneLines):
 def processVideo(dp: DataPoint,
                  vehicleDetector,
                  laneLineDetector,
-                 progressTracker,
-                 TESTING):
-  assert(not (TESTING and PRECOMPUTE))
+                 progressTracker):
+  assert(not (CONFIG.TESTING and CONFIG.PRECOMPUTE))
 
   video = Video(dp.videoPath)
   totalNumFrames = video.getTotalNumFrames()
 
   videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
-  if TESTING:
+  if CONFIG.TESTING:
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
     laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
   tracker = VehicleTracker()
   labelGen = LabelGenerator(video.getFps())
 
-  if PRECOMPUTE:
+  if CONFIG.PRECOMPUTE:
     allboxes = []
     allboxscores = []
     alllines = []
@@ -66,9 +65,9 @@ def processVideo(dp: DataPoint,
 
   frames = []
   for frameIndex in range(totalNumFrames):
-    if PRECOMPUTE:
+    if CONFIG.PRECOMPUTE or not CONFIG.TESTING:
       isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
-    if TESTING:
+    if CONFIG.TESTING:
       isFrameAvail, frame = True, None
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
@@ -85,23 +84,22 @@ def processVideo(dp: DataPoint,
       vehicles = tracker.getVehicles(frame, rawBoxes, boxscores)
       labelGen.processFrame(vehicles, lines, frameIndex)
 
-    if PRECOMPUTE:
+    if CONFIG.PRECOMPUTE:
       allboxes.append(rawBoxes)
       allboxscores.append(boxscores)
       allenvelopes.append(envelopes)
       alllines.append(lines)
       allvehicles.append(vehicles)
 
-    if not PRECOMPUTE:
+    if not CONFIG.PRECOMPUTE:
       _fillDataPoint(dp, rawBoxes, vehicles, envelopes, lines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
 
-  if PRECOMPUTE:
+  if CONFIG.PRECOMPUTE:
     import pickle
     with open(videoFeaturesPath, 'wb') as file:
       pickle.dump([allboxes, allboxscores, allenvelopes, alllines, allvehicles], file)
 
   dp.predictedLabels = labelGen.getLabels()
-  print(dp.predictedLabels)
   return dp

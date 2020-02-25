@@ -65,19 +65,19 @@ class VideoOverlay:
         for boundary in dataPoint.segmentations[frameIndex]:
           cv2.drawContours(frame, boundary, 0, self.segmentationsColor, 2)
 
-    # if self.shouldDrawLaneLines:
-    #   if len(dataPoint.laneLines) > frameIndex:
-    #     lines = dataPoint.laneLines[frameIndex]
-    #     if len(lines) == 0:
-    #       return frame
-    #     for coords,laneID in lines:
-    #       for (x1, y1, x2, y2) in coords:
-    #         cv2.line(frame, (x1, y1), (x2, y2), self.laneColors[laneID], 2)
     if self.shouldDrawLaneLines:
       if len(dataPoint.laneLines) > frameIndex:
         lines = dataPoint.laneLines[frameIndex]
-        for (x1, y1, x2, y2),laneID in lines:
-          cv2.line(frame, (x1, y1), (x2, y2), self.laneColors[laneID], 2)
+        if len(lines) == 0:
+          return frame
+        for coords,laneID in lines:
+          for (x1, y1, x2, y2) in coords:
+            cv2.line(frame, (x1, y1), (x2, y2), self.laneColors[laneID], 2)
+    #if self.shouldDrawLaneLines:
+    #  if len(dataPoint.laneLines) > frameIndex:
+    #    lines = dataPoint.laneLines[frameIndex]
+    #    for (x1, y1, x2, y2),laneID in lines:
+    #      cv2.line(frame, (x1, y1), (x2, y2), self.laneColors[laneID], 2)
 
     frame = cv2.copyMakeBorder(frame, 
                     3, 3, 3, 3, 

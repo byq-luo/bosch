@@ -31,9 +31,7 @@ class DataPoint:
         for ln in labelLines:
           label, labelTime = ln.split(',')
           label = label.split('=')[0]
-          labelTime = (float(labelTime))
-          temp = labelTime / 300
-          correctTime = (temp - int(temp)) * 300
+          correctTime = float(labelTime) % 300
           self.groundTruthLabels.append((label, correctTime))
     except:
       self.groundTruthLabels = []
