@@ -13,6 +13,7 @@ class VehicleTracker:
     self.mot_tracker = Sort(max_age=60, min_hits=30) 
 
   def getVehicles(self, frame, boxes, boxscores):
+    return []
     # update SORT
     inboxes = []
     for b,s in zip(boxes,boxscores):

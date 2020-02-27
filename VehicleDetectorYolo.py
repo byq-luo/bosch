@@ -73,7 +73,6 @@ class VehicleDetectorYolo:
       detections = non_max_suppression(detections, self.conf_thres, self.iou_thres)
 
     boxes, scores = [], []
-    envelopes = []  # YOLO does not give segmentations
     if detections is not None and detections[0] is not None:
       detections = detections[0]
       # Rescale boxes from img_size to im0 size
@@ -83,10 +82,17 @@ class VehicleDetectorYolo:
       #unique_labels = detections[:, -1].cpu().unique()
       #n_cls_preds = len(unique_labels)
 
+      screenWidth = frame.shape[1]
+
       boxes = []
       scores = []
       for x1, y1, x2, y2, score, clazz in detections.cpu().numpy():
         if eq(clazz, 2) or eq(clazz, 3) or eq(clazz, 5) or eq(clazz, 7):
-          boxes.append((x1, y1, x2, y2))
-          scores.append(score)
-    return boxes, envelopes, scores
+
+          # Sometimes YOLO detects the host vehicle's dash.
+          # So filter boxes that are too wide.
+          if (x2-x1) / screenWidth < .8:
+            boxes.append((x1, y1, x2, y2))
+            scores.append(score)
+        
+    return boxes, scores

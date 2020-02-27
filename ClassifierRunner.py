@@ -59,13 +59,14 @@ class _ProgressTracker(object):
 
 def _loadLibs(progressTracker):
   import CONFIG
-  if CONFIG.TESTING:
+  if CONFIG.USE_PRECOMPUTED_FEATURES:
     from precomputed.VehicleDetector import VehicleDetector
     from precomputed.LaneLineDetector import LaneLineDetector
   else:
     # from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
     from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
     from LaneLineDetectorERFNet import LaneLineDetector
+
   globals()['vehicleDetector'] = VehicleDetector()
   globals()['laneLineDetector'] = LaneLineDetector()
   globals()['progressTracker'] = progressTracker

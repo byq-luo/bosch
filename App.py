@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
     self.storage = Storage()
 
     # If we are in TESTING mode just load videos from the precomputed folder
-    if CONFIG.TESTING:
+    if CONFIG.USE_PRECOMPUTED_FEATURES:
       self.loadVideosFromFolder('precomputed/videos')
     else:
       self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
@@ -126,7 +126,8 @@ class MainWindow(QMainWindow):
   def loadVideosFromFolder(self, folder):
     videoPaths = self.storage.recursivelyFindVideosInFolder(folder)
     for videoPath in videoPaths:
-      if CONFIG.TESTING: # Do not load videos that have no precomputed boxes in TESTING mode
+      # Do not load videos that have no precomputed boxes in TESTING mode
+      if CONFIG.USE_PRECOMPUTED_FEATURES:
         videoFeaturesPath = videoPath.replace('videos/', 'features/').replace('.avi', '.pkl')
         if not os.path.isfile(videoFeaturesPath):
           continue

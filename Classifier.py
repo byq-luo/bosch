@@ -21,21 +21,20 @@ import cv2
 # and https://github.com/cardwing/Codes-for-Lane-Detection
 
 
-def _fillDataPoint(dp, rawBoxes, vehicles, envelopes, laneLines):
+def _fillDataPoint(dp, rawboxes, vehicles, laneLines):
   boxes = []
   # Sending back min length box list works good
   vehicleBoxes = [v.box for v in vehicles]
   vehicleIDs = [v.id for v in vehicles]
-  if len(vehicleBoxes) < len(rawBoxes):
-    vehicleBoxes += [np.array([0, 0, 0, 0])] * (len(rawBoxes)-len(vehicleBoxes))
+  if len(vehicleBoxes) < len(rawboxes):
+    vehicleBoxes += [np.array([0, 0, 0, 0])] * (len(rawboxes)-len(vehicleBoxes))
     vehicleIDs += ['.']
-  if len(vehicleBoxes) > len(rawBoxes):
-    rawBoxes += [np.array([0, 0, 0, 0])] * (len(vehicleBoxes)-len(rawBoxes))
-  for box, vbox, _id in zip(rawBoxes, vehicleBoxes, vehicleIDs):
+  if len(vehicleBoxes) > len(rawboxes):
+    rawboxes += [np.array([0, 0, 0, 0])] * (len(vehicleBoxes)-len(rawboxes))
+  for box, vbox, _id in zip(rawboxes, vehicleBoxes, vehicleIDs):
     boxes.append((list(map(int, box)), list(map(int, vbox)), _id))
 
   dp.boundingBoxes.append(boxes)
-  dp.segmentations.append(envelopes)
   dp.laneLines.append(laneLines)
 
 
@@ -43,63 +42,53 @@ def processVideo(dp: DataPoint,
                  vehicleDetector,
                  laneLineDetector,
                  progressTracker):
-  assert(not (CONFIG.TESTING and CONFIG.PRECOMPUTE))
 
   video = Video(dp.videoPath)
   totalNumFrames = video.getTotalNumFrames()
 
   videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
-  if CONFIG.TESTING:
+  if CONFIG.USE_PRECOMPUTED_FEATURES:
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
     laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
 
   tracker = VehicleTracker()
   labelGen = LabelGenerator(video.getFps())
 
-  if CONFIG.PRECOMPUTE:
-    allboxes = []
-    allboxscores = []
-    alllines = []
-    allenvelopes = []
-    allvehicles = []
+  if CONFIG.MAKE_PRECOMPUTED_FEATURES:
+    allboxes,allboxscores,allvehicles,alllines = [],[],[],[]
 
   frames = []
   for frameIndex in range(totalNumFrames):
-    if CONFIG.PRECOMPUTE or not CONFIG.TESTING:
+    if CONFIG.SHOULD_LOAD_VID_FROM_DISK:
       isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
-    if CONFIG.TESTING:
+    else:
       isFrameAvail, frame = True, None
+
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
-      rawBoxes = []
-      boxscores = []
-      lines = []
-      classes = []
-      envelopes = []
-      vehicles = []
+      rawboxes,boxscores,vehicles,lines = [],[],[],[]
     else:
-      rawBoxes, envelopes, boxscores = vehicleDetector.getFeatures(frame)
+      rawboxes, vehicles, boxscores = [], [], []
+      # rawboxes, boxscores = vehicleDetector.getFeatures(frame)
+      # vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
       lines = laneLineDetector.getLines(frame)
-      vehicles = tracker.getVehicles(frame, rawBoxes, boxscores)
-      labelGen.processFrame(vehicles, lines, frameIndex)
+      # labelGen.processFrame(vehicles, lines, frameIndex)
 
-    if CONFIG.PRECOMPUTE:
-      allboxes.append(rawBoxes)
+    if CONFIG.MAKE_PRECOMPUTED_FEATURES:
+      allboxes.append(rawboxes)
       allboxscores.append(boxscores)
-      allenvelopes.append(envelopes)
-      alllines.append(lines)
       allvehicles.append(vehicles)
+      alllines.append(lines)
 
-    if not CONFIG.PRECOMPUTE:
-      _fillDataPoint(dp, rawBoxes, vehicles, envelopes, lines)
+    _fillDataPoint(dp, rawboxes, vehicles, lines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
 
-  if CONFIG.PRECOMPUTE:
+  if CONFIG.MAKE_PRECOMPUTED_FEATURES:
     import pickle
     with open(videoFeaturesPath, 'wb') as file:
-      pickle.dump([allboxes, allboxscores, allenvelopes, alllines, allvehicles], file)
+      pickle.dump([allboxes, allboxscores, alllines, allvehicles], file)
 
   dp.predictedLabels = labelGen.getLabels()
   return dp
