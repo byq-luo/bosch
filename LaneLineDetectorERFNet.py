@@ -37,6 +37,8 @@ class LaneLineDetector:
     self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     self.model.to(self.device)
 
+    # TODO this assumes that there is a cuda device avail
+    # torch.load has a parameter that can fix this for us
     state_dict = torch.load('erfnet/trained/ERFNet_trained.tar')['state_dict']
 
     # https://discuss.pytorch.org/t/solved-keyerror-unexpected-key-module-encoder-embedding-weight-in-state-dict/1686/4
