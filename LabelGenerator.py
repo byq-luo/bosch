@@ -236,7 +236,7 @@ class LabelGenerator:
           self.newEventTimer -= 1
 
         # Handles when a vehicle is becoming the new currentTarget
-        elif self.newEventTimer > 0:
+        elif self.newEventTimer > 0 and self.newEventTimer < self.buffer:
           if self.newPotentialTarget.id == closestTarget.id:
             self.newEventTimer -= 1
           else:
