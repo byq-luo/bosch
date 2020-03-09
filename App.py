@@ -23,15 +23,17 @@ class MainWindow(QMainWindow):
     self.ui = Ui_MainWindow()
     self.ui.setupUi(self)
 
+    # TODO what if user tries to process same video twice?
+    self.dataPoints = dict()
+    self.classifier = ClassifierRunner()
+    # just a thin wrapper around a storage device
+    self.storage = Storage()
+
     self.ui.playButton.clicked.connect(self.ui.videoWidget.play)
     self.ui.pauseButton.clicked.connect(self.ui.videoWidget.pause)
     self.ui.horizontalSlider.sliderMoved.connect(self.ui.videoWidget.seekToPercent)
     self.ui.videoWidget.setSlider(self.ui.horizontalSlider)
     self.ui.videoWidget.setTimeLabels(self.ui.currentVideoTime, self.ui.fullVideoTime)
-    self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
-    self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
-    self.ui.showLaneLinesCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLaneLines)
-    # self.ui.showSegmentationsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawSegmentations)
     self.ui.fileTableWidget.cellClicked.connect(self.videoInListClicked)
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
     self.ui.labelTableWidget.itemChanged.connect(self.labelInListChanged)
@@ -39,15 +41,14 @@ class MainWindow(QMainWindow):
     self.processingCompleteSignal.connect(self.processingComplete)
     self.setWindowIcon(QIcon('icons/bosch.ico'))
     self.ui.actionInfo.triggered.connect(self.showInfoDialog)
-    self.ui.actionProcessVideos.triggered.connect(self.initiateProcessing)
 
-    # TODO what if user tries to process same video twice?
-    self.dataPoints = dict()
-
-    self.classifier = ClassifierRunner()
-
-    # just a thin wrapper around a storage device
-    self.storage = Storage()
+    if not CONFIG.IMMEDIATE_MODE:
+      self.ui.actionProcessVideos.triggered.connect(self.initiateProcessing)
+      self.ui.boundingBoxCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawBoxes)
+      self.ui.showLabelsCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLabels)
+      self.ui.showLaneLinesCheckbox.stateChanged.connect(self.ui.videoWidget.videoOverlay.setDrawLaneLines)
+    else:
+      self.loadVideosFromFolder('.')
 
     # If we are in TESTING mode just load videos from the precomputed folder
     if CONFIG.USE_PRECOMPUTED_FEATURES:
@@ -193,9 +194,10 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
   # this solves a gross bug in cv2.cvtColor on macOS
   # See https://github.com/opencv/opencv/issues/5150
+  # Also, in python 3.8 this is the default.
+  # See https://docs.python.org/3/library/multiprocessing.html
   import multiprocessing as mp
   mp.set_start_method('spawn')
-
 
   app = QApplication(sys.argv)
   window = MainWindow()

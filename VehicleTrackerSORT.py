@@ -10,10 +10,10 @@ class Vehicle:
 class VehicleTracker:
   def __init__(self):
     #create instance of SORT
-    self.mot_tracker = Sort(max_age=60, min_hits=30) 
+    # TODO find better values for these params
+    self.mot_tracker = Sort(max_age=60, min_hits=20) 
 
   def getVehicles(self, frame, boxes, boxscores):
-    return []
     # update SORT
     inboxes = []
     for b,s in zip(boxes,boxscores):

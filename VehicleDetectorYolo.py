@@ -27,11 +27,12 @@ class VehicleDetectorYolo:
   def __init__(self):
     self.model_def = MODEL_CFG_PATH
     self.weights = MODEL_WEIGHTS_PATH
-    self.conf_thres = 0.5
-    self.iou_thres = 0.5
     self.batch_size = 1
     self.img_size = 608
-    self.half = False
+
+    # TODO find better values for these two options
+    self.conf_thres = .7
+    self.iou_thres = .0
 
     self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
@@ -46,18 +47,18 @@ class VehicleDetectorYolo:
       load_darknet_weights(self.model, self.weights)
 
     self.model.to(self.device).eval()
-
-    # Half precision
-    # half precision only supported on CUDA
-    self.half = self.half and self.device.type != 'cpu'
-    if self.half:
-      self.model.half()
+    self.frameIndex = 0
+    self.prevRet = None
 
   def getFeatures(self, frame):
+    self.frameIndex += 1
+    if self.frameIndex % 3 == 0:
+      return self.prevRet
+
     # Padded resize
     img = letterbox(frame, new_shape=self.img_size)[0]
     img = img.transpose(2, 0, 1)  # reshape to 3x608x608
-    img = np.ascontiguousarray(img, dtype=np.float16 if self.half else np.float32)  # uint8 to fp16/fp32
+    img = np.ascontiguousarray(img, dtype=np.float32)  # uint8 to fp32
     img /= 255.0  # 0 - 255 to 0.0 - 1.0
 
     # Extract image as PyTorch tensor
@@ -68,31 +69,23 @@ class VehicleDetectorYolo:
 
     with torch.no_grad():
       detections = self.model(img)[0]
-      if self.half:
-        detections = detections.float()
-      detections = non_max_suppression(detections, self.conf_thres, self.iou_thres)
+      # we only care about labels 2, 3, 5, 7. See https://github.com/ultralytics/yolov3/blob/master/data/coco.names
+      detections = non_max_suppression(detections, self.conf_thres, self.iou_thres, classes=(2,3,5,7))
 
     boxes, scores = [], []
     if detections is not None and detections[0] is not None:
       detections = detections[0]
       # Rescale boxes from img_size to im0 size
       detections[:, :4] = scale_coords(img.shape[2:], detections[:, :4], frame.shape[:2]).round()
-
-      # we only care about labels 2, 3, 5, 7. See https://github.com/ultralytics/yolov3/blob/master/data/coco.names
-      #unique_labels = detections[:, -1].cpu().unique()
-      #n_cls_preds = len(unique_labels)
-
       screenWidth = frame.shape[1]
-
       boxes = []
       scores = []
       for x1, y1, x2, y2, score, clazz in detections.cpu().numpy():
-        if eq(clazz, 2) or eq(clazz, 3) or eq(clazz, 5) or eq(clazz, 7):
+        # Sometimes YOLO detects the host vehicle's dash.
+        # So filter boxes that are too wide.
+        if (x2-x1) / screenWidth < .8:
+          boxes.append((x1, y1, x2, y2))
+          scores.append(score)
 
-          # Sometimes YOLO detects the host vehicle's dash.
-          # So filter boxes that are too wide.
-          if (x2-x1) / screenWidth < .8:
-            boxes.append((x1, y1, x2, y2))
-            scores.append(score)
-        
+    self.prevRet = (boxes, scores)
     return boxes, scores

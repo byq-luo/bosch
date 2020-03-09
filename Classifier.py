@@ -16,12 +16,11 @@ import cv2
 # TODO make ERFNet work for any input image size
 # TODO also make Detectron only give bounding boxes for vehicle classes
 # TODO does ERFNet take BGR or RGB? what about DeepSort?
-# TODO can get lane curves from prob map.
 # See https://github.com/XingangPan/SCNN/tree/master/tools
 # and https://github.com/cardwing/Codes-for-Lane-Detection
 
 
-def _fillDataPoint(dp, rawboxes, vehicles, laneLines):
+def _updateDataPoint(dp, rawboxes, vehicles, laneLines):
   boxes = []
   # Sending back min length box list works good
   vehicleBoxes = [v.box for v in vehicles]
@@ -55,7 +54,7 @@ def processVideo(dp: DataPoint,
   labelGen = LabelGenerator(video.getFps())
 
   if CONFIG.MAKE_PRECOMPUTED_FEATURES:
-    allboxes,allboxscores,allvehicles,alllines = [],[],[],[]
+    allboxes, allboxscores, allvehicles, alllines = [], [], [], []
 
   frames = []
   for frameIndex in range(totalNumFrames):
@@ -67,12 +66,15 @@ def processVideo(dp: DataPoint,
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
-      rawboxes,boxscores,vehicles,lines = [],[],[],[]
+      rawboxes, boxscores, vehicles, lines = [], [], [], []
     else:
       rawboxes, boxscores = vehicleDetector.getFeatures(frame)
       vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
       lines = laneLineDetector.getLines(frame)
-      labelGen.processFrame(vehicles, lines, frameIndex)
+      try:
+        labelGen.processFrame(vehicles, lines, frameIndex)
+      except:
+        pass
 
     if CONFIG.MAKE_PRECOMPUTED_FEATURES:
       allboxes.append(rawboxes)
@@ -80,7 +82,7 @@ def processVideo(dp: DataPoint,
       allvehicles.append(vehicles)
       alllines.append(lines)
 
-    _fillDataPoint(dp, rawboxes, vehicles, lines)
+    _updateDataPoint(dp, rawboxes, vehicles, lines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
     progressTracker.incrementNumFramesProcessed()
 

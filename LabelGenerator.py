@@ -32,8 +32,8 @@ class LabelGenerator:
 
     self._time = frameIndex / self.videoFPS
 
-    leftSegments, _ = lines[0]
-    rightSegments, _ = lines[1]
+    leftSegments = lines[0]
+    rightSegments = lines[1]
 
     # This section finds all the boxes within the current lane
     # THINGS TO DO IN THIS SECTION:
@@ -62,6 +62,7 @@ class LabelGenerator:
 
       lInsideLeftLaneLine = False
       rInsideLeftLaneLine = False
+      # TODO use binary search to find segement https://docs.python.org/3/library/bisect.html
       for (sx1, sy1, sx2, sy2) in leftSegments:
         sx2 = max(sx1, sx2)
         sx1 = min(sx1, sx2)

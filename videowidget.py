@@ -3,15 +3,24 @@ from PyQt5.QtCore import QPoint, QTimer, Qt
 from PyQt5.QtGui import QPainter, QImage
 from VideoOverlay import VideoOverlay
 from Video import Video
+import CONFIG 
 
-# from LaneLineDetectorERFNet import LaneLineDetector
-# import cv2
+if CONFIG.IMMEDIATE_MODE:
+  from LaneLineDetectorERFNet import LaneLineDetector
+  from VehicleDetectorYolo import VehicleDetectorYolo
+  from VehicleTrackerSORT import VehicleTracker
+  #from VehicleTrackerDL import VehicleTracker
+  import cv2
+  import numpy as np
 
 class VideoWidget(QWidget):
   def __init__(self, centralWidget):
     super().__init__()
     self.initUI()
-    # self.lane= LaneLineDetector()
+    if CONFIG.IMMEDIATE_MODE:
+      self.lane= LaneLineDetector()
+      self.vehicleDetector = VehicleDetectorYolo()
+      self.tracker = VehicleTracker()
 
   def initUI(self):
     self.video = None
@@ -129,16 +138,11 @@ class VideoWidget(QWidget):
         self.pause()
         self.video.setFrameNumber(0)
       elif isFrameAvail:
-        # TODO see Classifier
-        # frame = frame[190:190+170,100:620].copy()
-
-        frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint, currentTime)
-
-        #laneColors = [(255,0,0),(255,255,0),(0,255,0),(0,0,255)]
-        #frame, lines = self.lane.getLines(frame)
-        #for (x1, y1, x2, y2), _id in lines:
-        #  cv2.line(frame, (x1, y1), (x2, y2), laneColors[_id], 2)
-
+        if CONFIG.IMMEDIATE_MODE:
+          # frame = cv2.blur(frame, (2,2))
+          frame = self.renderImmediately(frame, frameIndex)
+        else:
+          frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint, currentTime)
         self.previousFrame = frame
         self._drawImage(frame, qp)
     elif self.previousFrame is not None:
@@ -146,3 +150,59 @@ class VideoWidget(QWidget):
 
     qp.end()
 
+  # This function is only for development purposes
+  def renderImmediately(self, frame, frameIndex):
+      # rawboxes, boxscores = self.vehicleDetector.getFeatures(frame)
+      # vehicles = self.tracker.getVehicles(frame, rawboxes, boxscores)
+      # # Use VehicleTrackerDL to render fingerprint of vehicles
+      # # frame = self.tracker.getVehicles(frame, rawboxes, boxscores)
+      # self.boundingBoxColor = (0,255,0)
+      # self.labelColor = (255,0,0)
+      # self.boundingBoxThickness = 1
+      # # Sending back min length box list works good
+      # vehicleBoxes = [v.box for v in vehicles]
+      # vehicleIDs = [v.id for v in vehicles]
+      # if len(vehicleBoxes) < len(rawboxes):
+      #   vehicleBoxes += [np.array([0, 0, 0, 0])] * (len(rawboxes)-len(vehicleBoxes))
+      #   vehicleIDs += ['.']
+      # if len(vehicleBoxes) > len(rawboxes):
+      #   rawboxes += [np.array([0, 0, 0, 0])] * (len(vehicleBoxes)-len(rawboxes))
+      # bboxes = []
+      # for box, vbox, _id in zip(rawboxes, vehicleBoxes, vehicleIDs):
+      #   bboxes.append((list(map(int, box)), list(map(int, vbox)), _id))
+      # for (bx1,by1,bx2,by2),(x1,y1,x2,y2),_id in bboxes:
+      #   x, y = x1,y1-7
+      #   cv2.rectangle(frame,
+      #     (x1,y1), (x2,y2),
+      #     self.boundingBoxColor,
+      #     self.boundingBoxThickness)
+      #   cv2.rectangle(frame,
+      #     (bx1,by1), (bx2,by2),
+      #     (0,0,255),
+      #     self.boundingBoxThickness)
+      #   cv2.putText(frame,
+      #               str(_id),
+      #               (x,y),
+      #               0, .3,
+      #               self.labelColor)
+      # cv2.putText(frame,
+      #             str(len(rawboxes)),
+      #             (30,30),
+      #             0, 1,
+      #             self.labelColor)
+
+      laneColors = [(255,0,0),(255,255,0),(0,255,0),(0,0,255)]
+      lines = self.lane.getLines(frame)
+      for i,line in enumerate(lines):
+        for (x1, y1, x2, y2) in line:
+          cv2.line(frame, (x1, y1), (x2, y2), laneColors[i], 2)
+
+      # Visualize probability maps
+      # ls = .5*l  + .5*r
+      # ls = np.array([ls.T]).T
+      # ls = np.concatenate([ls]*3,-1).copy()
+      # frame2 = cv2.addWeighted(frame2/255,1,ls,1,0,dtype=cv2.CV_32F)
+      # frame= (frame2*255).clip(0,255).astype('uint8')
+
+      self.update()
+      return frame

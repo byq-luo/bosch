@@ -1,8 +1,4 @@
-# yolo code from https://github.com/eriklindernoren/PyTorch-YOLOv3
-
 import pickle
-import numpy as np
-
 
 class VehicleDetector:
   wantsRGB = True

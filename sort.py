@@ -217,7 +217,7 @@ class Sort(object):
     i = len(self.trackers)
     for trk in reversed(self.trackers):
         d = trk.get_state()[0]
-        if((trk.time_since_update < self.hit_window) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits)):
+        if((trk.time_since_update < self.hit_window) and (trk.hit_streak >= 7 or self.frame_count <= self.min_hits)):
           ret.append(np.concatenate((d,[trk.id+1])).reshape(1,-1)) # +1 as MOT benchmark requires positive
         i -= 1
         #remove dead tracklet

@@ -63,7 +63,6 @@ def _loadLibs(progressTracker):
     from precomputed.VehicleDetector import VehicleDetector
     from precomputed.LaneLineDetector import LaneLineDetector
   else:
-    # from VehicleDetectorDetectron import VehicleDetectorDetectron as VehicleDetector
     from VehicleDetectorYolo import VehicleDetectorYolo as VehicleDetector
     from LaneLineDetectorERFNet import LaneLineDetector
 
@@ -82,7 +81,7 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool)
   for dataPoint in dataPoints:
     progressTracker.addToTotalNumFrames(dataPoint.videoPath)
   for dataPoint in dataPoints:
-    future = pool.submit(_processVideo, (dataPoint))
+    future = pool.submit(_processVideo, dataPoint)
     while not future.done():
       time.sleep(1)
       totalPercentDone = progressTracker.getTotalProgress()

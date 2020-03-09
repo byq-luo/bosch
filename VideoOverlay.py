@@ -7,9 +7,6 @@ class VideoOverlay:
     self.shouldDrawBoxes = False
     self.shouldDrawLabels = False
     self.shouldDrawLaneLines = False
-    self.shouldDrawSegmentations = False
-
-    self.segmentationsColor = (255, 0, 0)
     self.boundingBoxColor = (0,255,0)
     self.boundingBoxThickness = 1
     self.labelColor = (255,0,0)
@@ -23,9 +20,6 @@ class VideoOverlay:
 
   def setDrawLaneLines(self, shouldDrawLaneLines: bool):
     self.shouldDrawLaneLines = shouldDrawLaneLines
-
-  def setDrawSegmentations(self, shouldDrawSegmentations: bool):
-    self.shouldDrawSegmentations = shouldDrawSegmentations
 
   def processFrame(self, frame, frameIndex, dataPoint:DataPoint, currentTime):
     if self.shouldDrawBoxes:
@@ -60,24 +54,14 @@ class VideoOverlay:
                   0, 1,
                   self.labelColor)
 
-    if self.shouldDrawSegmentations:
-      if frameIndex < len(dataPoint.segmentations):
-        for boundary in dataPoint.segmentations[frameIndex]:
-          cv2.drawContours(frame, boundary, 0, self.segmentationsColor, 2)
-
     if self.shouldDrawLaneLines:
       if len(dataPoint.laneLines) > frameIndex:
         lines = dataPoint.laneLines[frameIndex]
         if len(lines) == 0:
           return frame
-        for coords,laneID in lines:
+        for laneID,coords in enumerate(lines):
           for (x1, y1, x2, y2) in coords:
             cv2.line(frame, (x1, y1), (x2, y2), self.laneColors[laneID], 2)
-    #if self.shouldDrawLaneLines:
-    #  if len(dataPoint.laneLines) > frameIndex:
-    #    lines = dataPoint.laneLines[frameIndex]
-    #    for (x1, y1, x2, y2),laneID in lines:
-    #      cv2.line(frame, (x1, y1), (x2, y2), self.laneColors[laneID], 2)
 
     frame = cv2.copyMakeBorder(frame, 
                     3, 3, 3, 3, 
