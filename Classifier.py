@@ -69,10 +69,11 @@ def processVideo(dp: DataPoint,
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
       rawboxes,boxscores,vehicles,lines = [],[],[],[]
     else:
-      rawboxes, boxscores = vehicleDetector.getFeatures(frame)
-      vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
+      rawboxes, boxscores, vehicles, lines = [], [], [], []
+      # rawboxes, boxscores = vehicleDetector.getFeatures(frame)
+      # vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
       lines = laneLineDetector.getLines(frame)
-      labelGen.processFrame(vehicles, lines, frameIndex)
+      # labelGen.processFrame(vehicles, lines, frameIndex)
 
     if CONFIG.MAKE_PRECOMPUTED_FEATURES:
       allboxes.append(rawboxes)
