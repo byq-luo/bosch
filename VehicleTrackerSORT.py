@@ -21,5 +21,5 @@ class VehicleTracker:
     result = self.mot_tracker.update(np.array(inboxes))
     vehicles = []
     for x1,y1,x2,y2,i in result:
-      vehicles.append(Vehicle((int(x1),int(y1),int(x2),int(y2)), int(i)))
+      vehicles.append(Vehicle((int(x1),int(y1),int(x2),int(y2)),int(i)))
     return vehicles

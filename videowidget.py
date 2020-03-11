@@ -152,13 +152,20 @@ class VideoWidget(QWidget):
 
   # This function is only for development purposes
   def renderImmediately(self, frame, frameIndex):
-      # rawboxes, boxscores = self.vehicleDetector.getFeatures(frame)
-      # vehicles = self.tracker.getVehicles(frame, rawboxes, boxscores)
+      rawboxes, boxscores = self.vehicleDetector.getFeatures(frame)
+      vehicles = self.tracker.getVehicles(frame, rawboxes, boxscores)
+
+      laneColors = [(255,0,0),(255,255,0),(0,255,0),(0,0,255)]
+      lines,points,l,r,frame = self.lane.getLines(frame, vehicles)
+      for i,line in enumerate(lines):
+        for (x1, y1, x2, y2) in line:
+          cv2.line(frame, (x1, y1), (x2, y2), laneColors[i], 2)
+
       # # Use VehicleTrackerDL to render fingerprint of vehicles
       # # frame = self.tracker.getVehicles(frame, rawboxes, boxscores)
-      # self.boundingBoxColor = (0,255,0)
-      # self.labelColor = (255,0,0)
-      # self.boundingBoxThickness = 1
+      self.boundingBoxColor = (0,255,0)
+      self.labelColor = (255,0,0)
+      self.boundingBoxThickness = 1
       # # Sending back min length box list works good
       # vehicleBoxes = [v.box for v in vehicles]
       # vehicleIDs = [v.id for v in vehicles]
@@ -185,24 +192,16 @@ class VideoWidget(QWidget):
       #               (x,y),
       #               0, .3,
       #               self.labelColor)
-      # cv2.putText(frame,
-      #             str(len(rawboxes)),
-      #             (30,30),
-      #             0, 1,
-      #             self.labelColor)
 
-      laneColors = [(255,0,0),(255,255,0),(0,255,0),(0,0,255)]
-      lines = self.lane.getLines(frame)
-      for i,line in enumerate(lines):
-        for (x1, y1, x2, y2) in line:
-          cv2.line(frame, (x1, y1), (x2, y2), laneColors[i], 2)
+      for x1,y1,x2,y2 in points:
+        cv2.rectangle(frame,(x1,y1),(x2,y2),(0,0,0))
 
       # Visualize probability maps
-      # ls = .5*l  + .5*r
-      # ls = np.array([ls.T]).T
-      # ls = np.concatenate([ls]*3,-1).copy()
-      # frame2 = cv2.addWeighted(frame2/255,1,ls,1,0,dtype=cv2.CV_32F)
-      # frame= (frame2*255).clip(0,255).astype('uint8')
+      ls = .5*l  + .5*r
+      ls = np.array([ls.T]).T
+      ls = np.concatenate([ls]*3,-1).copy()
+      frame2 = cv2.addWeighted(frame/255,1,ls,1,0,dtype=cv2.CV_32F)
+      frame= (frame2*255).clip(0,255).astype('uint8')
 
       self.update()
       return frame

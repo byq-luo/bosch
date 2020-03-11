@@ -8,6 +8,10 @@ import math
 
 # TODO B: look at lane scores to check for change lane.?
 
+def clamp(l,h,x):
+  if x > h: return h
+  if x < l: return l
+  return x
 def mix(a, b, m):
   return (a-b)*(1-m) + b
 
@@ -29,17 +33,27 @@ class LaneLineDetector:
     self.state = [None]*4
     self.output = [None]*4
     self.frameIndex = -1
-    self.plr = [None]*4
+    self.plr = [None]*6
     self.framesSinceDiscontinuous = 0
 
-  def getLines(self, frame):
+  def getLines(self, frame, vehicles):
     self.frameIndex += 1
-    l,r,ls,rs = self.plr
+    l,r,lls,ls,rs,rrs = self.plr
     if self.frameIndex % 2 == 0:
-      l, r, ls, rs = self._getProbs(frame)
-      self.plr = l, r, ls, rs
-
-    # l, r, ls, rs = self._getProbs(frame)
+      l, r, lls, ls, rs, rrs = self._getProbs(frame)
+      self.plr = l, r, lls, ls, rs, rrs
+    
+    probvalues = []
+    for prob in [l,r]:
+      for vehicle in vehicles:
+        pvalues = []
+        x1, y1, x2, y2 = vehicle.box
+        points = [(x1,y1),(x2,y2),(x1,y2),(x2,y1)]
+        for x,y in points:
+          xp = int(clamp(0,975,976/720*x))
+          yp = int(clamp(0,207,(y-207)*976/720))
+          pvalues.append(prob[yp,xp])
+        probvalues.append(pvalues)
 
     laneLines = []
     for prob, score, _id in zip([l,r], [ls,rs], [1,2]):
@@ -154,7 +168,7 @@ class LaneLineDetector:
         xs,ys = [],[]
 
       laneLines.append(list(zip(xs, ys, xs[1:], ys[1:])))
-    return laneLines
+    return laneLines,[lls,ls,rs,rrs],probvalues
 
   # TODO This should work for arbitrary frame size
   def _getProbs(self, frame):
@@ -189,17 +203,17 @@ class LaneLineDetector:
       # output[i] is the probability map for the ith lane line (1<=i<=4)
       # lane_scores[i] is a probability that the ith lane exists (1<=i<=4)
 
-      # ll = output[1]
-      # lls = lane_scores[0]
-      # rr = output[4]
-      # rrs = lane_scores[3]
+      ll = output[1]
+      lls = lane_scores[0]
+      rr = output[4]
+      rrs = lane_scores[3]
 
       l = output[2]
       ls = lane_scores[1]
       r = output[3]
       rs = lane_scores[2]
     # return ll.cpu().numpy(), l.cpu().numpy(), r.cpu().numpy(), rr.cpu().numpy(), lls,ls, rs,rrs
-    return l.cpu().numpy(), r.cpu().numpy(), ls, rs
+    return l.cpu().numpy(), r.cpu().numpy(), lls,ls, rs,rrs #, frame_orig.copy()
 
   def _initDL(self):
     num_class = 5

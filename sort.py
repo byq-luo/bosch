@@ -138,7 +138,7 @@ def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
 
   for d,det in enumerate(detections):
     for t,trk in enumerate(trackers):
-      iou_matrix[d,t] = iou(det,trk) # - dist(det, trk)
+      iou_matrix[d,t] = iou(det,trk)#  - dist(det, trk)
   matched_indices = linear_sum_assignment(-iou_matrix)
   matched_indices = np.asarray(matched_indices)
   matched_indices = np.transpose(matched_indices)

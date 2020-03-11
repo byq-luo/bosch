@@ -31,7 +31,7 @@ class VehicleDetectorYolo:
     self.img_size = 608
 
     # TODO find better values for these two options
-    self.conf_thres = .7
+    self.conf_thres = .3333
     self.iou_thres = .0
 
     self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
@@ -53,7 +53,7 @@ class VehicleDetectorYolo:
   def getFeatures(self, frame):
     self.frameIndex += 1
     if self.frameIndex % 3 == 0:
-      return self.prevRet
+      return self.prevRet[0], self.prevRet[1]
 
     # Padded resize
     img = letterbox(frame, new_shape=self.img_size)[0]

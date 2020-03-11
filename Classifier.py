@@ -54,7 +54,7 @@ def processVideo(dp: DataPoint,
   labelGen = LabelGenerator(video.getFps())
 
   if CONFIG.MAKE_PRECOMPUTED_FEATURES:
-    allboxes, allboxscores, allvehicles, alllines = [], [], [], []
+    allboxes, allboxscores, allvehicles, alllines, alllanescores, allboxcornerprobs = [], [], [], [], [], []
 
   frames = []
   for frameIndex in range(totalNumFrames):
@@ -66,11 +66,11 @@ def processVideo(dp: DataPoint,
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
-      rawboxes, boxscores, vehicles, lines = [], [], [], []
+      rawboxes, boxscores, vehicles, lines, lanescores, boxcornerprobs = [], [], [], [], [], []
     else:
       rawboxes, boxscores = vehicleDetector.getFeatures(frame)
       vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
-      lines = laneLineDetector.getLines(frame)
+      lines, lanescores, boxcornerprobs = laneLineDetector.getLines(frame, vehicles)
       try:
         labelGen.processFrame(vehicles, lines, frameIndex)
       except:
@@ -79,8 +79,10 @@ def processVideo(dp: DataPoint,
     if CONFIG.MAKE_PRECOMPUTED_FEATURES:
       allboxes.append(rawboxes)
       allboxscores.append(boxscores)
-      allvehicles.append(vehicles)
+      allvehicles.append(list([v.id,*v.box] for v in vehicles))
       alllines.append(lines)
+      alllanescores.append(lanescores)
+      allboxcornerprobs.append(boxcornerprobs)
 
     _updateDataPoint(dp, rawboxes, vehicles, lines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
@@ -89,7 +91,7 @@ def processVideo(dp: DataPoint,
   if CONFIG.MAKE_PRECOMPUTED_FEATURES:
     import pickle
     with open(videoFeaturesPath, 'wb') as file:
-      pickle.dump([allboxes, allboxscores, alllines, allvehicles], file)
+      pickle.dump([allboxes, allboxscores, alllines, alllanescores, allvehicles, allboxcornerprobs], file)
 
   dp.predictedLabels = labelGen.getLabels()
   return dp
