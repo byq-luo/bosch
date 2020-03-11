@@ -30,19 +30,27 @@ class mylstm(nn.Module):
         return out_scores
 
 def train(tensors, labels):
+    print('Training')
     model = mylstm(17,17,9)
+    model.to(torch.device('cuda'))
     loss_function = nn.NLLLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
 
+    tensors = tensors.to(torch.device('cuda'))
+    labels = labels.to(torch.device('cuda'))
+
+    print('Get initial model outputs')
     # See what the scores are before training
     # Note that element i,j of the output is the score for tag j for word i.
     # Here we don't need to train, so the code is wrapped in torch.no_grad()
     with torch.no_grad():
-        out_scores = model(tensors[0].view(1,1,17))
-        print(out_scores)
+        out_scores = model(tensors)
+        # out_scores = model(tensors[0].view(1,1,17))
+        print(out_scores.shape)
 
-    loss = 'abcd'
-    for epoch in range(30):  # again, normally you would NOT do 300 epochs, it is toy data
+    print('Enter training loop')
+    loss = None
+    for epoch in range(1000):
         print(loss)
         i = random.randint(0,len(tensors)-10001)
         x = tensors[i:i+10000]
@@ -65,10 +73,24 @@ def train(tensors, labels):
         loss.backward()
         optimizer.step()
 
+    print('Finish training')
     # See what the scores are after training
     with torch.no_grad():
-        out_scores = model(tensors)
-        print(out_scores)
+        print('Evaluate model on dataset')
+        yhat = torch.argmax(model(tensors), dim=1).int()
+        print(yhat.shape)
+
+        print('Get data from gpu')
+        yhat = yhat.cpu().numpy()
+        tensors = tensors.cpu().numpy()
+        labels = labels.cpu().numpy()
+
+        print('Begin generating labels')
+        yhat_not_nolabel = yhat[yhat != 8]
+        print(yhat_not_nolabel)
+        print(yhat_not_nolabel.shape)
+
+
 
 # def onehot(i,n):
 #     return torch.tensor([[int(i == k) for k in range(n)]])
@@ -80,14 +102,9 @@ if  __name__ == '__main__':
     print(files)
 
     NUMLABELS=9
-    # NOLABEL = onehot(8, NUMLABELS)
     NOLABEL = torch.tensor([8])
     ENDSIGNAL = torch.tensor([[[-1]*17]], dtype=torch.float)
     print('endsignal.shape',ENDSIGNAL.shape)
-    # pick = {'lcRel':onehot(0,NUMLABELS),
-    #         'evtEnd':onehot(1,NUMLABELS),
-    #         'rightTO':onehot(2,NUMLABELS),
-    #         'cutout':onehot(3,NUMLABELS)}
     pick = {'lcRel':torch.tensor([0]),
             'evtEnd':torch.tensor([1]),
             'rightTO':torch.tensor([2]),
