@@ -74,6 +74,7 @@ def train(sequences):
   print('Training')
   model = mylstm(2*17, 17, NUMLABELS)
   model.to(torch.device('cuda'))
+  model.train()
   loss_function = nn.NLLLoss()
   # optimizer = optim.SGD(model.parameters(), lr=0.1)
   optimizer = optim.Adam(model.parameters())
@@ -113,6 +114,7 @@ def train(sequences):
           yhat = yhat.argmax(dim=1)
           print('yhat:', yhat)
           print('y   :', y)
+        model.train()
 
     model.train()
     for x, y in sequences:
