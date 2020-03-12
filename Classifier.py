@@ -71,7 +71,7 @@ def processVideo(dp: DataPoint,
       rawboxes, boxscores = vehicleDetector.getFeatures(frame)
       vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
       lines, lanescores, boxcornerprobs = laneLineDetector.getLines(frame, vehicles)
-      try:
+      try: # TODO adam your code still has a bug
         labelGen.processFrame(vehicles, lines, frameIndex)
       except:
         pass

@@ -1,0 +1,6 @@
+rightTO=XX,0.332384
+cutin,7.4121632
+rightTO=XX,15.3893792
+cutin,18.5470272
+evtEnd,18.9126496
+rightTO=XX,18.9126496
