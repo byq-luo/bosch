@@ -10,3 +10,4 @@ images/*
 *.jpg
 *.avi
 .DS_Store
+precomputed/features/*
