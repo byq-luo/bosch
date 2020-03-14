@@ -11,3 +11,6 @@ images/*
 *.avi
 .DS_Store
 precomputed/features/*
+precomputed/featuresLSTM/*
+tensors.pkl
+/tensors.pkl
