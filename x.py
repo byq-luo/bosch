@@ -7,6 +7,6 @@ def smooth(xs,m):
   return ret
 with open('losses.pkl','rb') as f:
   losses = pickle.load(f)
-smoothloss = smooth(losses,.997)
+smoothloss = smooth(losses,.999)
 plt.plot(smoothloss)
 plt.show()

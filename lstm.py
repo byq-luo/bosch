@@ -21,7 +21,7 @@ NUMLABELS = len(AllPossibleLabels)
 PREDICT_EVERY_NTH_FRAME = 15
 PRECOMPUTE = False
 WINDOWWIDTH = 30*18
-WINDOWSTEP = WINDOWWIDTH // 4
+WINDOWSTEP = WINDOWWIDTH // 2
 
 # 0 : rightTO
 # 1 : lcRel
@@ -102,7 +102,7 @@ def checkpoint(epoch, losses, model, loss_function, trainSequences, testSequence
 
 def train(trainSequences, testSequences):
   print('Training')
-  model = mylstm(13, 17, NUMLABELS)
+  model = mylstm(64, 17, NUMLABELS)
   model.to(torch.device('cuda'))
   model.train()
 
@@ -113,7 +113,7 @@ def train(trainSequences, testSequences):
                    1, # evtEnd
                    1, # objTurnOff
                    1, # end
-                   1/22]# NOLABEL
+                   1/10]# NOLABEL
   class_weights = torch.tensor(class_weights, device=torch.device('cuda'))/sum(class_weights)
 
   # loss_function = nn.CrossEntropyLoss(weight=class_weight)
