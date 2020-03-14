@@ -271,13 +271,12 @@ if __name__ == '__main__':
       labelsFilePath = "precomputed/convertedGroundTruthLabels/Gen5_RU_2019-10-07_07-56-42-0001_labels.txt"
 
       # Collect labels and features into one place
-      data = []  # == [path, [label, framnum], features] where features == [rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs]
       if not os.path.isfile(labelsFilePath):
         print("invalid test file")
 
       # Get features
       with open(featureFilePath, 'rb') as featuresfile:
-          data.append(list(pickle.load(featuresfile)))
+        (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs) = list(pickle.load(featuresfile))
 
       print('Loaded data')
 
@@ -285,8 +284,6 @@ if __name__ == '__main__':
       sequences = []
       intervalwidth = 30 * 60
       for i in range(0, 30 * 60 * 5 - intervalwidth, intervalwidth):
-        (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs) = features
-
         xs = []
 
         # Only look at data from this interval of frames
