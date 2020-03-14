@@ -267,24 +267,21 @@ if __name__ == '__main__':
               # If we ran this loop twice in this interval then we would append the same exact (xs,ys) to sequences
               break
     else:
-      featureFilePath = r"D:\features\Gen5_RU_2019-10-07_07-56-42-0001_m0.pkl"
-      labelsFilePath = "precomputed/convertedGroundTruthLabels/Gen5_RU_2019-10-07_07-56-42-0001_labels.txt"
-
-      # Collect labels and features into one place
-      if not os.path.isfile(labelsFilePath):
-        print("invalid test file")
+      # featureFilePath = r'D:\features\Gen5_RU_2019-10-07_07-56-42-0001_m0.pkl'
+      # labelsFilePath = 'precomputed/convertedGroundTruthLabels/Gen5_RU_2019-10-07_07-56-42-0001_labels.txt'
+      featureFilePath = r'C:\Users\Bradley\bosch\precomputed\features\Gen5_RU_2019-10-07_07-56-42-0001_m0.pkl'
 
       # Get features
       with open(featureFilePath, 'rb') as featuresfile:
-        (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs) = list(pickle.load(featuresfile))
-
-      print('Loaded data')
+          features = list(pickle.load(featuresfile))
 
       # Make input tensors from the data
       sequences = []
       intervalwidth = 30 * 60
       for i in range(0, 30 * 60 * 5 - intervalwidth, intervalwidth):
         xs = []
+
+        (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs) = features
 
         # Only look at data from this interval of frames
         vehicles = vehicles[i:i + intervalwidth + 1]
