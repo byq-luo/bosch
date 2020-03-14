@@ -10,7 +10,9 @@ from torch.nn.utils.rnn import pad_sequence
 import torch.nn.functional as F
 import torch.optim as optim
 torch.manual_seed(1)
-
+make_new = False
+load_model = True
+testing = True
 # 0 : rightTO
 # 1 : lcRel
 # 2 : cutin
@@ -72,8 +74,10 @@ class mylstm(nn.Module):
 
 def train(sequences):
   print('Training')
-  model = mylstm(2*17, 17, NUMLABELS)
+  model = mylstm(8*17, 17, NUMLABELS)
   model.to(torch.device('cuda'))
+  if load_model:
+    model.load_state_dict(torch.load('model1.pt'))
   model.train()
 
   # 0 : rightTO
@@ -101,7 +105,7 @@ def train(sequences):
       with torch.no_grad():
         model.eval()
         print('Saving model at epoch:',epoch)
-        torch.save(model.state_dict(), 'model.pt')
+        torch.save(model.state_dict(), 'model1.pt')
         for x, y in sequences[:20]:
           model.zero_grad()
           yhat = model(x)
@@ -138,119 +142,248 @@ def train(sequences):
       with open('predictions.pkl', 'wb') as file:
         pickle.dump(yhat.cpu().numpy().tolist(), file)
 
+def test(sequences):
+  model = mylstm(8 * 17, 17, NUMLABELS)
+  model.to(torch.device('cuda'))
+  model.load_state_dict(torch.load('model1.pt'))
+  model.eval()
+  with torch.no_grad():
+    for x, y in sequences:
+      model.zero_grad()
+      yhat = model(x)
+      yhat = yhat.argmax(dim=1)
+      print('yhat:', yhat)
+      print('y   :', y)
+      with open('predictions.pkl', 'wb') as file:
+        pickle.dump(yhat.cpu().numpy().tolist(), file)
 
 if __name__ == '__main__':
   print('Loading data.')
+  if make_new:
+    # Get paths to precomputed features
+    if not testing:
+      filepaths = []
+      for (dirpath, dirnames, filenames) in os.walk('precomputed/features'):
+        filepaths.extend(dirpath + '/' + f for f in filenames)
 
-  # # Get paths to precomputed features
-  # filepaths = []
-  # for (dirpath, dirnames, filenames) in os.walk('precomputed/features'):
-  #   filepaths.extend(dirpath + '/' + f for f in filenames)
-  #
-  # # Collect labels and features into one place
-  # data = []  # == [path, [label, framnum], features] where features == [rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs]
-  # for filepath in filepaths:
-  #   labelsFilePath = filepath.replace('features/', 'groundTruthLabels/').replace('_m0.pkl', '_labels.txt')
-  #
-  #   if not os.path.isfile(labelsFilePath):
-  #     continue
-  #
-  #   videodata = [filepath]
-  #
-  #   # Get labels
-  #   with open(labelsFilePath) as labelsFile:
-  #     labels = []
-  #     lines = labelsFile.readlines()
-  #     labelLines = [line.rstrip('\n') for line in lines]
-  #     for line in labelLines:
-  #       label, labelTime = line.split(',')
-  #       label = label.split('=')[0]
-  #       frameNumber = int((float(labelTime) % 300) * 30)
-  #       labels.append((label, frameNumber))
-  #     videodata.append(labels)
-  #
-  #   # Get features
-  #   with open(filepath, 'rb') as featuresfile:
-  #     videodata.append(list(pickle.load(featuresfile)))
-  #
-  #   data.append(videodata)
-  #
-  # print('Loaded data')
-  #
-  # # Get all labels
-  # AllPossibleLabels = ['rightTO', 'lcRel', 'cutin', 'cutout', 'evtEnd', 'objTurnOff', 'end', 'barrier', 'NOLABEL']
-  # labels2Tensor = {}
-  # for label in AllPossibleLabels:
-  #   labels2Tensor[label] = torch.tensor([len(labels2Tensor)])
-  #
-  # # Make input tensors from the data
-  # sequences = []
-  # for path, labels, features in data:
-  #
-  #   # The data would be very skewed (almost always NOLABEL) if we just had one big sequence for the entire video
-  #   # Instead train on smaller chunks of the video that contain some interesting action
-  #   intervalwidth = 30 * 2
-  #   for i in range(0, 30*60*5 - intervalwidth, intervalwidth):
-  #     left = i
-  #     right = i + intervalwidth
-  #
-  #     frameNum2LabelTensors = {}
-  #     for label, frameNum in labels:
-  #       if frameNum in frameNum2LabelTensors:
-  #         frameNum += 1
-  #       frameNum2LabelTensors[frameNum] = labels2Tensor[label]
-  #
-  #     # Now for each frame in the interval
-  #     for label, frameNum in labels:
-  #       if left <= frameNum <= right:
-  #         xs, ys = [], []
-  #
-  #         (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs) = features
-  #
-  #         # Only look at data from this interval of frames
-  #         vehicles = vehicles[i:i+intervalwidth+1]
-  #         probs = boxcornerprobs[i:i+intervalwidth+1]
-  #         lanescores = lanescores[i:i+intervalwidth+1]
-  #
-  #         # for each frame in the interval
-  #         for j, (vehicles, probs, scores) in enumerate(zip(vehicles, probs, lanescores)):
-  #           scores = [float(score.cpu().numpy()) for score in scores]
-  #
-  #           # for some reason I organized the pkl file s.t. we have to do this
-  #           probsleft = probs[:len(vehicles)]  # left lane line probability map values at box corners for each vehicle
-  #           probsright = probs[len(vehicles):]  # See LaneLineDetectorERFNet.py::175
-  #
-  #           features_xs = []
-  #           # Create tensors
-  #           for vehicle, probleft, probright in zip(vehicles, probsleft, probsright):
-  #             # Put object id into sensible range
-  #             objectid, x1, y1, x2, y2 = vehicle
-  #             objectid = (objectid % 1000) / 1000
-  #             vehicle = (objectid, x1, y1, x2, y2)
-  #
-  #             features_xs.append(torch.tensor([[*vehicle, *probleft, *probright, *scores]], dtype=torch.float))
-  #           if len(features_xs) == 0:
-  #             features_xs = [torch.tensor([ [0]*13 + [*scores] ], dtype=torch.float)] # make sure there is always an input tensor
-  #           features_xs = torch.cat(features_xs)
-  #
-  #           xs.append(features_xs)
-  #           if i+j in frameNum2LabelTensors:
-  #             ys.append(frameNum2LabelTensors[i+j])
-  #           else:
-  #             ys.append(labels2Tensor['NOLABEL'])
-  #
-  #         xs = pad_sequence(xs).to(torch.device('cuda'))
-  #         xs = torch.flip(xs,dims=(0,))
-  #         ys = torch.cat(ys).to(torch.device('cuda'))
-  #         sequences.append((xs, ys))
-  #
-  #         # There may be more than one label in this interval.
-  #         # If we ran this loop twice in this interval then we would append the same exact (xs,ys) to sequences
-  #         break
+      # Collect labels and features into one place
+      data = []  # == [path, [label, framnum], features] where features == [rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs]
+      for filepath in filepaths:
+        labelsFilePath = filepath.replace('features/', 'convertedGroundTruthLabels/').replace('_m0.pkl', '_labels.txt')
 
-  # print(len(sequences))
-  # with open('tensors.pkl', 'wb') as file:
-  #   pickle.dump(sequences, file)
-  with open('tensors.pkl', 'rb') as file:
-    sequences = pickle.load(file)
-  train(sequences)
+        if not os.path.isfile(labelsFilePath):
+          continue
+
+        videodata = [filepath]
+
+        # Get labels
+        with open(labelsFilePath) as labelsFile:
+          labels = []
+          lines = labelsFile.readlines()
+          labelLines = [line.rstrip('\n') for line in lines]
+          for line in labelLines:
+            label, labelTime = line.split(',')
+            label = label.split('=')[0]
+            frameNumber = int((float(labelTime) % 300) * 30)
+            labels.append((label, frameNumber))
+          videodata.append(labels)
+
+        # Get features
+        with open(filepath, 'rb') as featuresfile:
+          videodata.append(list(pickle.load(featuresfile)))
+
+        data.append(videodata)
+
+      print('Loaded data')
+
+      # Get all labels
+      #AllPossibleLabels = ['rightTO', 'lcRel', 'cutin', 'cutout', 'evtEnd', 'objTurnOff', 'end', 'barrier', 'NOLABEL']
+      AllPossibleLabels = ['0', '1', '2', '3', '4', '5', '6', '7', '8']
+      labels2Tensor = {}
+      for label in AllPossibleLabels:
+        labels2Tensor[label] = torch.tensor([len(labels2Tensor)])
+
+      # Make input tensors from the data
+      sequences = []
+      for path, labels, features in data:
+
+        # The data would be very skewed (almost always NOLABEL) if we just had one big sequence for the entire video
+        # Instead train on smaller chunks of the video that contain some interesting action
+        intervalwidth = 30 * 60
+        for i in range(0, 30*60*5 - intervalwidth, intervalwidth):
+          left = i
+          right = i + intervalwidth
+
+          frameNum2LabelTensors = {}
+          for label, frameNum in labels:
+            if frameNum in frameNum2LabelTensors:
+              frameNum += 1
+            frameNum2LabelTensors[frameNum] = labels2Tensor[label]
+
+          # Now for each frame in the interval
+          for label, frameNum in labels:
+            if left <= frameNum <= right:
+            #if True:
+              xs, ys = [], []
+
+              (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs) = features
+
+              # Only look at data from this interval of frames
+              vehicles = vehicles[i:i+intervalwidth+1]
+              probs = boxcornerprobs[i:i+intervalwidth+1]
+              lanescores = lanescores[i:i+intervalwidth+1]
+
+              # for each frame in the interval
+              for j, (vehicles, probs, scores) in enumerate(zip(vehicles, probs, lanescores)):
+                scores = [float(score.cpu().numpy()) for score in scores]
+
+                # for some reason I organized the pkl file s.t. we have to do this
+                probsleft = probs[:len(vehicles)]  # left lane line probability map values at box corners for each vehicle
+                probsright = probs[len(vehicles):]  # See LaneLineDetectorERFNet.py::175
+
+                features_xs = []
+                # Create tensors
+                for vehicle, probleft, probright in zip(vehicles, probsleft, probsright):
+                  # Put object id into sensible range
+                  objectid, x1, y1, x2, y2 = vehicle
+                  objectid = (objectid % 1000) / 1000
+                  vehicle = (objectid, x1, y1, x2, y2)
+
+                  features_xs.append(torch.tensor([[*vehicle, *probleft, *probright, *scores]], dtype=torch.float))
+                if len(features_xs) == 0:
+                  features_xs = [torch.tensor([ [0]*13 + [*scores] ], dtype=torch.float)] # make sure there is always an input tensor
+                features_xs = torch.cat(features_xs)
+
+                xs.append(features_xs)
+                if i+j in frameNum2LabelTensors:
+                  ys.append(frameNum2LabelTensors[i+j])
+                else:
+                  ys.append(labels2Tensor['8'])
+
+              xs = pad_sequence(xs).to(torch.device('cuda'))
+              xs = torch.flip(xs,dims=(0,))
+              ys = torch.cat(ys).to(torch.device('cuda'))
+              sequences.append((xs, ys))
+
+              # There may be more than one label in this interval.
+              # If we ran this loop twice in this interval then we would append the same exact (xs,ys) to sequences
+              break
+    else:
+      featureFilePath = r"D:\features\Gen5_RU_2019-10-07_07-56-42-0001_m0.pkl"
+      labelsFilePath = "precomputed/convertedGroundTruthLabels/Gen5_RU_2019-10-07_07-56-42-0001_labels.txt"
+      filepaths = []
+      filepaths.append(featureFilePath)
+
+      # Collect labels and features into one place
+      data = []  # == [path, [label, framnum], features] where features == [rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs]
+      if not os.path.isfile(labelsFilePath):
+        print("invalid test file")
+
+      videodata = [featureFilePath]
+
+      # Get labels
+      with open(labelsFilePath) as labelsFile:
+        labels = []
+        lines = labelsFile.readlines()
+        labelLines = [line.rstrip('\n') for line in lines]
+        for line in labelLines:
+          label, labelTime = line.split(',')
+          label = label.split('=')[0]
+          frameNumber = int((float(labelTime) % 300) * 30)
+          labels.append((label, frameNumber))
+        videodata.append(labels)
+
+      # Get features
+      with open(featureFilePath, 'rb') as featuresfile:
+        videodata.append(list(pickle.load(featuresfile)))
+
+      data.append(videodata)
+
+      print('Loaded data')
+
+      # Get all labels
+      # AllPossibleLabels = ['rightTO', 'lcRel', 'cutin', 'cutout', 'evtEnd', 'objTurnOff', 'end', 'barrier', 'NOLABEL']
+      AllPossibleLabels = ['0', '1', '2', '3', '4', '5', '6', '7', '8']
+      labels2Tensor = {}
+      for label in AllPossibleLabels:
+        labels2Tensor[label] = torch.tensor([len(labels2Tensor)])
+
+      # Make input tensors from the data
+      sequences = []
+      for path, labels, features in data:
+
+        # The data would be very skewed (almost always NOLABEL) if we just had one big sequence for the entire video
+        # Instead train on smaller chunks of the video that contain some interesting action
+        intervalwidth = 30 * 60
+        for i in range(0, 30 * 60 * 5 - intervalwidth, intervalwidth):
+          left = i
+          right = i + intervalwidth
+
+          frameNum2LabelTensors = {}
+          for label, frameNum in labels:
+            if frameNum in frameNum2LabelTensors:
+              frameNum += 1
+            frameNum2LabelTensors[frameNum] = labels2Tensor[label]
+
+          # Now for each frame in the interval
+          for label, frameNum in labels:
+            if left <= frameNum <= right:
+              # if True:
+              xs, ys = [], []
+
+              (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs) = features
+
+              # Only look at data from this interval of frames
+              vehicles = vehicles[i:i + intervalwidth + 1]
+              probs = boxcornerprobs[i:i + intervalwidth + 1]
+              lanescores = lanescores[i:i + intervalwidth + 1]
+
+              # for each frame in the interval
+              for j, (vehicles, probs, scores) in enumerate(zip(vehicles, probs, lanescores)):
+                scores = [float(score.cpu().numpy()) for score in scores]
+
+                # for some reason I organized the pkl file s.t. we have to do this
+                probsleft = probs[
+                            :len(vehicles)]  # left lane line probability map values at box corners for each vehicle
+                probsright = probs[len(vehicles):]  # See LaneLineDetectorERFNet.py::175
+
+                features_xs = []
+                # Create tensors
+                for vehicle, probleft, probright in zip(vehicles, probsleft, probsright):
+                  # Put object id into sensible range
+                  objectid, x1, y1, x2, y2 = vehicle
+                  objectid = (objectid % 1000) / 1000
+                  vehicle = (objectid, x1, y1, x2, y2)
+
+                  features_xs.append(torch.tensor([[*vehicle, *probleft, *probright, *scores]], dtype=torch.float))
+                if len(features_xs) == 0:
+                  features_xs = [torch.tensor([[0] * 13 + [*scores]],
+                                              dtype=torch.float)]  # make sure there is always an input tensor
+                features_xs = torch.cat(features_xs)
+
+                xs.append(features_xs)
+                if i + j in frameNum2LabelTensors:
+                  ys.append(frameNum2LabelTensors[i + j])
+                else:
+                  ys.append(labels2Tensor['8'])
+
+              xs = pad_sequence(xs).to(torch.device('cuda'))
+              xs = torch.flip(xs, dims=(0,))
+              ys = torch.cat(ys).to(torch.device('cuda'))
+              sequences.append((xs, ys))
+
+              # There may be more than one label in this interval.
+              # If we ran this loop twice in this interval then we would append the same exact (xs,ys) to sequences
+              break
+
+    print(len(sequences))
+    with open('tensors.pkl', 'wb') as file:
+      pickle.dump(sequences, file)
+
+  else:
+    with open('tensors.pkl', 'rb') as file:
+      sequences = pickle.load(file)
+    if not testing:
+      train(sequences)
+    else:
+      test(sequences)
