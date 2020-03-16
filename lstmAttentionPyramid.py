@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 torch.manual_seed(1209809284)
 
-PRECOMPUTE = True
+PRECOMPUTE = False
 
 # Get all labels
 AllPossibleLabels = ['rightTO', 'lcRel', 'cutin', 'cutout', 'evtEnd', 'objTurnOff', 'end', 'NOLABEL']
@@ -21,7 +21,7 @@ for label in AllPossibleLabels:
 
 NUMLABELS = len(AllPossibleLabels)
 PREDICT_EVERY_NTH_FRAME = 8
-WINDOWWIDTH = 30*8
+WINDOWWIDTH = 30*16
 WINDOWSTEP = WINDOWWIDTH // 4
 
 # 0 : rightTO
@@ -45,35 +45,51 @@ class mylstm(nn.Module):
     self.input_dim = input_dim
     self.output_dim = output_dim
     self.encoder = nn.LSTM(input_dim, hidden_dim)
-    self.attn = nn.Linear(hidden_dim + output_dim, WINDOWWIDTH)
-    self.attn_combine = nn.Linear(hidden_dim + output_dim, hidden_dim)
+    self.pencoder1 = nn.LSTM(hidden_dim*2, hidden_dim, bidirectional=True)
+    self.pencoder2 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True)
+    self.pencoder3 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True)
+    self.pencoder4 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True)
+    self.attn = nn.Linear(hidden_dim + output_dim, WINDOWWIDTH//16)
+    self.attn_combine = nn.Linear(hidden_dim*2 + output_dim, hidden_dim)
     self.dropout = nn.Dropout(.1)
     self.gru = nn.GRU(hidden_dim, hidden_dim)
     self.out = nn.Linear(hidden_dim, output_dim)
+    # self.out = nn.Linear(hidden_dim*2, output_dim)
 
   def forward(self, data):
     # see nn.LSTM documentation for input and output shapes
-    context_seq = self.encoder(data)  # == h_T, (hs, cs)
-    context_seq = context_seq[1]  # == (hs,cs)
-    context_seq = context_seq[0]  # == hs
+    # data = (seqlen=numBoundingBoxesInFrame, 240, 17)
+    # print(data.shape)
+    _, context_seq = self.encoder(data)
+    # print(context_seq[0].shape)
+    context_seq = context_seq[0].view(data.shape[1]//2,1,-1)
+    # print(context_seq.shape)
+    context_seq, _ = self.pencoder1(context_seq)
+    context_seq = context_seq.view(data.shape[1]//4,1,-1)
+    context_seq, _ = self.pencoder2(context_seq)
+    context_seq = context_seq.view(data.shape[1]//8,1,-1)
+    context_seq, _  = self.pencoder3(context_seq)
+    context_seq = context_seq.view(data.shape[1]//16,1,-1)
+    context_seq, hidden  = self.pencoder4(context_seq)
+    context_seq = context_seq.view(1,WINDOWWIDTH//16,self.hidden_dim*2)
+    # return F.log_softmax(self.out(context_seq), dim=1)[0]
 
-    hidden = context_seq[0][-1].view(1,1,-1)
-    input = torch.ones((1,1,self.output_dim),device=torch.device('cuda')) / self.output_dim
+    hidden = hidden[0][0].view(1,1,-1)
+    input = torch.ones((1,self.output_dim),device=torch.device('cuda')) / self.output_dim
     outputs = torch.zeros((WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME, NUMLABELS),device=torch.device('cuda'))
 
+    # print(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME)
     for i in range(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME):
-      input = self.dropout(input.detach())
-      # print(context_seq.shape)
-      attn_weights = F.softmax(self.attn(torch.cat((input[0].detach(), hidden[0]), 1)), dim=1)
-      # attn_weights = (batch,WINDOWSIZE)
+      input = self.dropout(input)
+      attn_weights = F.softmax(self.attn(torch.cat((input, hidden[0]), 1)), dim=1)
       # print(attn_weights.shape)
       attn_applied = torch.bmm(attn_weights.unsqueeze(0), context_seq)
-      # attn_applied = (1,batch,hsize)
 
       # print(attn_applied.shape)
       # print(input.shape)
       # print(hidden.shape)
-      output = torch.cat((input[0], attn_applied[0]), 1)
+      output = torch.cat((input, attn_applied[0]), 1)
+      # print(output.shape)
       output = self.attn_combine(output).unsqueeze(0)
 
       # print(output.shape)
@@ -81,13 +97,11 @@ class mylstm(nn.Module):
       output = F.relu(output)
       output, hidden = self.gru(output, hidden)
       outputs[i] += F.log_softmax(self.out(output[0]), dim=1)[0]
-      input = outputs[i].view(1,1,NUMLABELS)
-
+      input = outputs[i].view(1,NUMLABELS)
     return outputs
 
 
 def evaluate(model, loss_function, sequences, saveFileName, n=None):
-  model.eval()
   outputs = []
   average_loss = 0
   for x, y in sequences[:n]:
@@ -104,10 +118,10 @@ def evaluate(model, loss_function, sequences, saveFileName, n=None):
   with open(saveFileName, 'w') as f:
     f.writelines(outputs)
     f.write('average loss =' + str(average_loss/len(sequences)) + '\n')
-  model.train()
 
 
 def checkpoint(epoch, losses, model, loss_function, trainSequences, testSequences,n=None):
+  model.eval()
   with torch.no_grad():
     print('Saving model at epoch:', epoch)
     if n is None:
@@ -117,11 +131,12 @@ def checkpoint(epoch, losses, model, loss_function, trainSequences, testSequence
     evaluate(model, loss_function, trainSequences, 'trainOutputs.txt',n)
     evaluate(model, loss_function, testSequences, 'testOutputs.txt',n)
     print('Saved', epoch)
+  model.train()
 
 
 def train(trainSequences, testSequences):
   print('Training')
-  model = mylstm(17, 17, NUMLABELS)
+  model = mylstm(60, 17, NUMLABELS)
   model.to(torch.device('cuda'))
   model.train()
 
@@ -132,32 +147,33 @@ def train(trainSequences, testSequences):
                    1, # evtEnd
                    1, # objTurnOff
                    1, # end
-                   1/20]# NOLABEL
+                   1/22]# NOLABEL
   class_weights = torch.tensor(class_weights, device=torch.device('cuda'))/sum(class_weights)
 
   loss_function = nn.CrossEntropyLoss(weight=class_weights)
   # loss_function = nn.NLLLoss(weight=class_weights)
   # optimizer = optim.SGD(model.parameters(), lr=0.1)
-  optimizer = optim.Adam(model.parameters())
+  optimizer = optim.Adam(model.parameters(), lr=.01)
 
   print('Enter training loop')
   ema_loss = None
   losses = []
   for epoch in range(5000):
-    for i, (x, y) in enumerate(trainSequences):
-      # print('x')
-      loss = loss_function(model(x), y)
-      # print('0')
-      losses.append(float(loss))
-      # print('1')
+    mloss = 0
+    for i in range(len(trainSequences)):
+      k = random.randint(0,len(trainSequences)-1)
+      x,y = trainSequences[k]
+      loss = loss_function(model(x), y) / 3
       loss.backward()
-      # print('2')
-      optimizer.step()
-      model.zero_grad()
-      # print('3')
+      mloss += loss
+      if i % 3 == 2:
+        optimizer.step()
+        model.zero_grad()
+        losses.append(float(mloss))
+        mloss = 0
 
     if epoch % 2 == 0 and epoch > 0:
-      if epoch % 100 == 0:
+      if epoch % 10 == 0:
         checkpoint(epoch, losses, model, loss_function, trainSequences, testSequences)
       else:
         checkpoint(epoch, losses, model, loss_function, trainSequences, testSequences,10)
@@ -170,63 +186,65 @@ def train(trainSequences, testSequences):
   checkpoint(epoch, losses, model, loss_function, trainSequences, testSequences)
 
 
-def loadFeaturesAndLabels(files):
-  # returns a list of (path, [label, framnum], features)
-  # where features == (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs)
-  ret = []
-  for file in files:
-    labelsFilePath = file.replace('featuresLSTM/', 'groundTruthLabels/').replace('_m0.pkl', '_labels.txt')
-    if not os.path.isfile(labelsFilePath):
-      continue
-    videodata = []
-
-    # Get features
-    with open(file, 'rb') as featuresfile:
-      videodata.append(list(pickle.load(featuresfile)))
-
-    # Get labels
-    with open(labelsFilePath) as labelsFile:
-      labels = []
-      lines = labelsFile.readlines()
-      labelLines = [line.rstrip('\n') for line in lines]
-      for line in labelLines:
-        label, labelTime = line.split(',')
-        label = label.split('=')[0]
-        if label == 'barrier':
-          continue
-        frameNumber = int((float(labelTime) % 300) * 30)
-        labels.append((label, frameNumber))
-      videodata.append(labels)
-
-    ret.append(videodata)
-  return ret
-
-
 def getSequenceForInterval(low, high, features, labels, frameNum2LabelTensors):
   xs, ys = [], []
 
+  # (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs) = features
   (_, lanescores, vehicles, boxcornerprobs) = features
+
   # Only look at data from this interval of frames
   vehicles = vehicles[low:high]
   probs = boxcornerprobs[low:high]
   lanescores = lanescores[low:high]
+  # lines = lines[low:high]
+  # print(len(lines))
+  # print(len(lanescores))
+  # print(len(probs))
+  # print(len(vehicles))
+  # print()
+  # print()
+  # print()
 
-  # for each frame in the interval
-  for j, (vehicles, probs, lanescores_) in enumerate(zip(vehicles, probs, lanescores)):
+  # for the jth frame in the interval
+  for j, (vehicles_, probs_, lanescores_) in enumerate(zip(vehicles, probs, lanescores)):
     lanescores_ = [float(score.cpu().numpy()) for score in lanescores_]
 
+    # # Try to get some info from the lane lines
+    # lline = lines_[0]
+    # rline = lines_[1]
+    # print(lline)
+    # try:
+    #     for i in range(len(lline)):
+    #         lline[i] = lline[i][0]
+    #     for i in range(len(rline)):
+    #         rline[i] = rline[i][0]
+    #     lline = lline[::30][:5]
+    #     rline = rline[::30][:5]
+    #     if len(lline) < 5: lline += [0] * (5-len(lline))
+    #     if len(rline) < 5: rline += [0] * (5-len(rline))
+    # except:
+    #     continue
+
     # for some reason I organized the pkl file s.t. we have to do this
-    probsleft = probs[:len(vehicles)]  # left lane line probability map values at box corners for each vehicle
-    probsright = probs[len(vehicles):]  # See LaneLineDetectorERFNet.py::175
+    probsleft = probs_[:len(vehicles_)]  # left lane line probability map values at box corners for each vehicle
+    probsright = probs_[len(vehicles_):]  # See LaneLineDetectorERFNet.py::175
 
     features_xs = []
-    # Create tensors
-    for vehicle, probleft, probright in zip(vehicles, probsleft, probsright):
+
+    # print(len(probs_))
+    # print(len(lines_[0]))
+    # print(len(lines_[1]))
+    # print(len(vehicles_))
+    # print(len(probsleft))
+    # print(len(probsright))
+
+    # sort by objectid
+    stuff = sorted(list(zip(vehicles_, probsleft, probsright)), key=lambda x:-x[0][0])
+    for vehicle, probleft, probright in stuff:
       # Put object id into sensible range
       objectid, x1, y1, x2, y2 = vehicle
       objectid = (objectid % 1000) / 1000
       vehicle = (objectid, x1 / 720, y1 / 480, x2 / 720, y2 / 480)
-
       features_xs.append(torch.tensor([[*vehicle, *probleft, *probright, *lanescores_]], dtype=torch.float))
     if len(features_xs) == 0:
       features_xs = [torch.tensor([[0]*13 + [*lanescores_]], dtype=torch.float)]  # make sure there is always an input tensor
@@ -245,18 +263,44 @@ def getSequenceForInterval(low, high, features, labels, frameNum2LabelTensors):
   return (xs, ys)
 
 
-def getSequencesForData(data):
-  # Make input tensors from the data
+def getSequencesForFiles(files):
+  # returns a list of (path, [label, framnum], features)
+  # where features == (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs)
   sequences = []
-  for features, labels in data:
+  for file in files:
+    labelsFilePath = file.replace('featuresLSTM/', 'groundTruthLabels/').replace('_m0.pkl', '_labels.txt')
+    if not os.path.isfile(labelsFilePath):
+      continue
+
+    # Get features
+    features = None
+    with open(file, 'rb') as featuresfile:
+      features = list(pickle.load(featuresfile))
+
+    # Get labels
+    labels = []
+    with open(labelsFilePath) as labelsFile:
+      lines = labelsFile.readlines()
+      labelLines = [line.rstrip('\n') for line in lines]
+      for line in labelLines:
+        label, labelTime = line.split(',')
+        label = label.split('=')[0]
+        if label == 'barrier':
+          continue
+        frameNumber = int((float(labelTime) % 300) * 30)
+        labels.append((label, frameNumber))
+
+    # Make input tensors from the data
+    # First do labels tensors
     frameNum2LabelTensors = {}
     for label, frameNum in labels:
       while frameNum//PREDICT_EVERY_NTH_FRAME in frameNum2LabelTensors:
         frameNum += PREDICT_EVERY_NTH_FRAME
       frameNum2LabelTensors[frameNum//PREDICT_EVERY_NTH_FRAME] = labels2Tensor[label]
+
+    # Then do features tensors
     for i in range(0, 30*60*5 - WINDOWWIDTH, WINDOWSTEP):
-      low = i
-      high = i + WINDOWWIDTH
+      [low, high] = [i, i + WINDOWWIDTH]
       # Search for a label that is in the interval.
       # If such a label does not exist, then we will not add the sequence to the dataset.
       for label, frameNum in labels:
@@ -279,7 +323,7 @@ if __name__ == '__main__':
       filepaths.extend(dirpath + '/' + f for f in filenames)
     random.shuffle(filepaths)
 
-    trainSize = int(len(filepaths)*.8)
+    trainSize = int(len(filepaths)*.85)
     trainSet = filepaths[:trainSize]
     testSet = filepaths[trainSize:]
 
@@ -288,13 +332,9 @@ if __name__ == '__main__':
     print('Test set has size:', len(testSet))
     for path in testSet: print(path)
 
-    # Collect labels and features into one place
-    trainData = loadFeaturesAndLabels(trainSet)
-    testData = loadFeaturesAndLabels(testSet)
-
     # Convert the data into tensors
-    trainSequences = getSequencesForData(trainData)
-    testSequences = getSequencesForData(testData)
+    trainSequences = getSequencesForFiles(trainSet)
+    testSequences = getSequencesForFiles(testSet)
 
     with open('tensors.pkl', 'wb') as file:
       pickle.dump((trainSequences, testSequences), file)
