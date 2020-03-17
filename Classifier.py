@@ -54,7 +54,7 @@ def processVideo(dp: DataPoint,
   labelGen = LabelGenerator(video.getFps())
 
   if CONFIG.MAKE_PRECOMPUTED_FEATURES:
-    allboxes, allboxscores, allvehicles, alllines, alllanescores, allboxcornerprobs = [], [], [], [], [], []
+    allboxes, allboxscores, allvehicles, alllines, alllanescores, allboxavglaneprobs = [], [], [], [], [], []
 
   frames = []
   for frameIndex in range(totalNumFrames):
@@ -66,11 +66,11 @@ def processVideo(dp: DataPoint,
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
-      rawboxes, boxscores, vehicles, lines, lanescores, boxcornerprobs = [], [], [], [], [], []
+      rawboxes, boxscores, vehicles, lines, lanescores, boxavglaneprobs = [], [], [], [], [], []
     else:
       rawboxes, boxscores = vehicleDetector.getFeatures(frame)
       vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
-      lines, lanescores, boxcornerprobs = laneLineDetector.getLines(frame, vehicles)
+      lines, lanescores, boxavglaneprobs = laneLineDetector.getLines(frame, vehicles)
       try: # TODO adam your code still has a bug
         labelGen.processFrame(vehicles, lines, frameIndex)
       except:
@@ -82,7 +82,7 @@ def processVideo(dp: DataPoint,
       allvehicles.append(list([v.id,*v.box] for v in vehicles))
       alllines.append(lines)
       alllanescores.append(lanescores)
-      allboxcornerprobs.append(boxcornerprobs)
+      allboxavglaneprobs.append(boxavglaneprobs)
 
     _updateDataPoint(dp, rawboxes, vehicles, lines)
     progressTracker.setCurVidProgress(frameIndex / totalNumFrames)
@@ -91,7 +91,7 @@ def processVideo(dp: DataPoint,
   if CONFIG.MAKE_PRECOMPUTED_FEATURES:
     import pickle
     with open(videoFeaturesPath, 'wb') as file:
-      pickle.dump([allboxes, allboxscores, alllines, alllanescores, allvehicles, allboxcornerprobs], file)
+      pickle.dump([allboxes, allboxscores, alllines, alllanescores, allvehicles, allboxavglaneprobs], file)
 
   dp.predictedLabels = labelGen.getLabels()
   return dp

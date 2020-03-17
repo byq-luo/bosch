@@ -6,8 +6,6 @@ import torch.nn.functional as F
 import numpy as np
 import math
 
-# TODO B: look at lane scores to check for change lane.?
-
 def clamp(l,h,x):
   if x > h: return h
   if x < l: return l
@@ -16,8 +14,6 @@ def mix(a, b, m):
   return (a-b)*(1-m) + b
 
 THRESHOLD = .2
-
-# FEEDBACK = 0.3
 
 TIMESMOOTH = .7
 XSMOOTH = .7
@@ -33,37 +29,43 @@ class LaneLineDetector:
     self.state = [None]*4
     self.output = [None]*4
     self.frameIndex = -1
-    self.plr = [None]*6
+    self.prevLaneLineComputation = [None]*6
     self.framesSinceDiscontinuous = 0
 
   def getLines(self, frame, vehicles):
     self.frameIndex += 1
-    l,r,lls,ls,rs,rrs = self.plr
+    leftProbMap,rightProbMap,leftOutsideScore,leftScore,rightScore,rightOutsideScore = self.prevLaneLineComputation
     if self.frameIndex % 2 == 0:
-      l, r, lls, ls, rs, rrs = self._getProbs(frame)
-      self.plr = l, r, lls, ls, rs, rrs
-    
-    probvalues = []
-    for prob in [l,r]:
-      for vehicle in vehicles:
-        pvalues = []
-        x1, y1, x2, y2 = vehicle.box
-        points = [(x1,y1),(x2,y2),(x1,y2),(x2,y1)]
-        for x,y in points:
-          xp = int(clamp(0,975,976/720*x))
-          yp = int(clamp(0,207,(y-207)*976/720))
-          pvalues.append(prob[yp,xp])
-        probvalues.append(pvalues)
+      leftProbMap, rightProbMap, leftOutsideScore, leftScore, rightScore, rightOutsideScore = self._getProbs(frame)
+      self.prevLaneLineComputation = leftProbMap, rightProbMap, leftOutsideScore, leftScore, rightScore, rightOutsideScore
+
+    # How much probability does each bounding box cover?
+    (vehicleLaneProbsL,vehicleLaneProbsR) = [],[]
+    for vehicle in vehicles:
+      x1, y1, x2, y2 = vehicle.box
+      width = x2 - x1
+      height = y2 - y1
+      centroid = np.array([x1/2+x2/2, y1/2+y2/2])
+      # Estimate probability in bounding box
+      avgProbL, avgProbR = 0, 0
+      for i in range(70):
+        randPoint = np.random.randn(2) * np.array([width,height]) * .333 + centroid
+        xp = int(clamp(0,975,976/720*randPoint[0]))
+        yp = int(clamp(0,207,(randPoint[1]-207)*976/720))
+        avgProbL += leftProbMap[yp,xp]
+        avgProbR += rightProbMap[yp,xp]
+      vehicleLaneProbsL.append(avgProbL / 70)
+      vehicleLaneProbsR.append(avgProbR / 70)
 
     laneLines = []
-    for prob, score, _id in zip([l,r], [ls,rs], [1,2]):
+    for probMap, score, _id in zip([leftProbMap,rightProbMap], [leftScore,rightScore], [1,2]):
       if score < .5:
         laneLines.append([])
         continue
 
-      prob = prob[VOFF:-VOFF][::-1]
-      maxs = np.max(prob, axis=1)
-      measurement = np.argmax(prob, axis=1).astype('float32')
+      probMap = probMap[VOFF:-VOFF][::-1]
+      maxs = np.max(probMap, axis=1)
+      measurement = np.argmax(probMap, axis=1).astype('float32')
       if self.state[_id] is None:
         self.state[_id] = measurement.copy()
 
@@ -85,7 +87,7 @@ class LaneLineDetector:
         # Try to remove some discontinuities
         newMeasurement = measurement
         for k in range(2):
-          mg = max(abs(np.gradient(newMeasurement)))
+          maxgradient = max(abs(np.gradient(newMeasurement)))
           newMeasurement = measurement.copy()
           grad = np.gradient(newMeasurement)
           # use previous state estimate
@@ -103,9 +105,8 @@ class LaneLineDetector:
                 newMeasurement[y] = px
             else:
               px = newMeasurement[y]
-          nmg = max(abs(np.gradient(newMeasurement)))
         # If we made the curve more discontinuous then just use the original curve
-        if nmg > mg:
+        if max(abs(np.gradient(newMeasurement))) > maxgradient:
           newMeasurement = measurement
 
         # Check how different the measurement is from the previous state est
@@ -168,7 +169,8 @@ class LaneLineDetector:
         xs,ys = [],[]
 
       laneLines.append(list(zip(xs, ys, xs[1:], ys[1:])))
-    return laneLines,[lls,ls,rs,rrs],probvalues
+
+    return laneLines,(leftOutsideScore,leftScore,rightScore,rightOutsideScore),(vehicleLaneProbsL,vehicleLaneProbsR)
 
   # TODO This should work for arbitrary frame size
   def _getProbs(self, frame):
@@ -204,16 +206,15 @@ class LaneLineDetector:
       # lane_scores[i] is a probability that the ith lane exists (1<=i<=4)
 
       ll = output[1]
-      lls = lane_scores[0]
+      leftOutsideScore = lane_scores[0]
       rr = output[4]
-      rrs = lane_scores[3]
+      rightOutsideScore = lane_scores[3]
 
       l = output[2]
-      ls = lane_scores[1]
+      leftScore = lane_scores[1]
       r = output[3]
-      rs = lane_scores[2]
-    # return ll.cpu().numpy(), l.cpu().numpy(), r.cpu().numpy(), rr.cpu().numpy(), lls,ls, rs,rrs
-    return l.cpu().numpy(), r.cpu().numpy(), lls,ls, rs,rrs #, frame_orig.copy()
+      rightScore = lane_scores[2]
+    return l.cpu().numpy(), r.cpu().numpy(), leftOutsideScore,leftScore,rightScore,rightOutsideScore
 
   def _initDL(self):
     num_class = 5

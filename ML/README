@@ -1,0 +1,9 @@
+Hyperparameters:
+    batch size
+    hidden dimension size
+    number of pyramid layers
+    bidirectional
+    class weights
+    predict every nth frame
+    window width
+    dataset augmentation

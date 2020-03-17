@@ -1,0 +1,8 @@
+-- Try autoencoder with whitened data and bigger hidden
+-- Organize into experiements
+-- Report average loss alongside loss on each datapoint
+-- replace cornerprobs with centroid prob average
+-- Upddate lstmFirstModelOverfits
+-- Try using an rnn over trajectories of bboxes instead of over bboxes in frames
+
+-- Try more simple input features (no obj id, use yolo bboxes and not SORT bboxes.)
