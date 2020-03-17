@@ -1,6 +1,6 @@
 import os
 import pickle
-with open('tensors.pkl', 'rb') as file:
+with open('predictions.pkl', 'rb') as file:
     sequences = pickle.load(file)
     labels=[]
     i = 0
@@ -8,8 +8,8 @@ with open('tensors.pkl', 'rb') as file:
     h = 0
     for seq in sequences:
         if i<=4:
-            for val in seq[1]:
-                label = int(val.data.cpu().numpy())
+            for val in seq:
+                label = val
                 #print(val.data.cpu().numpy() == '8')
                 if label != 8:
                     if label == 0:

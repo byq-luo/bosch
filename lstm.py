@@ -143,6 +143,7 @@ def train(sequences):
         pickle.dump(yhat.cpu().numpy().tolist(), file)
 
 def test(sequences):
+  labels = []
   model = mylstm(8 * 17, 17, NUMLABELS)
   model.load_state_dict(torch.load('model1.pt'))
   model.to(torch.device('cuda'))
@@ -152,8 +153,9 @@ def test(sequences):
       yhat = model(x)
       yhat = yhat.argmax(dim=1)
       print('yhat:', yhat)
+      labels.append(yhat.cpu().numpy().tolist())
       with open('predictions.pkl', 'wb') as file:
-        pickle.dump(yhat.cpu().numpy().tolist(), file)
+        pickle.dump(labels, file)
 
 if __name__ == '__main__':
   print('Loading data.')
@@ -267,9 +269,9 @@ if __name__ == '__main__':
               # If we ran this loop twice in this interval then we would append the same exact (xs,ys) to sequences
               break
     else:
-      # featureFilePath = r'D:\features\Gen5_RU_2019-10-07_07-56-42-0001_m0.pkl'
+      featureFilePath = r'D:\test_features\Gen5_RU_2019-10-08_13-33-50-0047_m0.pkl'
       # labelsFilePath = 'precomputed/convertedGroundTruthLabels/Gen5_RU_2019-10-07_07-56-42-0001_labels.txt'
-      featureFilePath = r'C:\Users\Bradley\bosch\precomputed\features\Gen5_RU_2019-10-07_07-56-42-0001_m0.pkl'
+      #featureFilePath = r'C:\Users\Bradley\bosch\precomputed\features\Gen5_RU_2019-10-07_07-56-42-0001_m0.pkl'
 
       # Get features
       with open(featureFilePath, 'rb') as featuresfile:
