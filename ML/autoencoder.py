@@ -1,3 +1,5 @@
+# OUTDATED
+
 import os
 import pickle
 import numpy as np
@@ -36,7 +38,6 @@ class Model(nn.Module):
     seq = seq[:-1,:,:]
     return seq
 
-
 def evaluate(model, losses, loss_function, sequences):
   average_loss = 0
   for i,(x,_) in enumerate(sequences):
@@ -50,7 +51,6 @@ def evaluate(model, losses, loss_function, sequences):
     losses.append(loss)
     average_loss += loss
   print(average_loss / len(sequences))
-
 
 def checkpoint(epoch, trainloss, testloss, model, loss_function, trainSequences, testSequences):
   model.eval()
@@ -67,7 +67,6 @@ def checkpoint(epoch, trainloss, testloss, model, loss_function, trainSequences,
       pickle.dump(testloss, file)
     print('Saved', epoch)
   model.train()
-
 
 def train(trainSequences, testSequences):
   print('Training')
@@ -93,7 +92,6 @@ def train(trainSequences, testSequences):
       checkpoint(epoch, trainlosses, testlosses, model, loss_function, trainSequences, testSequences)
   print('Finished training')
   checkpoint(epoch, losses, model, loss_function, trainSequences, testSequences)
-
 
 if __name__ == '__main__':
   print('Loading data.')

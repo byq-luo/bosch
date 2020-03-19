@@ -1,8 +1,10 @@
 -- Try autoencoder with whitened data and bigger hidden
--- Organize into experiements
+-- Organize into experiments
 -- Report average loss alongside loss on each datapoint
--- replace cornerprobs with centroid prob average
 -- Upddate lstmFirstModelOverfits
 -- Try using an rnn over trajectories of bboxes instead of over bboxes in frames
-
+-- See https://discuss.pytorch.org/t/saving-and-loading-a-model-in-pytorch/2610/3
+-- Add the start-of-sequence and end-of-sequence tokens?
+-- Visualize the attention layer?
+-- Try training without object IDs
 -- Try more simple input features (no obj id, use yolo bboxes and not SORT bboxes.)

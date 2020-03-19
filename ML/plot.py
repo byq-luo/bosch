@@ -9,11 +9,11 @@ def ewm(xs,m):
     ret[i+1] = (ret[i] * m + x * (1-m))
   return ret
 
-SMOOTH = .99
+SMOOTH = .8
 
-with open('trainlossNoise.pkl','rb') as f:
+with open('trainloss.pkl','rb') as f:
   trainloss = np.array(pickle.load(f))
-with open('testlossNoise.pkl','rb') as f:
+with open('testloss.pkl','rb') as f:
   testloss = np.array(pickle.load(f))
 
 smoothtrainloss = ewm(trainloss,SMOOTH)

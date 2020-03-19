@@ -11,10 +11,7 @@ import numpy as np
 import random
 import cv2
 
-# TODO somehow make use of frames from the future?
-# TODO test if resizing the images makes performance (accuracy or speed) any better
 # TODO make ERFNet work for any input image size
-# TODO also make Detectron only give bounding boxes for vehicle classes
 # TODO does ERFNet take BGR or RGB? what about DeepSort?
 # See https://github.com/XingangPan/SCNN/tree/master/tools
 # and https://github.com/cardwing/Codes-for-Lane-Detection

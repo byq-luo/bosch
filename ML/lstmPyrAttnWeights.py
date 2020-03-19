@@ -1,15 +1,11 @@
-import os
-import pickle
+import os, time, pickle, random
 import numpy as np
-import random
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
 import torch.nn.functional as F
 import torch.optim as optim
 torch.manual_seed(1209809284)
-
-# TODO improve data
 
 device = torch.device('cuda')
 PRECOMPUTE = False
@@ -23,7 +19,7 @@ for label in AllPossibleLabels:
 NUMLABELS = len(AllPossibleLabels)
 PREDICT_EVERY_NTH_FRAME = 8
 WINDOWWIDTH = 30*8
-WINDOWSTEP = WINDOWWIDTH // 8
+WINDOWSTEP = WINDOWWIDTH // 4
 
 # 0 : rightTO
 # 1 : lcRel
@@ -81,15 +77,12 @@ class mylstm(nn.Module):
         input = outputs[i].view(1,NUMLABELS)
     return outputs
 
-
-def evaluate(model, losses, lossFunction, sequences, saveFileName):
+def evaluate(model, lossFunction, sequences, saveFileName):
   outputs = []
   avgloss = 0
   for x, y in sequences:
     yhat = model(x)
-    loss = float(lossFunction(yhat, y))
-    losses.append(loss)
-    avgloss += loss
+    avgloss += float(lossFunction(yhat, y))
     yhat = yhat.argmax(dim=1)
     yhat = yhat.cpu().numpy().tolist()
     y = y.cpu().numpy().tolist()
@@ -100,28 +93,25 @@ def evaluate(model, losses, lossFunction, sequences, saveFileName):
     f.writelines(outputs)
   return avgloss / len(sequences)
 
-def checkpoint(epoch, mintrainloss, mintestloss, trainloss, testloss, model, lossFunction, trainSequences, testSequences):
+def checkpoint(epoch, trainloss, testloss, model, lossFunction, trainSequences, testSequences):
   model.eval()
   with torch.no_grad():
-    print('Testing model. ',end='')
-    avgtrainloss = evaluate(model, trainloss, lossFunction, trainSequences, 'trainOutputsNoise.txt')
-    avgtestloss = evaluate(model, testloss, lossFunction, testSequences, 'testOutputsNoise.txt')
-    print('Saving model. ',end='')
-    if avgtrainloss < mintrainloss:
+    avgtrainloss = evaluate(model, lossFunction, trainSequences, 'trainOutputs.txt')
+    avgtestloss = evaluate(model, lossFunction, testSequences, 'testOutputs.txt')
+    if len(trainloss) and avgtrainloss < min(trainloss):
       mintrainloss = avgtrainloss
-      torch.save(model.state_dict(), 'mintrainlossmodelNoise.pt')
-    if avgtestloss < mintestloss:
+      torch.save(model.state_dict(), 'mintrainlossmodel.pt')
+    if len(testloss) and avgtestloss < min(testloss):
       mintestloss = avgtestloss
-      torch.save(model.state_dict(), 'mintestlossmodelNoise.pt')
-    torch.save(model.state_dict(), 'mostrecentmodelNoise.pt')
-    with open('trainlossNoise.pkl', 'wb') as file:
+      torch.save(model.state_dict(), 'mintestlossmodel.pt')
+    trainloss.append(avgtrainloss)
+    testloss.append(avgtestloss)
+    torch.save(model.state_dict(), 'mostrecentmodel.pt')
+    with open('trainloss.pkl', 'wb') as file:
       pickle.dump(trainloss, file)
-    with open('testlossNoise.pkl', 'wb') as file:
+    with open('testloss.pkl', 'wb') as file:
       pickle.dump(testloss, file)
-    print('done.')
   model.train()
-  return mintrainloss, mintestloss
-
 
 def train(trainSequences, testSequences):
   print('Training')
@@ -154,62 +144,52 @@ def train(trainSequences, testSequences):
   print('Enter training loop')
   trainloss = []
   testloss = []
-  mintrainloss = float('inf')
-  mintestloss = float('inf')
-
-  print_loss = 0
   for epoch in range(5000):
+    start = time.time()
+    loss = 0
     for i in range(len(trainSequences)):
-      optimizer.zero_grad()
-
       k = random.randint(0,len(trainSequences)-1)
       x,y = trainSequences[k]
-      if k % 10 == 0:
-        loss = lossFunction(model(x), y)
-      else:
-        loss = lossFunction(model(x,y), y)
-      
-      loss.backward()
-      optimizer.step()
+      if k%10: loss += lossFunction(model(x,y), y)
+      else:    loss += lossFunction(model(x), y)
+      if i % 10 == 9: # use a minibatch of size 10
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        loss = 0
 
-      print_loss += float(loss)
+    if epoch % 3 == 0:
+      checkpoint(epoch, trainloss, testloss, model, lossFunction, trainSequences, testSequences)
 
-    if epoch % 10 == 0:
-      mintrainloss, mintestloss = \
-        checkpoint(epoch, mintrainloss, mintestloss, trainloss, testloss, model, lossFunction, trainSequences, testSequences)
-
-    print('epoch:',epoch,' train loss:', print_loss / len(trainSequences), ' mintrainloss:', mintrainloss, ' mintestloss', mintestloss)
-    print_loss = 0
+    end = time.time()
+    print('epoch {}    train {:1.5}    test {:1.5}    time {}'.format(epoch, trainloss[-1], testloss[-1], int(end-start)))
 
   print('Finished training')
-  mintrainloss, mintestloss = \
-    checkpoint(epoch, mintrainloss, mintestloss, trainloss, testloss, model, lossFunction, trainSequences, testSequences)
+  checkpoint(epoch, trainloss, testloss, model, lossFunction, trainSequences, testSequences)
 
 # gxs = []
 mean = torch.tensor([4.7812e-01, 3.8052e-01, 4.2687e-01, 4.4340e-01, 4.9411e-01, 3.1371e-04,
         6.1817e-02, 7.6253e-02, 3.6926e-04, 1.6677e-04, 6.1989e-02, 4.9159e-02,
         3.5818e-04, 4.1619e-01, 9.3100e-01, 9.2963e-01, 4.6476e-01])
-std = torch.tensor([0.3070, 0.2182, 0.0546, 0.2191, 0.0504, 0.0040, 0.1959, 0.2156, 0.0038,
-        0.0023, 0.1858, 0.1734, 0.0037, 0.4054, 0.1840, 0.1859, 0.3852])
+std = torch.tensor([.307,.2182,.0546,.2191,.0504,.004,0.1959,.2156,.0038,0.0023,.1858,.1734,.0037,.4054,.184,0.1859,.3852])
 class_counts = {label:0 for label in AllPossibleLabels}
 
 def getSequenceForInterval(low, high, features, labels, frameNum2Label, noise):
   xs, ys = [], []
 
-  # (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs) = features
-  (_, lanescores, vehicles, boxcornerprobs) = features
+  (_, lanescores, vehicles, boxcentroidprobs) = features
 
   # Only look at data from this interval of frames
   vehicles = vehicles[low:high]
-  probs = boxcornerprobs[low:high]
+  probs = boxcentroidprobs[low:high]
   lanescores = lanescores[low:high]
   # for the jth frame in the interval
   for j, (vehicles_, probs_, lanescores_) in enumerate(zip(vehicles, probs, lanescores)):
     lanescores_ = [float(score.cpu().numpy()) for score in lanescores_]
     probsleft = probs_[:len(vehicles_)]  # left lane line probability map values at box corners for each vehicle
     probsright = probs_[len(vehicles_):]  # See LaneLineDetectorERFNet.py::175
-    features_xs = []
 
+    features_xs = []
     # sort by objectid
     stuff = sorted(list(zip(vehicles_, probsleft, probsright)), key=lambda x:-x[0][0])
     for vehicle, probleft, probright in stuff:
@@ -219,7 +199,8 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, noise):
       vehicle = (objectid, x1 / 720, y1 / 480, x2 / 720, y2 / 480)
       tens = torch.tensor([[*vehicle, *probleft, *probright, *lanescores_]])
       tens = (tens - mean) / std
-      tens += torch.randn(tens.size()) * .1
+      if noise:
+        tens += torch.randn(tens.size()) * .05
       features_xs.append(tens)
     # gxs.extend(features_xs)
     if len(features_xs) == 0:
@@ -243,10 +224,7 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, noise):
   ys = torch.cat(ys).to(device)
   return (xs,ys)
 
-
 def getSequencesForFiles(files):
-  # returns a list of (path, [label, framnum], features)
-  # where features == (rawboxes, boxscores, lines, lanescores, vehicles, boxcornerprobs)
   sequences = []
   for file in files:
     labelsFilePath = file.replace('featuresLSTM/', 'groundTruthLabels/').replace('_m0.pkl', '_labels.txt')
@@ -294,7 +272,6 @@ def getSequencesForFiles(files):
             break
   return sequences
 
-
 if __name__ == '__main__':
   print('Loading data.')
 
@@ -321,6 +298,7 @@ if __name__ == '__main__':
     # bigboy = torch.cat(gxs)
     # print(bigboy.mean(dim=0))
     # print(bigboy.std(dim=0))
+    # print(bigboy.shape)
     # exit(1)
 
     print('Class counts for data:',class_counts)
