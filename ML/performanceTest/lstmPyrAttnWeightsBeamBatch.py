@@ -1,3 +1,4 @@
+# TODO CHANGE EPOCH TEST RATE
 
 import os, time, pickle, random
 import numpy as np
@@ -24,10 +25,11 @@ NUMLABELS = len(AllPossibleLabels)
 PREDICT_EVERY_NTH_FRAME = 4 # TODO play with this value
 WINDOWWIDTH = 30*8
 WINDOWSTEP = WINDOWWIDTH // 8
-TEACHERFORCING_RATIO = 10
+TEACHERFORCING_RATIO = 10 # to 1
 BATCH_SIZE = 32
-INPUT_FEATURE_SIZE = 36
-HIDDEN_DIM_SIZE = 256
+INPUT_FEATURE_DIM = 36
+HIDDEN_DIM = 256
+DROPOUT_RATE = .1
 
 PRECOMPUTE = False
 RESUMETRAINING = False
@@ -41,9 +43,8 @@ EVAL_LOSS_EVERY_NTH_EPOCH = 1
 # WINDOWSTEP = WINDOWWIDTH // 8
 # TEACHERFORCING_RATIO = 10
 # BATCH_SIZE = 32
-# INPUT_FEATURE_SIZE = 36
-# HIDDEN_DIM_SIZE = 256
-
+# INPUT_FEATURE_DIM = 36
+# HIDDEN_DIM = 256
 
 # TODO implement proper beam search algorithm so that we can play with the beam width parameter (perf/acc tradeoff)
 # TODO consider using pytorch's DataSet and DataParallel if it speeds up training to use multigpus.
@@ -63,7 +64,19 @@ def clamp(l, h, x):
   return x
 
 def one_hot(i):
-  return torch.tensor([[0. if j != i else 1. for j in range(NUMLABELS)]], device=device)
+  return torch.tensor([[[0. if j != i else 1. for j in range(NUMLABELS)]]], device=device)
+
+def getBatch(sequences):
+  xs,xlengths,ys = [],[],[]
+  batch = random.choices(sequences, k=BATCH_SIZE)
+  for ((x,xlength),y) in batch:
+    xs.extend(x)
+    xlengths.extend(xlength)
+    ys.extend(y)
+  ys = torch.tensor(ys,device=device)
+  xs = pad_sequence(xs)
+  xlengths = torch.tensor(xlengths)
+  return (xs,xlengths),ys
 
 class Model(nn.Module):
   def __init__(self, hidden_dim, input_dim, output_dim):
@@ -72,54 +85,74 @@ class Model(nn.Module):
     self.input_dim = input_dim
     self.output_dim = output_dim
     self.encoder = nn.LSTM(input_dim, hidden_dim)
-    self.pencoder1 = nn.LSTM(hidden_dim*2, hidden_dim, bidirectional=True)
-    self.pencoder2 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True)
+    self.pencoder1 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True, dropout=DROPOUT_RATE)
+    self.pencoder2 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True, dropout=DROPOUT_RATE)
     self.attn = nn.Linear(hidden_dim*2 + output_dim, WINDOWWIDTH//4)
-    self.attn_combine = nn.Linear(hidden_dim*2 + output_dim, hidden_dim)
-    self.decoder = nn.GRU(hidden_dim, hidden_dim*2)
+    self.attnCombine = nn.Linear(hidden_dim*2 + output_dim, hidden_dim)
+    self.decoder = nn.GRU(hidden_dim, hidden_dim*2, dropout=DROPOUT_RATE, batch_first=True)
     self.out = nn.Linear(hidden_dim*2, output_dim)
 
   def encode(self, data):
-    x, xlengths = data
-    packed_padded = pack_padded_sequence(x, xlengths, enforce_sorted=False)
-    packed_padded_out, packed_padded_hidden = self.encoder(packed_padded)
+    xs, xlengths = data
+
+    # If batched then xs = (seqlen, WINDOWWIDTH*batches, featuredim)
+    packed_padded = pack_padded_sequence(xs, xlengths, enforce_sorted=False)
+    packed_padded_out, hidden = self.encoder(packed_padded)
     # Check unpacked_lengths against xlengths to verify correct output ordering
-    unpacked_padded, unpacked_lengths = pad_packed_sequence(packed_padded_out)
-    context_seq = unpacked_padded
+    # unpacked_padded, unpacked_lengths = pad_packed_sequence(packed_padded_hidden[0])
 
-    seq_len = x.shape[1]
-    context_seq = context_seq[0].view(seq_len//2,1,-1)
+    context_seq = torch.cat(hidden, dim=2) # (1, WINDOWWIDTH * BATCH_SIZE, 2*HIDDEN_DIM)
+
+    context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 2, 4 * HIDDEN_DIM)
     context_seq, _ = self.pencoder1(context_seq)
-    context_seq = context_seq.view(seq_len//4,1,-1)
+    context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 4, 4 * HIDDEN_DIM)
     context_seq, hidden = self.pencoder2(context_seq)
-    context_seq = context_seq.view(1,WINDOWWIDTH//4,self.hidden_dim*2)
-    hidden = hidden[0].view(1,1,-1)
-
+    hidden = hidden[0] # Take the h vector
+    # hidden = (numdirections * layers, batch, hiddensize)
+    hidden = hidden.transpose(1,0)
+    hidden = hidden.reshape(BATCH_SIZE,2 * HIDDEN_DIM)
     return context_seq, hidden
 
   # TODO batchify decoder
   def decoderStep(self, input, hidden, encoderOutputs):
-    attn_weights = F.softmax(self.attn(torch.cat((input, hidden[0]), 1)), dim=1)
-    attn_applied = torch.bmm(attn_weights.unsqueeze(0), encoderOutputs)
-    output = torch.cat((input, attn_applied[0]), 1)
-    output = self.attn_combine(output).unsqueeze(0)
+    # print('input:',input.shape)
+    # print('hidden:',hidden.shape)
+    attnWeights = F.softmax(self.attn(torch.cat((input, hidden.unsqueeze(1)), dim=2)), dim=2)
+    # print('attnWeights:',attnWeights.shape)
+    # print('encoderOutputs:',encoderOutputs.shape)
+    attnApplied = torch.bmm(attnWeights, encoderOutputs)
+    # print('attnApplied:',attnApplied.shape)
+    output = torch.cat((input, attnApplied), dim=2)
+    output = self.attnCombine(output)
     output = F.relu(output)
-    output, hidden = self.decoder(output, hidden)
-    output = F.log_softmax(self.out(output[0]), dim=1)[0]
+    # print('relu:',output.shape)
+    output, hidden = self.decoder(output, hidden.unsqueeze(0))
+    hidden = hidden.squeeze(0)
+    # print('decoder out:',output.shape)
+    # print('decoder hid:',hidden.shape)
+    output = F.log_softmax(self.out(output), dim=2)
+    # print('log:',output.shape)
     return output, hidden
 
-  def forward(self, data:torch.Tensor, y:torch.Tensor=None):
-    context_seq, hidden = self.encode(data)
-    input = torch.zeros((1,NUMLABELS), device=device)
-    outputs = torch.zeros((WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME, NUMLABELS), device=device)
+  def forward(self, xs:torch.Tensor, ys:torch.Tensor=None):
+    if ys is not None:
+      ys = ys.view(BATCH_SIZE, WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME)
+    # If batched then data = (seqlen, windowlength*batches, featuredim)
+    context_seq, hidden = self.encode(xs)
+    input = torch.zeros((BATCH_SIZE,1,NUMLABELS), device=device)
+    outputs = []
     for i in range(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME):
       output, hidden = self.decoderStep(input, hidden, context_seq)
-      if y is None:
-        input = output.view(1,NUMLABELS)
+      if ys is None:
+        input = output
       else:
-        input = one_hot(y[i])
-      outputs[i] = output
-    return outputs
+        # TODO could use torch.nn.functional.one_hot
+        input = torch.cat([one_hot(ys[j,i]) for j in range(BATCH_SIZE)])
+      outputs.append(output)
+    output = torch.cat(outputs, dim=1)
+    # print(output.shape)
+    output = output.view(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME * BATCH_SIZE, NUMLABELS)
+    return output
 
   # TODO Batchify?
   def beamDecode(self, data:torch.Tensor):
@@ -153,17 +186,21 @@ def evaluate(model, lossFunction, sequences, saveFileName):
   N = len(sequences)
   testOffset = random.randint(0,N-1)
   stabilityCount = 0
-  for i in range(1,N+1):
-    x,y = sequences[(testOffset+i)%N]
-    yhat = model(x)
-    avgloss += float(lossFunction(yhat, y))
+  for i in range(1,N//BATCH_SIZE+1):
+    xs, ys = getBatch(sequences)
+
+    yhats = model(xs)
+    avgloss += float(lossFunction(yhats, ys))
     previous_avgloss = avgloss / i
-    yhat = yhat.argmax(dim=1)
-    yhat = yhat.cpu().numpy().tolist()
-    y = y.cpu().numpy().tolist()
-    yhat = ''.join(['_' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in yhat]) + ' '
-    y = ''.join(['.' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in y]) + '\n\n'
-    outputs.extend([yhat, y])
+
+    yhats = yhats.view(BATCH_SIZE, WINDOWWIDTH // PREDICT_EVERY_NTH_FRAME, NUMLABELS).cpu().numpy()
+    ys = ys.view(BATCH_SIZE, WINDOWWIDTH // PREDICT_EVERY_NTH_FRAME).cpu().numpy()
+    for j in range(BATCH_SIZE):
+      pred = yhats[j].argmax(axis=1)
+      exp = ys[j]
+      pred = ''.join(['_' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in pred.tolist()]) + ' '
+      exp = ''.join(['.' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in exp.tolist()]) + '\n\n'
+      outputs.extend([pred, exp])
 
     # We need to either stop early or test a smaller fraction of the dataset.
     # I chose to stop early.
@@ -176,26 +213,27 @@ def evaluate(model, lossFunction, sequences, saveFileName):
     f.writelines(outputs)
   outputs = []
 
+  # TODO
   # Beam search is slow so only evaluate it a few times.
-  for _ in range(10):
-    x,y = sequences[random.randint(0,N-1)]
-    yhat = model.beamDecode(x)
-    yhat_nobeam = model(x)
-    avgloss += float(lossFunction(yhat, y))
-    yhat = yhat.argmax(dim=1)
-    yhat = yhat.cpu().numpy().tolist()
-    yhat_nobeam = yhat_nobeam.argmax(dim=1)
-    yhat_nobeam = yhat_nobeam.cpu().numpy().tolist()
-    y = y.cpu().numpy().tolist()
-    if not all([i==AllPossibleLabels.index('NOLABEL') for i in yhat]):
-      yhat = ''.join(['_' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in yhat]) + ' '
-      y = ''.join(['.' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in y]) + '\n\n'
-      yhat_nobeam = ''.join(['_' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in yhat_nobeam]) + ' '
-      outputs.extend(('Beam:   '+yhat+'\n',
-                      'Greedy: '+yhat_nobeam+'\n',
-                      'Truth:  '+y+'\n'))
-  with open('beamSample'+saveFileName, 'w') as f:
-    f.writelines(outputs)
+  # for _ in range(10):
+  #   x,y = sequences[random.randint(0,N-1)]
+  #   yhat = model.beamDecode(x)
+  #   yhat_nobeam = model(x)
+  #   avgloss += float(lossFunction(yhat, y))
+  #   yhat = yhat.argmax(dim=1)
+  #   yhat = yhat.cpu().numpy().tolist()
+  #   yhat_nobeam = yhat_nobeam.argmax(dim=1)
+  #   yhat_nobeam = yhat_nobeam.cpu().numpy().tolist()
+  #   y = y.cpu().numpy().tolist()
+  #   if not all([i==AllPossibleLabels.index('NOLABEL') for i in yhat]):
+  #     yhat = ''.join(['_' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in yhat]) + ' '
+  #     y = ''.join(['.' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in y]) + '\n\n'
+  #     yhat_nobeam = ''.join(['_' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in yhat_nobeam]) + ' '
+  #     outputs.extend(('Beam:   '+yhat+'\n',
+  #                     'Greedy: '+yhat_nobeam+'\n',
+  #                     'Truth:  '+y+'\n'))
+  # with open('beamSample'+saveFileName, 'w') as f:
+  #   f.writelines(outputs)
 
   return avgloss / N
 
@@ -223,8 +261,15 @@ def checkpoint(epoch, trainloss, testloss, model, optimizer, lossFunction, train
   model.train()
 
 def train(trainSequences, testSequences, classCounts):
+  # Send data to gpu
+  print('Sending data to GPU')
+  for data in [trainSequences, testSequences]:
+    for ((x,xlengths),y) in data:
+      for j in range(len(x)):
+        x[j] = x[j].to(device)
+
   print('Training')
-  model = Model(HIDDEN_DIM_SIZE, INPUT_FEATURE_SIZE, NUMLABELS)
+  model = Model(HIDDEN_DIM, INPUT_FEATURE_DIM, NUMLABELS)
 
   N = len(trainSequences)
   print('Train set num sequences:',N)
@@ -234,7 +279,7 @@ def train(trainSequences, testSequences, classCounts):
     print('\t',label,':',count)
 
   # TODO do not know if I am accumulating class counts correctly
-  classWeights = [1/classCounts[lab] for lab in AllPossibleLabels] # order is important here
+  classWeights = [1/(classCounts[lab]+1) for lab in AllPossibleLabels] # order is important here
   classWeights = torch.tensor(classWeights, device=device) / sum(classWeights)
 
   lossFunction = nn.NLLLoss(weight=classWeights)
@@ -258,20 +303,15 @@ def train(trainSequences, testSequences, classCounts):
 
   print('Enter training loop')
   for epoch in range(5000):
-    loss = 0
-    for i in tqdm(range(N)):
-      k = random.randint(0,N-1)
-      x,y = trainSequences[k]
-      if k % TEACHERFORCING_RATIO:
-        loss += lossFunction(model(x,y), y) / BATCH_SIZE
+    for i in tqdm(range(N // BATCH_SIZE)):
+      xs,ys = getBatch(trainSequences)
+      if i % TEACHERFORCING_RATIO:
+        loss = lossFunction(model(xs,ys), ys)
       else:
-        loss += lossFunction(model(x), y) / BATCH_SIZE
-      # TODO are we wasting steps here?
-      if (i+1) % BATCH_SIZE == 0:
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        loss = 0
+        loss = lossFunction(model(xs), ys)
+      loss.backward()
+      optimizer.step()
+      optimizer.zero_grad()
 
     if epoch % EVAL_LOSS_EVERY_NTH_EPOCH == 0:
       checkpoint(epoch, trainloss, testloss, model, optimizer, lossFunction, trainSequences, testSequences)
@@ -350,8 +390,6 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, allxs, c
         ys.append(labels2Tensor['NOLABEL'])
 
   xlengths = list(map(len, xs))
-  xs = pad_sequence(xs).to(device)
-  ys = torch.cat(ys).to(device)
   return ((xs, xlengths),ys)
 
 vehiclesKept = set()
@@ -531,14 +569,15 @@ if __name__ == '__main__':
     # trainSequences.extend(extraDataTrain)
 
     print('Standardizing data')
-    bigboy = torch.cat(allxs).to(device)
+    bigboy = torch.cat(allxs)
     mean = bigboy.mean(dim=0)
     std = bigboy.std(dim=0)
     # TODO We should record the mean and std of the dataset our model was trained on
     # In production we need to try and make the input data lie in the same distribution
     for data in [trainSequences, testSequences]:
-      for i,((x,xlengths),y) in enumerate(data):
-        data[i] = (((x-mean)/std, xlengths),y)
+      for ((x,xlengths),y) in data:
+        for j in range(len(x)):
+          x[j] = (x[j] - mean) / std
     print('Shape of full data matrix:',bigboy.shape)
 
     with open('tensors.pkl', 'wb') as file:
