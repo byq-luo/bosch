@@ -1,5 +1,3 @@
-# TODO CHANGE EPOCH TEST RATE
-
 import os, time, pickle, random
 import numpy as np
 from tqdm import tqdm
@@ -35,7 +33,7 @@ PRECOMPUTE = False
 RESUMETRAINING = False
 MODELPATH = 'mostrecentmodel.pt'
 OPTIMIZERPATH = 'mostrecentoptimizer.pt'
-EVAL_LOSS_EVERY_NTH_EPOCH = 3
+EVAL_LOSS_EVERY_NTH_EPOCH = 4
 
 # I had a good model with the following params
 # PREDICT_EVERY_NTH_FRAME = 10
@@ -307,7 +305,9 @@ def train(trainSequences, testSequences, classCounts):
 
   print('Enter training loop')
   for epoch in range(5000):
-    for i in tqdm(range(N // BATCH_SIZE)):
+    #for i in tqdm(range(N // BATCH_SIZE)):
+    start = time.time()
+    for i in range(N // BATCH_SIZE):
       xs,ys = getBatch(trainSequences)
       if i % TEACHERFORCING_RATIO:
         loss = lossFunction(model(xs,ys), ys)
@@ -319,12 +319,14 @@ def train(trainSequences, testSequences, classCounts):
 
     if epoch % EVAL_LOSS_EVERY_NTH_EPOCH == 0:
       checkpoint(epoch, trainloss, testloss, model, optimizer, lossFunction, trainSequences, testSequences)
-      print('epoch {}    train {:1.5}    test {:1.5}'.format(epoch, trainloss[-1], testloss[-1]))
+      end = time.time()
+      print('epoch {} train {:1.5} test {:1.5} time {}'.format(epoch, trainloss[-1], testloss[-1], int(end-start)))
     else:
-      print('epoch {}'.format(epoch))
+      end = time.time()
+      print('epoch {}                          time {}'.format(epoch, int(end-start)))
 
   print('Finished training')
-  checkpoint(epoch, trainloss, testloss, model, lossFunction, trainSequences, testSequences)
+  checkpoint(epoch, trainloss, testloss, model, optimizer, lossFunction, trainSequences, testSequences)
 
 
 # torch.save(dataloader, 'dataloader.pth')
