@@ -20,21 +20,24 @@ for label in AllPossibleLabels:
 
 NUMLABELS = len(AllPossibleLabels)
 
-PREDICT_EVERY_NTH_FRAME = 10
+PREDICT_EVERY_NTH_FRAME = 5
 WINDOWWIDTH = 30*8
 WINDOWSTEP = WINDOWWIDTH // 10
 
+USE_BLANK_RATIO = 10
+
 BATCH_SIZE = 64
-INPUT_FEATURE_DIM = 36
 HIDDEN_DIM = 512
-DROPOUT_RATE = .3
+DROPOUT_RATE = .35
 TEACHERFORCING_RATIO = 7 # to 1
+INPUT_FEATURE_DIM = 36
 
 PRECOMPUTE = False
-SEND_ALL_DATA_TO_GPU = False
-RESUMETRAINING = False
+USE_ALL_VIDEOS = True
+SEND_ALL_DATA_TO_GPU = True
+RESUME_TRAINING = False
 CHECKPOINT_PATH = 'mostrecent.pt'
-EVAL_LOSS_EVERY_NTH_EPOCH = 10
+EVAL_LOSS_EVERY_NTH_EPOCH = 2
 
 # 0 : rightTO
 # 1 : lcRel
@@ -106,7 +109,7 @@ class Model(nn.Module):
     hidden = hidden[0] # Take the h vector
     # hidden = (numdirections * layers, batch, hiddensize)
     hidden = hidden.transpose(1,0)
-    hidden = hidden.reshape(BATCH_SIZE,2 * HIDDEN_DIM)
+    hidden = hidden.reshape(BATCH_SIZE,2 * HIDDEN_DIM) # concats the forward & backward hiddens
     return context_seq, hidden
 
   def decoderStep(self, input, hidden, encoderOutputs):
@@ -132,8 +135,9 @@ class Model(nn.Module):
   def forward(self, xs:torch.Tensor, ys:torch.Tensor=None):
     if ys is not None:
       ys = ys.view(BATCH_SIZE, WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME)
-    # If batched then data = (seqlen, windowlength*batches, featuredim)
+    # If batched then data = (maxNumFeaturesInFramesInInterval, windowLength*batches, featureDim)
     context_seq, hidden = self.encode(xs)
+
     input = torch.zeros((BATCH_SIZE,1,NUMLABELS), device=device)
     outputs = []
     for i in range(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME):
@@ -145,7 +149,6 @@ class Model(nn.Module):
         input = torch.cat([one_hot(ys[j,i]) for j in range(BATCH_SIZE)])
       outputs.append(output)
     output = torch.cat(outputs, dim=1)
-    # print(output.shape)
     output = output.view(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME * BATCH_SIZE, NUMLABELS)
     return output
 
@@ -177,9 +180,10 @@ class Model(nn.Module):
 def evaluate(model, lossFunction, sequences, saveFileName):
   outputs = []
   avgloss = 0
-  avgacc = 0
+  avgacc1 = 0
+  avgacc2 = 0
   N = len(sequences)
-  for i in range(16):
+  for i in range(32):
     xs, ys = getBatch(sequences)
 
     yhats = model(xs)
@@ -195,7 +199,10 @@ def evaluate(model, lossFunction, sequences, saveFileName):
       exp = ''.join(['.' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in exp.tolist()]) + '\n\n'
       outputs.extend([pred, exp])
 
-    avgacc += ((yhats == ys) & (ys != AllPossibleLabels.index('NOLABEL'))).sum() / (ys == AllPossibleLabels.index('NOLABEL')).sum()
+    numlabels = (ys != AllPossibleLabels.index('NOLABEL')).sum()
+    if numlabels > 0:
+        avgacc1 += ((yhats == ys) & (ys != AllPossibleLabels.index('NOLABEL'))).sum() / numlabels
+    avgacc2 += (yhats == ys).sum()
 
   with open(saveFileName, 'w') as f:
     f.writelines(outputs)
@@ -223,38 +230,48 @@ def evaluate(model, lossFunction, sequences, saveFileName):
   # with open('beamSample'+saveFileName, 'w') as f:
   #   f.writelines(outputs)
 
-  return avgloss / i, avgacc / i
+  return avgloss / i, avgacc1 / i, avgacc2 / i
 
-def checkpoint(epoch, trainloss, testloss, trainacc, testacc, model, optimizer, lossFunction, trainSequences, testSequences):
+def checkpoint(epoch, losses, model, optimizer, lossFunction, trainSequences, testSequences):
   model.eval()
   with torch.no_grad():
-    avgtrainloss, avgtrainacc = evaluate(model, lossFunction, trainSequences, 'trainOutputs.txt')
-    avgtestloss, avgtestacc = evaluate(model, lossFunction, testSequences, 'testOutputs.txt')
+    avgtrainloss, avgtrainacc, avgtrainacc2 = evaluate(model, lossFunction, trainSequences, 'trainOutputs.txt')
+    avgtestloss, avgtestacc, avgtestacc2 = evaluate(model, lossFunction, testSequences, 'testOutputs.txt')
 
-    saveData = (model.state_dict(), optimizer.state_dict(), trainloss, testloss, trainacc, testacc)
-    if len(trainloss) and avgtrainloss < min(trainloss):
+    losses.trainloss.append(avgtrainloss)
+    losses.testloss.append(avgtestloss)
+    losses.trainacc.append(avgtrainacc)
+    losses.testacc.append(avgtestacc)
+    losses.trainacc2.append(avgtrainacc2)
+    losses.testacc2.append(avgtestacc2)
+
+    saveData = (model.state_dict(), optimizer.state_dict(), losses)
+    if len(losses.trainloss) and avgtrainloss < min(losses.trainloss[:-1]):
       torch.save(saveData, 'mintrainloss.pt')
-    if len(testloss) and avgtestloss < min(testloss):
+    if len(losses.testloss) and avgtestloss < min(losses.testloss[:-1]):
       torch.save(saveData, 'mintestloss.pt')
-    if len(trainacc) and avgtrainacc > max(trainacc):
+    if len(losses.trainacc) and avgtrainacc > max(losses.trainacc[:-1]):
       torch.save(saveData, 'maxtrainacc.pt')
-    if len(testacc) and avgtestacc > max(testacc):
+    if len(losses.testacc) and avgtestacc > max(losses.testacc[:-1]):
       torch.save(saveData, 'maxtestacc.pt')
     torch.save(saveData, 'mostrecent.pt')
 
-    trainloss.append(avgtrainloss)
-    testloss.append(avgtestloss)
-    trainacc.append(avgtrainacc)
-    testacc.append(avgtestacc)
   model.train()
+
+class Losses:
+  def __init__(self):
+      self.trainLoss = []
+      self.testLoss = []
+      self.trainAcc = []
+      self.testAcc = []
 
 def train(trainSequences, testSequences, classCounts):
   if SEND_ALL_DATA_TO_GPU:
-      print('Sending data to GPU')
-      for data in [trainSequences, testSequences]:
-        for ((x,xlengths),y) in data:
-          for j in range(len(x)):
-            x[j] = x[j].to(device)
+    print('Sending data to GPU')
+    for data in [trainSequences, testSequences]:
+      for ((x,xlengths),y) in data:
+        for j in range(len(x)):
+          x[j] = x[j].to(device)
 
   print('Training')
   model = Model(HIDDEN_DIM, INPUT_FEATURE_DIM, NUMLABELS)
@@ -274,14 +291,13 @@ def train(trainSequences, testSequences, classCounts):
   lossFunction = nn.NLLLoss(weight=classWeights)
   optimizer = optim.Adam(model.parameters(), lr=.0001)
 
-  trainloss = []
-  testloss = []
-  trainacc = []
-  testacc = []
+  losses = Losses()
 
-  if RESUMETRAINING:
+  if RESUME_TRAINING:
     print('Resuming from checkpoint')
-    (model_state, optimizer_state, trainloss, testloss, trainacc, testacc) = torch.load(CHECKPOINT_PATH)
+
+    (model_state, optimizer_state, losses) = torch.load(CHECKPOINT_PATH)
+
     model.load_state_dict(model_state)
     optimizer.load_state_dict(optimizer_state)
     optimizer.zero_grad()
@@ -291,8 +307,8 @@ def train(trainSequences, testSequences, classCounts):
   print('Enter training loop')
   for epoch in range(5000):
     start = time.time()
-    # for i in tqdm(range(N // BATCH_SIZE)):
-    for i in range(N // BATCH_SIZE):
+    # for i in tqdm(range(N // BATCH_SIZE // 2)):
+    for i in range(N // BATCH_SIZE // 2):
       xs,ys = getBatch(trainSequences)
       if i % TEACHERFORCING_RATIO:
         loss = lossFunction(model(xs,ys), ys)
@@ -303,15 +319,15 @@ def train(trainSequences, testSequences, classCounts):
       optimizer.zero_grad()
 
     if epoch % EVAL_LOSS_EVERY_NTH_EPOCH == 0:
-      checkpoint(epoch, trainloss, testloss, trainacc, testacc, model, optimizer, lossFunction, trainSequences, testSequences)
+      checkpoint(epoch, losses, model, optimizer, lossFunction, trainSequences, testSequences)
       end = time.time()
-      print('epoch {} trainloss {:1.5} testloss {:1.5} trainacc {:1.5} testacc {:1.5} time {}'.format(epoch, trainloss[-1], testloss[-1], trainacc[-1], testacc[-1], int(end-start)))
+      print('epoch {} trainloss {:1.5} testloss {:1.5} trainacc {:1.5} testacc {:1.5} time {}'.format(epoch, losses.trainloss[-1], losses.testloss[-1], losses.trainacc[-1], losses.testacc[-1], int(end-start)))
     else:
       end = time.time()
       print('epoch {}                                                                 time {}'.format(epoch, int(end-start)))
 
   print('Finished training')
-  checkpoint(epoch, trainloss, testloss, trainacc, testacc, model, optimizer, lossFunction, trainSequences, testSequences)
+  checkpoint(epoch, losses, model, optimizer, lossFunction, trainSequences, testSequences)
 
 
 # torch.save(dataloader, 'dataloader.pth')
@@ -383,6 +399,7 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, allxs, c
   xlengths = list(map(len, xs))
   return ((xs, xlengths),ys)
 
+usedBlank = 0
 vehiclesKept = set()
 vehiclesRemoved = set()
 class Vehicle:
@@ -411,6 +428,7 @@ class Vehicle:
             self.percentLifeComplete)
 
 def getSequencesForFiles(files, allxs, classCounts):
+  global usedBlank
   sequences = []
   for fileI, file in enumerate(files):
     labelsFilePath = file.replace('features/', 'labels/').replace('_m0.pkl', '_labels.txt')
@@ -512,7 +530,10 @@ def getSequencesForFiles(files, allxs, classCounts):
       # Search for a label that is in the interval.
       # If such a label does not exist, then we will not add the sequence to the dataset.
       for label, frameNum in labels:
-        if low <= frameNum <= high:
+        useBlankInterval = random.randint(0,13512351) % USE_BLANK_RATIO == 0
+        if useBlankInterval and not (low <= frameNum <= high):
+          usedBlank += 1
+        if low <= frameNum <= high or useBlankInterval:
           data = getSequenceForInterval(low, high, features, labels, frameNum2Label, allxs, classCounts)
           sequences.append(data)
           # There may be more than one label in this interval.
@@ -530,6 +551,8 @@ if __name__ == '__main__':
       for (dirpath, dirnames, filenames) in os.walk('features'):
         filepaths.extend(dirpath + '/' + f for f in filenames)
       random.shuffle(filepaths)
+      if not USE_ALL_VIDEOS:
+          filepaths = filepaths[:50]
 
       trainSize = int(len(filepaths)*.85)
       trainSet = filepaths[:trainSize]
@@ -548,6 +571,7 @@ if __name__ == '__main__':
       print('Class counts for data:',classCounts)
       print('Vehicles skipped:',len(vehiclesRemoved),
             'Vehicles kept:', len(vehiclesKept))
+      print('Blank intervals added:', usedBlank)
 
       print('Calculating statistics')
       bigboy = torch.cat(allxs)
@@ -561,7 +585,7 @@ if __name__ == '__main__':
       extraDataTrain = []
       for i,((x,xlengths),y) in enumerate(trainSequences[::3]):
         newseqReflH = []
-        # newseqRandShift = []
+        newseqRandShift = []
         newseqNoise = []
         for j in range(len(x)):
           # reflect everything left to right
@@ -573,15 +597,18 @@ if __name__ == '__main__':
           tens[0,-20:] *= -1
           tens[0,-20:] += 720
           newseqReflH.append(tens)
+
           tens = x[j].clone()
           tens[0,1:9] += torch.randn_like(tens[0,1:9]) * 40
           tens[0,-20:] += torch.randn_like(tens[0,-20:]) * 40
-          # newseqRandShift.append(tens)
-          # tens = x[j].clone()
-          # tens += torch.randn_like(tens)
+          newseqRandShift.append(tens)
+
+          tens = x[j].clone()
+          tens += torch.randn_like(tens)
           newseqNoise.append(tens)
+
         extraDataTrain.append(((newseqReflH,xlengths),y))
-        # extraDataTrain.append(((newseqRandShift,xlengths),y))
+        extraDataTrain.append(((newseqRandShift,xlengths),y))
         extraDataTrain.append(((newseqNoise,xlengths),y))
       trainSequences.extend(extraDataTrain)
 

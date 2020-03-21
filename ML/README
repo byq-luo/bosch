@@ -16,7 +16,6 @@ should the pyramid take the sequence inreverse?
 TODO:
     try autoencoder with whitened data and bigger hidden
     organize into experiments
-    update lstmFirstModelOverfits
     try using an rnn over trajectories of bboxes instead of over bboxes in frames
     add the start-of-sequence and end-of-sequence tokens?
     visualize the attention layer?
