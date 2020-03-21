@@ -4,6 +4,19 @@ Hyperparameters:
     number of pyramid layers
     bidirectional
     class weights
+    dropout rate
     predict every nth frame
     window width
-    dataset augmentation
+    dataset augmentation params
+
+loss turns out not to be the best measure for accuracy on the test set.
+
+should the pyramid take the sequence inreverse?
+
+TODO:
+    try autoencoder with whitened data and bigger hidden
+    organize into experiments
+    update lstmFirstModelOverfits
+    try using an rnn over trajectories of bboxes instead of over bboxes in frames
+    add the start-of-sequence and end-of-sequence tokens?
+    visualize the attention layer?

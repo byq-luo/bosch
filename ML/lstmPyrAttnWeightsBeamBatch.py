@@ -10,9 +10,9 @@ import torch.optim as optim
 torch.manual_seed(1209809284)
 device = torch.device('cuda')
 
-# We train on like 2million data points even though there are only about 4000 sequences in the train set.
+# TODO try to think of how to engineer more rich features.
+# TODO consider using pytorch's DataSet and DataParallel if it speeds up training to use multigpus.
 
-# Get all labels
 AllPossibleLabels = ['rightTO', 'lcRel', 'cutin', 'cutout', 'evtEnd', 'objTurnOff', 'end', 'NOLABEL']
 labels2Tensor = {}
 for label in AllPossibleLabels:
@@ -20,32 +20,21 @@ for label in AllPossibleLabels:
 
 NUMLABELS = len(AllPossibleLabels)
 
-PREDICT_EVERY_NTH_FRAME = 6 # TODO play with this value
+PREDICT_EVERY_NTH_FRAME = 10
 WINDOWWIDTH = 30*8
-WINDOWSTEP = WINDOWWIDTH // 8
-TEACHERFORCING_RATIO = 10 # to 1
-BATCH_SIZE = 32
+WINDOWSTEP = WINDOWWIDTH // 10
+
+BATCH_SIZE = 64
 INPUT_FEATURE_DIM = 36
-HIDDEN_DIM = 256
-DROPOUT_RATE = .13
+HIDDEN_DIM = 512
+DROPOUT_RATE = .3
+TEACHERFORCING_RATIO = 7 # to 1
 
 PRECOMPUTE = False
+SEND_ALL_DATA_TO_GPU = False
 RESUMETRAINING = False
-MODELPATH = 'mostrecentmodel.pt'
-OPTIMIZERPATH = 'mostrecentoptimizer.pt'
-EVAL_LOSS_EVERY_NTH_EPOCH = 4
-
-# I had a good model with the following params
-# PREDICT_EVERY_NTH_FRAME = 10
-# WINDOWWIDTH = 30*8
-# WINDOWSTEP = WINDOWWIDTH // 8
-# TEACHERFORCING_RATIO = 10
-# BATCH_SIZE = 32
-# INPUT_FEATURE_DIM = 36
-# HIDDEN_DIM = 256
-
-# TODO implement proper beam search algorithm so that we can play with the beam width parameter (perf/acc tradeoff)
-# TODO consider using pytorch's DataSet and DataParallel if it speeds up training to use multigpus.
+CHECKPOINT_PATH = 'mostrecent.pt'
+EVAL_LOSS_EVERY_NTH_EPOCH = 10
 
 # 0 : rightTO
 # 1 : lcRel
@@ -66,14 +55,18 @@ def one_hot(i):
 
 def getBatch(sequences):
   xs,xlengths,ys = [],[],[]
-  k = random.randint(0,len(sequences)-1)
-  batch = random.choices(sequences, k=BATCH_SIZE)
-  for ((x,xlength),y) in batch:
+  N = len(sequences)
+  sampleRandomly = random.randint(0,12412124) % 10 == 0
+  k = random.randint(0,N-1)
+  for i in range(BATCH_SIZE):
+    if sampleRandomly:
+      k = random.randint(0,N-1)
+    ((x,xlength),y) = sequences[(i+k) % N]
     xs.extend(x)
     xlengths.extend(xlength)
     ys.extend(y)
   ys = torch.tensor(ys,device=device)
-  xs = pad_sequence(xs)
+  xs = pad_sequence(xs).to(device=device)
   xlengths = torch.tensor(xlengths)
   return (xs,xlengths),ys
 
@@ -84,11 +77,13 @@ class Model(nn.Module):
     self.input_dim = input_dim
     self.output_dim = output_dim
     self.encoder = nn.LSTM(input_dim, hidden_dim)
-    self.pencoder1 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True, dropout=DROPOUT_RATE)
-    self.pencoder2 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True, dropout=DROPOUT_RATE)
+    self.pencoder1 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True)
+    self.pencoder2 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True)
+    self.dropout1 = nn.Dropout(p=DROPOUT_RATE)
+    self.dropout2 = nn.Dropout(p=DROPOUT_RATE)
     self.attn = nn.Linear(hidden_dim*2 + output_dim, WINDOWWIDTH//4)
     self.attnCombine = nn.Linear(hidden_dim*2 + output_dim, hidden_dim)
-    self.decoder = nn.GRU(hidden_dim, hidden_dim*2, dropout=DROPOUT_RATE, batch_first=True)
+    self.decoder = nn.GRU(hidden_dim, hidden_dim*2, batch_first=True)
     self.out = nn.Linear(hidden_dim*2, output_dim)
 
   def encode(self, data):
@@ -103,8 +98,10 @@ class Model(nn.Module):
     context_seq = torch.cat(hidden, dim=2) # (1, WINDOWWIDTH * BATCH_SIZE, 2*HIDDEN_DIM)
 
     context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 2, 4 * HIDDEN_DIM)
+    context_seq = self.dropout1(context_seq)
     context_seq, _ = self.pencoder1(context_seq)
     context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 4, 4 * HIDDEN_DIM)
+    context_seq = self.dropout2(context_seq)
     context_seq, hidden = self.pencoder2(context_seq)
     hidden = hidden[0] # Take the h vector
     # hidden = (numdirections * layers, batch, hiddensize)
@@ -112,7 +109,6 @@ class Model(nn.Module):
     hidden = hidden.reshape(BATCH_SIZE,2 * HIDDEN_DIM)
     return context_seq, hidden
 
-  # TODO batchify decoder
   def decoderStep(self, input, hidden, encoderOutputs):
     # print('input:',input.shape)
     # print('hidden:',hidden.shape)
@@ -153,69 +149,60 @@ class Model(nn.Module):
     output = output.view(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME * BATCH_SIZE, NUMLABELS)
     return output
 
-  # TODO Batchify?
-  def beamDecode(self, data:torch.Tensor):
-    context_seq, encoder_hidden = self.encode(data)
-    beams = [] # tuple of (outputs, previous hidden, next input, beam log prob)
-
-    # get the initial beam
-    input = torch.zeros((1,NUMLABELS), device=device)
-    output, hidden = self.decoderStep(input, encoder_hidden, context_seq)
-    for i in range(NUMLABELS):
-      beams.append(([output.view(1,NUMLABELS)], hidden, one_hot(i), float(output[i])))
-
-    for i in range(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME - 1):
-      newBeams = []
-      for beam in beams:
-        outputs, hidden, input, beamLogProb = beam
-        output, hidden = self.decoderStep(input, hidden, context_seq)
-        for i in range(NUMLABELS):
-          newBeam = (outputs + [output.view(1,NUMLABELS)], hidden, one_hot(i), beamLogProb + float(output[i]))
-          newBeams.append(newBeam)
-      beams = sorted(newBeams, key=lambda x:-x[-1])[:NUMLABELS]
-
-    outputs, _, _, _ = beams[0]
-    return torch.cat(outputs)
+  # # TODO Batchify?
+  # def beamDecode(self, data:torch.Tensor):
+  #   context_seq, encoder_hidden = self.encode(data)
+  #   beams = [] # tuple of (outputs, previous hidden, next input, beam log prob)
+  #
+  #   # get the initial beam
+  #   input = torch.zeros((1,NUMLABELS), device=device)
+  #   output, hidden = self.decoderStep(input, encoder_hidden, context_seq)
+  #   for i in range(NUMLABELS):
+  #     beams.append(([output.view(1,NUMLABELS)], hidden, one_hot(i), float(output[i])))
+  #
+  #   for i in range(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME - 1):
+  #     newBeams = []
+  #     for beam in beams:
+  #       outputs, hidden, input, beamLogProb = beam
+  #       output, hidden = self.decoderStep(input, hidden, context_seq)
+  #       for i in range(NUMLABELS):
+  #         newBeam = (outputs + [output.view(1,NUMLABELS)], hidden, one_hot(i), beamLogProb + float(output[i]))
+  #         newBeams.append(newBeam)
+  #     beams = sorted(newBeams, key=lambda x:-x[-1])[:NUMLABELS]
+  #
+  #   outputs, _, _, _ = beams[0]
+  #   return torch.cat(outputs)
 
 # Estimates the loss on the dataset
 def evaluate(model, lossFunction, sequences, saveFileName):
   outputs = []
   avgloss = 0
-  previous_avgloss = None
+  avgacc = 0
   N = len(sequences)
-  stabilityCount = 0
-  for i in range(1,N//BATCH_SIZE+1):
+  for i in range(16):
     xs, ys = getBatch(sequences)
 
     yhats = model(xs)
     avgloss += float(lossFunction(yhats, ys))
-    previous_avgloss = avgloss / i
 
-    yhats = yhats.view(BATCH_SIZE, WINDOWWIDTH // PREDICT_EVERY_NTH_FRAME, NUMLABELS).cpu().numpy()
+    yhats = yhats.view(BATCH_SIZE, WINDOWWIDTH // PREDICT_EVERY_NTH_FRAME, NUMLABELS)
+    yhats = yhats.argmax(dim=2).cpu().numpy()
     ys = ys.view(BATCH_SIZE, WINDOWWIDTH // PREDICT_EVERY_NTH_FRAME).cpu().numpy()
     for j in range(BATCH_SIZE):
-      pred = yhats[j].argmax(axis=1)
+      pred = yhats[j]
       exp = ys[j]
       pred = ''.join(['_' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in pred.tolist()]) + ' '
       exp = ''.join(['.' if z == AllPossibleLabels.index('NOLABEL') else str(z) for z in exp.tolist()]) + '\n\n'
       outputs.extend([pred, exp])
 
-    # We need to either stop early or test a smaller fraction of the dataset.
-    # I chose to stop early.
-    if abs(avgloss/i-previous_avgloss) < .001:
-      if stabilityCount > 40:
-        print('Creation of '+saveFileName+' took '+str(i)+' iters.')
-        break
-      else:
-        stabilityCount += 1
-    else:
-      stabilityCount = 0
+    avgacc += ((yhats == ys) & (ys != AllPossibleLabels.index('NOLABEL'))).sum() / (ys == AllPossibleLabels.index('NOLABEL')).sum()
+
   with open(saveFileName, 'w') as f:
     f.writelines(outputs)
-  outputs = []
 
-  # TODO
-  # Beam search is slow so only evaluate it a few times.
+  # # TODO
+  # # Beam search is slow so only evaluate it a few times.
+  # outputs = []
   # for _ in range(10):
   #   x,y = sequences[random.randint(0,N-1)]
   #   yhat = model.beamDecode(x)
@@ -236,42 +223,43 @@ def evaluate(model, lossFunction, sequences, saveFileName):
   # with open('beamSample'+saveFileName, 'w') as f:
   #   f.writelines(outputs)
 
-  return avgloss
+  return avgloss / i, avgacc / i
 
-def checkpoint(epoch, trainloss, testloss, model, optimizer, lossFunction, trainSequences, testSequences):
+def checkpoint(epoch, trainloss, testloss, trainacc, testacc, model, optimizer, lossFunction, trainSequences, testSequences):
   model.eval()
   with torch.no_grad():
-    avgtrainloss = evaluate(model, lossFunction, trainSequences, 'trainOutputs.txt')
-    avgtestloss = evaluate(model, lossFunction, testSequences, 'testOutputs.txt')
+    avgtrainloss, avgtrainacc = evaluate(model, lossFunction, trainSequences, 'trainOutputs.txt')
+    avgtestloss, avgtestacc = evaluate(model, lossFunction, testSequences, 'testOutputs.txt')
+
+    saveData = (model.state_dict(), optimizer.state_dict(), trainloss, testloss, trainacc, testacc)
     if len(trainloss) and avgtrainloss < min(trainloss):
-      mintrainloss = avgtrainloss
-      torch.save(model.state_dict(), 'mintrainlossmodel.pt')
-      torch.save(optimizer.state_dict(), 'mintrainlossoptimizer.pt')
+      torch.save(saveData, 'mintrainloss.pt')
     if len(testloss) and avgtestloss < min(testloss):
-      mintestloss = avgtestloss
-      torch.save(model.state_dict(), 'mintestlossmodel.pt')
-      torch.save(optimizer.state_dict(), 'mintestlossoptimizer.pt')
+      torch.save(saveData, 'mintestloss.pt')
+    if len(trainacc) and avgtrainacc > max(trainacc):
+      torch.save(saveData, 'maxtrainacc.pt')
+    if len(testacc) and avgtestacc > max(testacc):
+      torch.save(saveData, 'maxtestacc.pt')
+    torch.save(saveData, 'mostrecent.pt')
+
     trainloss.append(avgtrainloss)
     testloss.append(avgtestloss)
-    torch.save(model.state_dict(), 'mostrecentmodel.pt')
-    torch.save(optimizer.state_dict(), 'mostrecentoptimizer.pt')
-    with open('trainloss.pkl', 'wb') as file:
-      pickle.dump(trainloss, file)
-    with open('testloss.pkl', 'wb') as file:
-      pickle.dump(testloss, file)
+    trainacc.append(avgtrainacc)
+    testacc.append(avgtestacc)
   model.train()
 
 def train(trainSequences, testSequences, classCounts):
-  # Send data to gpu
-  print('Sending data to GPU')
-  for data in [trainSequences, testSequences]:
-    for ((x,xlengths),y) in data:
-      for j in range(len(x)):
-        x[j] = x[j].to(device)
+  if SEND_ALL_DATA_TO_GPU:
+      print('Sending data to GPU')
+      for data in [trainSequences, testSequences]:
+        for ((x,xlengths),y) in data:
+          for j in range(len(x)):
+            x[j] = x[j].to(device)
 
   print('Training')
   model = Model(HIDDEN_DIM, INPUT_FEATURE_DIM, NUMLABELS)
   model.to(device)
+  print(model)
 
   N = len(trainSequences)
   print('Train set num sequences:',N)
@@ -280,33 +268,30 @@ def train(trainSequences, testSequences, classCounts):
   for label,count in classCounts.items():
     print('\t',label,':',count)
 
-  # TODO do not know if I am accumulating class counts correctly
   classWeights = [1/(classCounts[lab]+1) for lab in AllPossibleLabels] # order is important here
-  classWeights[-1] *= 2 # make mispredicting NOLABEL cost a bit more
   classWeights = torch.tensor(classWeights, device=device) / sum(classWeights)
 
   lossFunction = nn.NLLLoss(weight=classWeights)
-  optimizer = optim.Adam(model.parameters(), lr = .0001)
+  optimizer = optim.Adam(model.parameters(), lr=.0001)
 
   trainloss = []
   testloss = []
+  trainacc = []
+  testacc = []
 
   if RESUMETRAINING:
     print('Resuming from checkpoint')
-    model.load_state_dict(torch.load(MODELPATH))
-    optimizer.load_state_dict(torch.load(OPTIMIZERPATH))
+    (model_state, optimizer_state, trainloss, testloss, trainacc, testacc) = torch.load(CHECKPOINT_PATH)
+    model.load_state_dict(model_state)
+    optimizer.load_state_dict(optimizer_state)
     optimizer.zero_grad()
-    with open('testloss.pkl', 'rb') as f:
-      testloss = pickle.load(f)
-    with open('trainloss.pkl', 'rb') as f:
-      trainloss = pickle.load(f)
 
   model.train()
 
   print('Enter training loop')
   for epoch in range(5000):
-    #for i in tqdm(range(N // BATCH_SIZE)):
     start = time.time()
+    # for i in tqdm(range(N // BATCH_SIZE)):
     for i in range(N // BATCH_SIZE):
       xs,ys = getBatch(trainSequences)
       if i % TEACHERFORCING_RATIO:
@@ -318,15 +303,15 @@ def train(trainSequences, testSequences, classCounts):
       optimizer.zero_grad()
 
     if epoch % EVAL_LOSS_EVERY_NTH_EPOCH == 0:
-      checkpoint(epoch, trainloss, testloss, model, optimizer, lossFunction, trainSequences, testSequences)
+      checkpoint(epoch, trainloss, testloss, trainacc, testacc, model, optimizer, lossFunction, trainSequences, testSequences)
       end = time.time()
-      print('epoch {} train {:1.5} test {:1.5} time {}'.format(epoch, trainloss[-1], testloss[-1], int(end-start)))
+      print('epoch {} trainloss {:1.5} testloss {:1.5} trainacc {:1.5} testacc {:1.5} time {}'.format(epoch, trainloss[-1], testloss[-1], trainacc[-1], testacc[-1], int(end-start)))
     else:
       end = time.time()
-      print('epoch {}                          time {}'.format(epoch, int(end-start)))
+      print('epoch {}                                                                 time {}'.format(epoch, int(end-start)))
 
   print('Finished training')
-  checkpoint(epoch, trainloss, testloss, model, optimizer, lossFunction, trainSequences, testSequences)
+  checkpoint(epoch, trainloss, testloss, trainacc, testacc, model, optimizer, lossFunction, trainSequences, testSequences)
 
 
 # torch.save(dataloader, 'dataloader.pth')
@@ -421,9 +406,9 @@ class Vehicle:
             *self.point,
             self.maxAge,
             self.ageAtFrame,
-            self.percentLifeComplete,
             self.avgSignedDistToLeftLane,
-            self.avgSignedDistToRightLane)
+            self.avgSignedDistToRightLane,
+            self.percentLifeComplete)
 
 def getSequencesForFiles(files, allxs, classCounts):
   sequences = []
@@ -539,57 +524,79 @@ if __name__ == '__main__':
   print('Loading data.')
 
   if PRECOMPUTE:
-    # Get paths to precomputed features
-    filepaths = []
-    for (dirpath, dirnames, filenames) in os.walk('features'):
-      filepaths.extend(dirpath + '/' + f for f in filenames)
-    random.shuffle(filepaths)
+    with torch.no_grad():
+      # Get paths to precomputed features
+      filepaths = []
+      for (dirpath, dirnames, filenames) in os.walk('features'):
+        filepaths.extend(dirpath + '/' + f for f in filenames)
+      random.shuffle(filepaths)
 
-    trainSize = int(len(filepaths)*.85)
-    trainSet = filepaths[:trainSize]
-    testSet = filepaths[trainSize:]
+      trainSize = int(len(filepaths)*.85)
+      trainSet = filepaths[:trainSize]
+      testSet = filepaths[trainSize:]
 
-    print('Train set has size:', len(trainSet))
-    print('Test set has size:', len(testSet))
+      print('Train set has size:', len(trainSet))
+      print('Test set has size:', len(testSet))
 
-    classCounts = {label:0 for label in AllPossibleLabels}
-    allxs = [] # for computing mean and std
+      classCounts = {label:0 for label in AllPossibleLabels}
+      allxs = [] # for computing mean and std
 
-    # Convert the data into tensors
-    trainSequences = getSequencesForFiles(trainSet, allxs, classCounts)
-    testSequences = getSequencesForFiles(testSet, allxs, classCounts)
+      # Convert the data into tensors
+      trainSequences = getSequencesForFiles(trainSet, allxs, classCounts)
+      testSequences = getSequencesForFiles(testSet, allxs, classCounts)
 
-    print('Class counts for data:',classCounts)
-    print('Vehicles skipped:',len(vehiclesRemoved),
-          'Vehicles kept:', len(vehiclesKept))
+      print('Class counts for data:',classCounts)
+      print('Vehicles skipped:',len(vehiclesRemoved),
+            'Vehicles kept:', len(vehiclesKept))
 
-    # TODO be careful here, would be easy to create a dataset that's too big
-    # print('Augmenting data')
-    # extraDataTrain = []
-    # extraDataTest = []
-    # # reflect everything left to right
-    # for i,((x,xlengths),y) in enumerate(trainSequences):
-    #   tens = x
-    #   tens[:,:,(1,3)] = 720 - tens[:,:,(1,3)]
-    #   extraDataTrain.append(((tens,xlengths),y))
-    # trainSequences.extend(extraDataTrain)
+      print('Calculating statistics')
+      bigboy = torch.cat(allxs)
+      mean = bigboy.mean(dim=0).clone()
+      std = bigboy.std(dim=0).clone()
+      print('Shape of full data matrix:',bigboy.shape)
+      del bigboy
+      del allxs
 
-    print('Standardizing data')
-    bigboy = torch.cat(allxs)
-    mean = bigboy.mean(dim=0)
-    std = bigboy.std(dim=0)
-    # TODO We should record the mean and std of the dataset our model was trained on
-    # In production we need to try and make the input data lie in the same distribution
-    for data in [trainSequences, testSequences]:
-      for ((x,xlengths),y) in data:
+      print('Augmenting data')
+      extraDataTrain = []
+      for i,((x,xlengths),y) in enumerate(trainSequences[::3]):
+        newseqReflH = []
+        # newseqRandShift = []
+        newseqNoise = []
         for j in range(len(x)):
-          x[j] = (x[j] - mean) / std
-    print('Shape of full data matrix:',bigboy.shape)
+          # reflect everything left to right
+          tens = x[j].clone()
+          tens[0,1] *= -1
+          tens[0,1] += 720
+          tens[0,3] *= -1
+          tens[0,3] += 720
+          tens[0,-20:] *= -1
+          tens[0,-20:] += 720
+          newseqReflH.append(tens)
+          tens = x[j].clone()
+          tens[0,1:9] += torch.randn_like(tens[0,1:9]) * 40
+          tens[0,-20:] += torch.randn_like(tens[0,-20:]) * 40
+          # newseqRandShift.append(tens)
+          # tens = x[j].clone()
+          # tens += torch.randn_like(tens)
+          newseqNoise.append(tens)
+        extraDataTrain.append(((newseqReflH,xlengths),y))
+        # extraDataTrain.append(((newseqRandShift,xlengths),y))
+        extraDataTrain.append(((newseqNoise,xlengths),y))
+      trainSequences.extend(extraDataTrain)
 
-    with open('tensors.pkl', 'wb') as file:
-      pickle.dump((trainSequences, testSequences, classCounts), file)
-    print('Wrote tensors pickle. Exiting.')
+      print('Standardizing data')
+      # TODO We should record the mean and std of the dataset our model was trained on
+      # In production we need to try and make the input data lie in the same distribution
+      for data in [trainSequences, testSequences]:
+        for ((x,xlengths),y) in data:
+          for j in range(len(x)):
+            x[j] -= mean
+            x[j] /= std
+
+      print('Writing tensors')
+      torch.save((trainSequences, testSequences, classCounts), 'tensors.pkl')
+      print('Wrote tensors pickle. Exiting.')
   else:
-    with open('tensors.pkl', 'rb') as file:
-      (trainSequences, testSequences, classCounts) = pickle.load(file)
+    (trainSequences, testSequences, classCounts) = torch.load('tensors.pkl')
     train(trainSequences, testSequences, classCounts)
