@@ -1,4 +1,4 @@
-import os, time, pickle, random
+import os, time, pickle, random, bisect
 import numpy as np
 from tqdm import tqdm
 import torch
@@ -20,21 +20,20 @@ for label in AllPossibleLabels:
 
 NUMLABELS = len(AllPossibleLabels)
 
-PREDICT_EVERY_NTH_FRAME = 5
-WINDOWWIDTH = 30*8
+PREDICT_EVERY_NTH_FRAME = 15
+WINDOWWIDTH = 30*16
 WINDOWSTEP = WINDOWWIDTH // 10
-
-USE_BLANK_RATIO = 10
+USE_BLANK_RATIO = 80
 
 BATCH_SIZE = 64
 HIDDEN_DIM = 512
-DROPOUT_RATE = .35
-TEACHERFORCING_RATIO = 7 # to 1
-INPUT_FEATURE_DIM = 36
+DROPOUT_RATE = .1
+TEACHERFORCING_RATIO = 10 # to 1
+INPUT_FEATURE_DIM = 42
 
-PRECOMPUTE = False
-USE_ALL_VIDEOS = True
-SEND_ALL_DATA_TO_GPU = True
+PRECOMPUTE = True
+USE_ALL_VIDEOS = False
+SEND_ALL_DATA_TO_GPU = False
 RESUME_TRAINING = False
 CHECKPOINT_PATH = 'mostrecent.pt'
 EVAL_LOSS_EVERY_NTH_EPOCH = 2
@@ -53,17 +52,17 @@ def clamp(l, h, x):
   if x > h: return h
   return x
 
-def one_hot(i):
+def oneHot(i):
   return torch.tensor([[[0. if j != i else 1. for j in range(NUMLABELS)]]], device=device)
 
 def getBatch(sequences):
   xs,xlengths,ys = [],[],[]
   N = len(sequences)
-  sampleRandomly = random.randint(0,12412124) % 10 == 0
+  # sampleRandomly = random.randint(0,12412124) % 10 == 0
   k = random.randint(0,N-1)
   for i in range(BATCH_SIZE):
-    if sampleRandomly:
-      k = random.randint(0,N-1)
+    # if sampleRandomly:
+    #   k = random.randint(0,N-1)
     ((x,xlength),y) = sequences[(i+k) % N]
     xs.extend(x)
     xlengths.extend(xlength)
@@ -100,9 +99,11 @@ class Model(nn.Module):
 
     context_seq = torch.cat(hidden, dim=2) # (1, WINDOWWIDTH * BATCH_SIZE, 2*HIDDEN_DIM)
 
+    context_seq = self.dropout1(context_seq)
     context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 2, 4 * HIDDEN_DIM)
     context_seq = self.dropout1(context_seq)
     context_seq, _ = self.pencoder1(context_seq)
+    context_seq = self.dropout2(context_seq)
     context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 4, 4 * HIDDEN_DIM)
     context_seq = self.dropout2(context_seq)
     context_seq, hidden = self.pencoder2(context_seq)
@@ -146,7 +147,8 @@ class Model(nn.Module):
         input = output
       else:
         # TODO could use torch.nn.functional.one_hot
-        input = torch.cat([one_hot(ys[j,i]) for j in range(BATCH_SIZE)])
+
+        input = torch.cat([oneHot(ys[j,i]) for j in range(BATCH_SIZE)])
       outputs.append(output)
     output = torch.cat(outputs, dim=1)
     output = output.view(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME * BATCH_SIZE, NUMLABELS)
@@ -161,7 +163,7 @@ class Model(nn.Module):
   #   input = torch.zeros((1,NUMLABELS), device=device)
   #   output, hidden = self.decoderStep(input, encoder_hidden, context_seq)
   #   for i in range(NUMLABELS):
-  #     beams.append(([output.view(1,NUMLABELS)], hidden, one_hot(i), float(output[i])))
+  #     beams.append(([output.view(1,NUMLABELS)], hidden, oneHot(i), float(output[i])))
   #
   #   for i in range(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME - 1):
   #     newBeams = []
@@ -169,7 +171,7 @@ class Model(nn.Module):
   #       outputs, hidden, input, beamLogProb = beam
   #       output, hidden = self.decoderStep(input, hidden, context_seq)
   #       for i in range(NUMLABELS):
-  #         newBeam = (outputs + [output.view(1,NUMLABELS)], hidden, one_hot(i), beamLogProb + float(output[i]))
+  #         newBeam = (outputs + [output.view(1,NUMLABELS)], hidden, oneHot(i), beamLogProb + float(output[i]))
   #         newBeams.append(newBeam)
   #     beams = sorted(newBeams, key=lambda x:-x[-1])[:NUMLABELS]
   #
@@ -238,23 +240,23 @@ def checkpoint(epoch, losses, model, optimizer, lossFunction, trainSequences, te
     avgtrainloss, avgtrainacc, avgtrainacc2 = evaluate(model, lossFunction, trainSequences, 'trainOutputs.txt')
     avgtestloss, avgtestacc, avgtestacc2 = evaluate(model, lossFunction, testSequences, 'testOutputs.txt')
 
-    losses.trainloss.append(avgtrainloss)
-    losses.testloss.append(avgtestloss)
-    losses.trainacc.append(avgtrainacc)
-    losses.testacc.append(avgtestacc)
-    losses.trainacc2.append(avgtrainacc2)
-    losses.testacc2.append(avgtestacc2)
-
     saveData = (model.state_dict(), optimizer.state_dict(), losses)
-    if len(losses.trainloss) and avgtrainloss < min(losses.trainloss[:-1]):
+    if len(losses.trainLoss) and avgtrainloss < min(losses.trainLoss):
       torch.save(saveData, 'mintrainloss.pt')
-    if len(losses.testloss) and avgtestloss < min(losses.testloss[:-1]):
+    if len(losses.testLoss) and avgtestloss < min(losses.testLoss):
       torch.save(saveData, 'mintestloss.pt')
-    if len(losses.trainacc) and avgtrainacc > max(losses.trainacc[:-1]):
+    if len(losses.trainAcc) and avgtrainacc > max(losses.trainAcc):
       torch.save(saveData, 'maxtrainacc.pt')
-    if len(losses.testacc) and avgtestacc > max(losses.testacc[:-1]):
+    if len(losses.testAcc) and avgtestacc > max(losses.testAcc):
       torch.save(saveData, 'maxtestacc.pt')
     torch.save(saveData, 'mostrecent.pt')
+
+    losses.trainLoss.append(avgtrainloss)
+    losses.testLoss.append(avgtestloss)
+    losses.trainAcc.append(avgtrainacc)
+    losses.testAcc.append(avgtestacc)
+    losses.trainAcc2.append(avgtrainacc2)
+    losses.testAcc2.append(avgtestacc2)
 
   model.train()
 
@@ -264,6 +266,8 @@ class Losses:
       self.testLoss = []
       self.trainAcc = []
       self.testAcc = []
+      self.trainAcc2 = []
+      self.testAcc2 = []
 
 def train(trainSequences, testSequences, classCounts):
   if SEND_ALL_DATA_TO_GPU:
@@ -321,7 +325,7 @@ def train(trainSequences, testSequences, classCounts):
     if epoch % EVAL_LOSS_EVERY_NTH_EPOCH == 0:
       checkpoint(epoch, losses, model, optimizer, lossFunction, trainSequences, testSequences)
       end = time.time()
-      print('epoch {} trainloss {:1.5} testloss {:1.5} trainacc {:1.5} testacc {:1.5} time {}'.format(epoch, losses.trainloss[-1], losses.testloss[-1], losses.trainacc[-1], losses.testacc[-1], int(end-start)))
+      print('epoch {} trainloss {:1.5} testloss {:1.5} trainacc {:1.5} testacc {:1.5} time {}'.format(epoch, losses.trainLoss[-1], losses.testLoss[-1], losses.trainAcc[-1], losses.testAcc[-1], int(end-start)))
     else:
       end = time.time()
       print('epoch {}                                                                 time {}'.format(epoch, int(end-start)))
@@ -345,11 +349,10 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, allxs, c
   xs, ys = [], []
 
   # YOLOboxes, YOLOboxscores, lines, lanescores, vehicles, boxavglaneprobs
-  (_, _, lines, lanescores, vehicles, boxavglaneprobs) = features
+  (_, _, lines, lanescores, vehicles, _) = features
 
   # Only look at data from this interval of frames
   vehicles = vehicles[low:high]
-  boxavglaneprobs = boxavglaneprobs[low:high]
   lanescores = lanescores[low:high]
   lines = lines[low:high]
 
@@ -361,28 +364,23 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, allxs, c
   objIds = sorted(objIds)
 
   # for the jth frame in the interval
-  for j, (vehicles_, centroidProbs, laneScores_, lines_) in enumerate(zip(vehicles, boxavglaneprobs, lanescores, lines)):
+  for j, (vehicles_, laneScores_, lines_) in enumerate(zip(vehicles, lanescores, lines)):
     laneScores_ = [float(score.cpu().numpy()) for score in laneScores_]
     leftLane = lines_[0]
     rightLane = lines_[1]
 
-    centroidProbsLeft = centroidProbs[0]
-    centroidProbsRight = centroidProbs[1]
-
     features_xs = []
     # descending sort by percent life completed
-    prioritized = sorted(list(zip(vehicles_, centroidProbsLeft, centroidProbsRight)),
-                         key=lambda tup:-tup[0].percentLifeComplete)
-    for vehicle, centroidProbLeft, centroidProbRight in prioritized:
+    for vehicle in sorted(vehicles_, key=lambda v:-v.percentLifeComplete):
       # Put object id into sensible range
       vehicle.objId = objIds.index(vehicle.objId)
-      tens = torch.tensor([[*vehicle.unpack(), centroidProbLeft, centroidProbRight, *laneScores_, *leftLane, *rightLane]])
+      tens = torch.tensor([[*vehicle.unpack(), *laneScores_, *leftLane, *rightLane]], dtype=torch.float)
       features_xs.append(tens)
     allxs.extend(features_xs)
 
     # there may be lane changes even if there are no boxes in the video
     if len(features_xs) == 0:
-      tens = torch.tensor([[0]*12 + [*laneScores_, *leftLane, *rightLane]])  # make sure there is always an input tensor
+      tens = torch.tensor([[0.]*18 + [*laneScores_, *leftLane, *rightLane]], dtype=torch.float)  # make sure there is always an input tensor
       features_xs.append(tens)
 
     features_xs = torch.cat(features_xs)
@@ -397,6 +395,7 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, allxs, c
         ys.append(labels2Tensor['NOLABEL'])
 
   xlengths = list(map(len, xs))
+  features, lines, lanescores, vehicles = None, None, None, None
   return ((xs, xlengths),ys)
 
 usedBlank = 0
@@ -410,22 +409,46 @@ class Vehicle:
     self.maxAge = None
     self.ageAtFrame = None
     self.percentLifeComplete = None
+    self.width = None
+    self.height = None
+    self.area = None
+    self.inLeftLane = None
+    self.inHostLane = None
+    self.inRightLane = None
     self.avgSignedDistToLeftLane = None
     self.avgSignedDistToRightLane = None
+    self.centroidProbLeft = None
+    self.centroidProbRight = None
   def unpack(self):
     assert(self.objId is not None)
     assert(self.maxAge is not None)
     assert(self.ageAtFrame is not None)
     assert(self.percentLifeComplete is not None)
+    assert(self.width is not None)
+    assert(self.height is not None)
+    assert(self.area is not None)
+    assert(self.inLeftLane is not None)
+    assert(self.inHostLane is not None)
+    assert(self.inRightLane is not None)
     assert(self.avgSignedDistToLeftLane is not None)
     assert(self.avgSignedDistToRightLane is not None)
+    assert(self.centroidProbLeft is not None)
+    assert(self.centroidProbRight is not None)
     return (self.objId,
             *self.point,
             self.maxAge,
             self.ageAtFrame,
             self.avgSignedDistToLeftLane,
             self.avgSignedDistToRightLane,
-            self.percentLifeComplete)
+            self.width,
+            self.height,
+            self.area,
+            self.centroidProbLeft,
+            self.centroidProbRight,
+            self.percentLifeComplete,
+            self.inLeftLane,
+            self.inHostLane,
+            self.inRightLane)
 
 def getSequencesForFiles(files, allxs, classCounts):
   global usedBlank
@@ -441,7 +464,8 @@ def getSequencesForFiles(files, allxs, classCounts):
     with open(file, 'rb') as featuresfile:
       features = list(pickle.load(featuresfile))
 
-    boxes, boxscores, lines, lanescores, vehicles, boxavglaneprobs = features
+    # boxes, boxscores, lines, lanescores, vehicles, boxavglaneprobs
+    _, _, lines, lanescores, vehicles, boxavglaneprobs = features
 
     # Do a few things here;
     # Add a feature to describe the age in number frames of the box.
@@ -455,10 +479,17 @@ def getSequencesForFiles(files, allxs, classCounts):
     maxAge = dict()
     for i in range(len(vehicles)):
       vehiclesInFramei = vehicles[i]
+      if len(boxavglaneprobs[i]) != 2:
+        boxavglaneprobs[i] = [[],[]]
+      centroidProbsLeft = boxavglaneprobs[i][0]
+      centroidProbsRight = boxavglaneprobs[i][1]
       for j,vehicleTuple in enumerate(vehiclesInFramei):
         v = Vehicle(vehicleTuple)
+        v.centroidProbLeft = centroidProbsLeft[j]
+        v.centroidProbRight = centroidProbsRight[j]
         if v.objId not in objFirstFrame:
           objFirstFrame[v.objId] = i
+        # Add horizontal distance to lane lines
         # Add age at frame feature
         v.ageAtFrame = i - objFirstFrame[v.objId]
         maxAge[v.objId] = max(maxAge.get(v.objId, 0), v.ageAtFrame)
@@ -470,6 +501,8 @@ def getSequencesForFiles(files, allxs, classCounts):
       leftLane, rightLane = lines[i]
       if len(leftLane) == 0: leftLane = [(0,0,0,0)]
       if len(rightLane) == 0: rightLane = [(0,0,0,0)]
+      a = [y1 for (x1,y1,x2,y2) in leftLane]
+      b = [y1 for (x1,y1,x2,y2) in rightLane]
       vehiclesInFramei = vehicles[i]
       newVehiclesInFramei = []
       for v in vehiclesInFramei:
@@ -481,6 +514,20 @@ def getSequencesForFiles(files, allxs, classCounts):
           # Add signed distance feature
           x1,y1,x2,y2 = v.point
           midX = (x1 + x2) / 2
+          indxa = bisect.bisect(a, y2)
+          indxb = bisect.bisect(b, y2)
+          if indxa < len(a):
+              v.inLeftLane = 1 if midX < (leftLane[indxa][0] + leftLane[indxa][2])/2 else 0
+          else:
+              v.inLeftLane = 0
+          if indxb < len(b):
+              v.inRightLane = 1 if midX > (rightLane[indxb][0] + rightLane[indxb][2])/2 else 0
+          else:
+              v.inRightLane = 0
+          v.width = x2-x1
+          v.height = y2-y1
+          v.area = v.width * v.height
+          v.inHostLane = 1 if (not v.inLeftLane and not v.inRightLane) else 0
           v.avgSignedDistToLeftLane = (np.array([(x1+x2)/2 for (x1,y1,x2,y2) in leftLane]) - midX).mean()
           v.avgSignedDistToRightLane = (np.array([(x1+x2)/2 for (x1,y1,x2,y2) in rightLane]) - midX).mean()
           newVehiclesInFramei.append(v)
@@ -539,6 +586,12 @@ def getSequencesForFiles(files, allxs, classCounts):
           # There may be more than one label in this interval.
           # If we ran this loop twice in this interval then we would append the same exact (xs,ys) to sequences
           break
+
+    features = None
+    lines = None
+    lanescores = None
+    vehicles = None
+    boxavglaneprobs = None
   return sequences
 
 if __name__ == '__main__':
@@ -581,6 +634,22 @@ if __name__ == '__main__':
       del bigboy
       del allxs
 
+    # (self.objId                    , 0
+    #  *self.point                   , 4
+    #  self.maxAge                   , 5
+    #  self.ageAtFrame               ,6
+    #  self.avgSignedDistToLeftLane  ,7
+    #  self.avgSignedDistToRightLane ,8
+    #  self.width                    ,9
+    #  self.height                   ,10
+    #  self.area                     ,11
+    #  self.centroidProbLeft         ,12
+    #  self.centroidProbRight        ,13
+    #  self.percentLifeComplete      ,14
+    #  self.inLeftLane               ,15
+    #  self.inHostLane               ,16
+    #  self.inRightLane              ,17
+
       print('Augmenting data')
       extraDataTrain = []
       for i,((x,xlengths),y) in enumerate(trainSequences[::3]):
@@ -594,12 +663,17 @@ if __name__ == '__main__':
           tens[0,1] += 720
           tens[0,3] *= -1
           tens[0,3] += 720
+          tens[0,1], tens[0,3] = tens[0,3], tens[0,1]
+          tens[0,7], tens[0,8] = tens[0,8], tens[0,7]
+          tens[0,12], tens[0,13] = tens[0,13], tens[0,12]
+          tens[0,15], tens[0,17] = tens[0,17], tens[0,15]
           tens[0,-20:] *= -1
           tens[0,-20:] += 720
+          tens[0,-20:-10], tens[0,-10:] = tens[0,-10:], tens[0,-20:-10]
           newseqReflH.append(tens)
 
           tens = x[j].clone()
-          tens[0,1:9] += torch.randn_like(tens[0,1:9]) * 40
+          tens[0,1:12] += torch.randn_like(tens[0,1:12]) * 40
           tens[0,-20:] += torch.randn_like(tens[0,-20:]) * 40
           newseqRandShift.append(tens)
 
@@ -622,8 +696,12 @@ if __name__ == '__main__':
             x[j] /= std
 
       print('Writing tensors')
-      torch.save((trainSequences, testSequences, classCounts), 'tensors.pkl')
+      with open('tensors.pkl', 'wb') as file:
+        p = pickle.Pickler(file)
+        p.fast = True
+        p.dump((trainSequences, testSequences, classCounts))
       print('Wrote tensors pickle. Exiting.')
   else:
-    (trainSequences, testSequences, classCounts) = torch.load('tensors.pkl')
+    with open('tensors.pkl', 'rb') as file:
+      (trainSequences, testSequences, classCounts) = pickle.load(file)
     train(trainSequences, testSequences, classCounts)
