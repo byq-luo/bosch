@@ -23,16 +23,15 @@ NUMLABELS = len(AllPossibleLabels)
 PREDICT_EVERY_NTH_FRAME = 5
 WINDOWWIDTH = 30*8
 WINDOWSTEP = WINDOWWIDTH // 10
-
-USE_BLANK_RATIO = 10
+USE_BLANK_RATIO = 20
 
 BATCH_SIZE = 64
 HIDDEN_DIM = 512
-DROPOUT_RATE = .35
-TEACHERFORCING_RATIO = 7 # to 1
+DROPOUT_RATE = .2
+TEACHERFORCING_RATIO = 10 # to 1
 INPUT_FEATURE_DIM = 36
 
-PRECOMPUTE = False
+PRECOMPUTE = True
 USE_ALL_VIDEOS = True
 SEND_ALL_DATA_TO_GPU = True
 RESUME_TRAINING = False
@@ -53,17 +52,17 @@ def clamp(l, h, x):
   if x > h: return h
   return x
 
-def one_hot(i):
+def oneHot(i):
   return torch.tensor([[[0. if j != i else 1. for j in range(NUMLABELS)]]], device=device)
 
 def getBatch(sequences):
   xs,xlengths,ys = [],[],[]
   N = len(sequences)
-  sampleRandomly = random.randint(0,12412124) % 10 == 0
+  # sampleRandomly = random.randint(0,12412124) % 10 == 0
   k = random.randint(0,N-1)
   for i in range(BATCH_SIZE):
-    if sampleRandomly:
-      k = random.randint(0,N-1)
+    # if sampleRandomly:
+    #   k = random.randint(0,N-1)
     ((x,xlength),y) = sequences[(i+k) % N]
     xs.extend(x)
     xlengths.extend(xlength)
@@ -82,8 +81,9 @@ class Model(nn.Module):
     self.encoder = nn.LSTM(input_dim, hidden_dim)
     self.pencoder1 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True)
     self.pencoder2 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True)
-    self.dropout1 = nn.Dropout(p=DROPOUT_RATE)
-    self.dropout2 = nn.Dropout(p=DROPOUT_RATE)
+    self.dropout1 = nn.Dropout(p=DROPOUT_RATE,inplace=True)
+    self.dropout2 = nn.Dropout(p=DROPOUT_RATE,inplace=True)
+    self.dropout3 = nn.Dropout(p=DROPOUT_RATE,inplace=True)
     self.attn = nn.Linear(hidden_dim*2 + output_dim, WINDOWWIDTH//4)
     self.attnCombine = nn.Linear(hidden_dim*2 + output_dim, hidden_dim)
     self.decoder = nn.GRU(hidden_dim, hidden_dim*2, batch_first=True)
@@ -100,12 +100,15 @@ class Model(nn.Module):
 
     context_seq = torch.cat(hidden, dim=2) # (1, WINDOWWIDTH * BATCH_SIZE, 2*HIDDEN_DIM)
 
+    context_seq = self.dropout1(context_seq)
     context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 2, 4 * HIDDEN_DIM)
     context_seq = self.dropout1(context_seq)
     context_seq, _ = self.pencoder1(context_seq)
+    context_seq = self.dropout2(context_seq)
     context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 4, 4 * HIDDEN_DIM)
     context_seq = self.dropout2(context_seq)
     context_seq, hidden = self.pencoder2(context_seq)
+    context_seq = self.dropout3(context_seq)
     hidden = hidden[0] # Take the h vector
     # hidden = (numdirections * layers, batch, hiddensize)
     hidden = hidden.transpose(1,0)
@@ -146,7 +149,8 @@ class Model(nn.Module):
         input = output
       else:
         # TODO could use torch.nn.functional.one_hot
-        input = torch.cat([one_hot(ys[j,i]) for j in range(BATCH_SIZE)])
+
+        input = torch.cat([oneHot(ys[j,i]) for j in range(BATCH_SIZE)])
       outputs.append(output)
     output = torch.cat(outputs, dim=1)
     output = output.view(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME * BATCH_SIZE, NUMLABELS)
@@ -161,7 +165,7 @@ class Model(nn.Module):
   #   input = torch.zeros((1,NUMLABELS), device=device)
   #   output, hidden = self.decoderStep(input, encoder_hidden, context_seq)
   #   for i in range(NUMLABELS):
-  #     beams.append(([output.view(1,NUMLABELS)], hidden, one_hot(i), float(output[i])))
+  #     beams.append(([output.view(1,NUMLABELS)], hidden, oneHot(i), float(output[i])))
   #
   #   for i in range(WINDOWWIDTH//PREDICT_EVERY_NTH_FRAME - 1):
   #     newBeams = []
@@ -169,7 +173,7 @@ class Model(nn.Module):
   #       outputs, hidden, input, beamLogProb = beam
   #       output, hidden = self.decoderStep(input, hidden, context_seq)
   #       for i in range(NUMLABELS):
-  #         newBeam = (outputs + [output.view(1,NUMLABELS)], hidden, one_hot(i), beamLogProb + float(output[i]))
+  #         newBeam = (outputs + [output.view(1,NUMLABELS)], hidden, oneHot(i), beamLogProb + float(output[i]))
   #         newBeams.append(newBeam)
   #     beams = sorted(newBeams, key=lambda x:-x[-1])[:NUMLABELS]
   #
@@ -238,23 +242,23 @@ def checkpoint(epoch, losses, model, optimizer, lossFunction, trainSequences, te
     avgtrainloss, avgtrainacc, avgtrainacc2 = evaluate(model, lossFunction, trainSequences, 'trainOutputs.txt')
     avgtestloss, avgtestacc, avgtestacc2 = evaluate(model, lossFunction, testSequences, 'testOutputs.txt')
 
-    losses.trainloss.append(avgtrainloss)
-    losses.testloss.append(avgtestloss)
-    losses.trainacc.append(avgtrainacc)
-    losses.testacc.append(avgtestacc)
-    losses.trainacc2.append(avgtrainacc2)
-    losses.testacc2.append(avgtestacc2)
-
     saveData = (model.state_dict(), optimizer.state_dict(), losses)
-    if len(losses.trainloss) and avgtrainloss < min(losses.trainloss[:-1]):
+    if len(losses.trainLoss) and avgtrainloss < min(losses.trainLoss):
       torch.save(saveData, 'mintrainloss.pt')
-    if len(losses.testloss) and avgtestloss < min(losses.testloss[:-1]):
+    if len(losses.testLoss) and avgtestloss < min(losses.testLoss):
       torch.save(saveData, 'mintestloss.pt')
-    if len(losses.trainacc) and avgtrainacc > max(losses.trainacc[:-1]):
+    if len(losses.trainAcc) and avgtrainacc > max(losses.trainAcc):
       torch.save(saveData, 'maxtrainacc.pt')
-    if len(losses.testacc) and avgtestacc > max(losses.testacc[:-1]):
+    if len(losses.testAcc) and avgtestacc > max(losses.testAcc):
       torch.save(saveData, 'maxtestacc.pt')
     torch.save(saveData, 'mostrecent.pt')
+
+    losses.trainLoss.append(avgtrainloss)
+    losses.testLoss.append(avgtestloss)
+    losses.trainAcc.append(avgtrainacc)
+    losses.testAcc.append(avgtestacc)
+    losses.trainAcc2.append(avgtrainacc2)
+    losses.testAcc2.append(avgtestacc2)
 
   model.train()
 
@@ -264,6 +268,8 @@ class Losses:
       self.testLoss = []
       self.trainAcc = []
       self.testAcc = []
+      self.trainAcc2 = []
+      self.testAcc2 = []
 
 def train(trainSequences, testSequences, classCounts):
   if SEND_ALL_DATA_TO_GPU:
@@ -321,7 +327,7 @@ def train(trainSequences, testSequences, classCounts):
     if epoch % EVAL_LOSS_EVERY_NTH_EPOCH == 0:
       checkpoint(epoch, losses, model, optimizer, lossFunction, trainSequences, testSequences)
       end = time.time()
-      print('epoch {} trainloss {:1.5} testloss {:1.5} trainacc {:1.5} testacc {:1.5} time {}'.format(epoch, losses.trainloss[-1], losses.testloss[-1], losses.trainacc[-1], losses.testacc[-1], int(end-start)))
+      print('epoch {} trainloss {:1.5} testloss {:1.5} trainacc {:1.5} testacc {:1.5} time {}'.format(epoch, losses.trainLoss[-1], losses.testLoss[-1], losses.trainAcc[-1], losses.testAcc[-1], int(end-start)))
     else:
       end = time.time()
       print('epoch {}                                                                 time {}'.format(epoch, int(end-start)))
@@ -345,11 +351,10 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, allxs, c
   xs, ys = [], []
 
   # YOLOboxes, YOLOboxscores, lines, lanescores, vehicles, boxavglaneprobs
-  (_, _, lines, lanescores, vehicles, boxavglaneprobs) = features
+  (_, _, lines, lanescores, vehicles, _) = features
 
   # Only look at data from this interval of frames
   vehicles = vehicles[low:high]
-  boxavglaneprobs = boxavglaneprobs[low:high]
   lanescores = lanescores[low:high]
   lines = lines[low:high]
 
@@ -361,22 +366,17 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, allxs, c
   objIds = sorted(objIds)
 
   # for the jth frame in the interval
-  for j, (vehicles_, centroidProbs, laneScores_, lines_) in enumerate(zip(vehicles, boxavglaneprobs, lanescores, lines)):
+  for j, (vehicles_, laneScores_, lines_) in enumerate(zip(vehicles, lanescores, lines)):
     laneScores_ = [float(score.cpu().numpy()) for score in laneScores_]
     leftLane = lines_[0]
     rightLane = lines_[1]
 
-    centroidProbsLeft = centroidProbs[0]
-    centroidProbsRight = centroidProbs[1]
-
     features_xs = []
     # descending sort by percent life completed
-    prioritized = sorted(list(zip(vehicles_, centroidProbsLeft, centroidProbsRight)),
-                         key=lambda tup:-tup[0].percentLifeComplete)
-    for vehicle, centroidProbLeft, centroidProbRight in prioritized:
+    for vehicle in sorted(vehicles_, key=lambda v:-v.percentLifeComplete):
       # Put object id into sensible range
       vehicle.objId = objIds.index(vehicle.objId)
-      tens = torch.tensor([[*vehicle.unpack(), centroidProbLeft, centroidProbRight, *laneScores_, *leftLane, *rightLane]])
+      tens = torch.tensor([[*vehicle.unpack(), *laneScores_, *leftLane, *rightLane]])
       features_xs.append(tens)
     allxs.extend(features_xs)
 
@@ -397,6 +397,7 @@ def getSequenceForInterval(low, high, features, labels, frameNum2Label, allxs, c
         ys.append(labels2Tensor['NOLABEL'])
 
   xlengths = list(map(len, xs))
+  features, lines, lanescores, vehicles = None, None, None, None
   return ((xs, xlengths),ys)
 
 usedBlank = 0
@@ -412,6 +413,8 @@ class Vehicle:
     self.percentLifeComplete = None
     self.avgSignedDistToLeftLane = None
     self.avgSignedDistToRightLane = None
+    self.centroidProbLeft = None
+    self.centroidProbRight = None
   def unpack(self):
     assert(self.objId is not None)
     assert(self.maxAge is not None)
@@ -419,12 +422,16 @@ class Vehicle:
     assert(self.percentLifeComplete is not None)
     assert(self.avgSignedDistToLeftLane is not None)
     assert(self.avgSignedDistToRightLane is not None)
+    assert(self.centroidProbLeft is not None)
+    assert(self.centroidProbRight is not None)
     return (self.objId,
             *self.point,
             self.maxAge,
             self.ageAtFrame,
             self.avgSignedDistToLeftLane,
             self.avgSignedDistToRightLane,
+            self.centroidProbLeft,
+            self.centroidProbRight,
             self.percentLifeComplete)
 
 def getSequencesForFiles(files, allxs, classCounts):
@@ -441,7 +448,8 @@ def getSequencesForFiles(files, allxs, classCounts):
     with open(file, 'rb') as featuresfile:
       features = list(pickle.load(featuresfile))
 
-    boxes, boxscores, lines, lanescores, vehicles, boxavglaneprobs = features
+    # boxes, boxscores, lines, lanescores, vehicles, boxavglaneprobs
+    _, _, lines, lanescores, vehicles, boxavglaneprobs = features
 
     # Do a few things here;
     # Add a feature to describe the age in number frames of the box.
@@ -455,8 +463,14 @@ def getSequencesForFiles(files, allxs, classCounts):
     maxAge = dict()
     for i in range(len(vehicles)):
       vehiclesInFramei = vehicles[i]
+      if len(boxavglaneprobs[i]) != 2:
+        boxavglaneprobs[i] = [[],[]]
+      centroidProbsLeft = boxavglaneprobs[i][0]
+      centroidProbsRight = boxavglaneprobs[i][1]
       for j,vehicleTuple in enumerate(vehiclesInFramei):
         v = Vehicle(vehicleTuple)
+        v.centroidProbLeft = centroidProbsLeft[j]
+        v.centroidProbRight = centroidProbsRight[j]
         if v.objId not in objFirstFrame:
           objFirstFrame[v.objId] = i
         # Add age at frame feature
@@ -539,6 +553,12 @@ def getSequencesForFiles(files, allxs, classCounts):
           # There may be more than one label in this interval.
           # If we ran this loop twice in this interval then we would append the same exact (xs,ys) to sequences
           break
+
+    features = None
+    lines = None
+    lanescores = None
+    vehicles = None
+    boxavglaneprobs = None
   return sequences
 
 if __name__ == '__main__':
@@ -622,8 +642,12 @@ if __name__ == '__main__':
             x[j] /= std
 
       print('Writing tensors')
-      torch.save((trainSequences, testSequences, classCounts), 'tensors.pkl')
+      with open('tensors.pkl', 'wb') as file:
+        p = pickle.Pickler(file)
+        p.fast = True
+        p.dump((trainSequences, testSequences, classCounts))
       print('Wrote tensors pickle. Exiting.')
   else:
-    (trainSequences, testSequences, classCounts) = torch.load('tensors.pkl')
+    with open('tensors.pkl', 'rb') as file:
+      (trainSequences, testSequences, classCounts) = pickle.load(file)
     train(trainSequences, testSequences, classCounts)
