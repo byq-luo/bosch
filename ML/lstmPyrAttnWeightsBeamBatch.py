@@ -81,10 +81,11 @@ class Model(nn.Module):
     self.encoder = nn.LSTM(input_dim, hidden_dim)
     self.pencoder1 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True)
     self.pencoder2 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True)
-    self.dropout1 = nn.Dropout(p=DROPOUT_RATE,inplace=True)
-    self.dropout2 = nn.Dropout(p=DROPOUT_RATE,inplace=True)
-    self.dropout3 = nn.Dropout(p=DROPOUT_RATE,inplace=True)
-    self.attn = nn.Linear(hidden_dim*2 + output_dim, WINDOWWIDTH//4)
+    self.pencoder3 = nn.LSTM(hidden_dim*4, hidden_dim, bidirectional=True, batch_first=True)
+    self.dropout1 = nn.Dropout(p=DROPOUT_RATE)
+    self.dropout2 = nn.Dropout(p=DROPOUT_RATE)
+    self.dropout3 = nn.Dropout(p=DROPOUT_RATE)
+    self.attn = nn.Linear(hidden_dim*2 + output_dim, WINDOWWIDTH//8)
     self.attnCombine = nn.Linear(hidden_dim*2 + output_dim, hidden_dim)
     self.decoder = nn.GRU(hidden_dim, hidden_dim*2, batch_first=True)
     self.out = nn.Linear(hidden_dim*2, output_dim)
@@ -100,19 +101,22 @@ class Model(nn.Module):
 
     context_seq = torch.cat(hidden, dim=2) # (1, WINDOWWIDTH * BATCH_SIZE, 2*HIDDEN_DIM)
 
-    context_seq = self.dropout1(context_seq)
     context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 2, 4 * HIDDEN_DIM)
     context_seq = self.dropout1(context_seq)
     context_seq, _ = self.pencoder1(context_seq)
-    context_seq = self.dropout2(context_seq)
+
     context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 4, 4 * HIDDEN_DIM)
     context_seq = self.dropout2(context_seq)
-    context_seq, hidden = self.pencoder2(context_seq)
+    context_seq, _ = self.pencoder2(context_seq)
+
+    context_seq = context_seq.reshape(BATCH_SIZE, WINDOWWIDTH // 8, 4 * HIDDEN_DIM)
     context_seq = self.dropout3(context_seq)
+    context_seq, hidden = self.pencoder3(context_seq)
+
     hidden = hidden[0] # Take the h vector
     # hidden = (numdirections * layers, batch, hiddensize)
     hidden = hidden.transpose(1,0)
-    hidden = hidden.reshape(BATCH_SIZE,2 * HIDDEN_DIM) # concats the forward & backward hiddens
+    hidden = hidden.reshape(BATCH_SIZE, 2 * HIDDEN_DIM) # concats the forward & backward hiddens
     return context_seq, hidden
 
   def decoderStep(self, input, hidden, encoderOutputs):
