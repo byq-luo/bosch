@@ -5,9 +5,9 @@ def isLeft(a, b, c):
 
 class LabelGenerator:
   def __init__(self, videoFPS):
-    self.buffer = 10
-    self.cancelBuffer = 3
-    self.targetLostBuffer = 5
+    self.buffer = 30
+    self.cancelBuffer = 15
+    self.targetLostBuffer = 15
     self.targetLostTimer = self.targetLostBuffer
     self.cancelTimer = self.cancelBuffer
     self.cancelCutinTimer = self.cancelBuffer
@@ -16,15 +16,27 @@ class LabelGenerator:
     self.newCutinTarget = None
     self.newEventTimer = self.buffer
     self.newTargetTimer = self.buffer
+    self.laneChangeTimer = self.buffer
+    self.cancelLaneChangeTimer = self.buffer
     self.lastLabelProduced = None
     self.targetDirection = None
     self.lastTargetPos = None
     self._time = None
+    self.label_time = None
+    self.cutinLabelTime = None
     self.labels = []
     self.videoFPS = videoFPS
+    self.seconds = 0
+    self.currentLeftX = 0
+    self.currentRightX = 0
+    self.prevLeftX = None
+    self.prevRightX = None
+    self.laneChangeBuffer = 30
+    self.laneChangeDir = None
 
   def getLabels(self):
     return self.labels
+
 
   def processFrame(self, vehicles, lines, frameIndex):
     if len(lines) != 2:
@@ -35,11 +47,6 @@ class LabelGenerator:
     leftSegments = lines[0]
     rightSegments = lines[1]
 
-    # This section finds all the boxes within the current lane
-    # THINGS TO DO IN THIS SECTION:
-    #     detect boxes that are half in the lane on left and right
-    #     detect boxes completely out of lane on left and right
-
     vehiclesOutLaneLeft = []
     vehiclesOnLeftLane = []
     vehiclesInLane = []
@@ -48,6 +55,9 @@ class LabelGenerator:
 
     boxIndex = 0
     targetFound = False
+
+    firstLeftX = None
+    firstRightX = None
     for vehicle in vehicles:
       if self.currentTargetObject is not None:
         if vehicle.id == self.currentTargetObject.id:
@@ -58,157 +68,146 @@ class LabelGenerator:
       x1,y1,x2,y2 = box
       leftX = min(x1,x2)
       rightX = max(x1,x2)
+
+      midX = (rightX + leftX) / 2
       bottomY = max(y1,y2)
 
-      lInsideLeftLaneLine = False
-      rInsideLeftLaneLine = False
-      # TODO use binary search to find segement https://docs.python.org/3/library/bisect.html
+      leftSeg = None
       for (sx1, sy1, sx2, sy2) in leftSegments:
-        sx2 = max(sx1, sx2)
-        sx1 = min(sx1, sx2)
-        sy2 = min(sy1, sy2)
-        sy1 = max(sy1, sy2)
-        if leftX >= sx1 and leftX <= sx2 and bottomY <= sy1 and bottomY >= sy2:
-          lInsideLeftLaneLine = not isLeft((sx1,sy1),(sx2,sy2),(leftX,bottomY))
-        elif leftX >= sx2 and bottomY <= sy1 and bottomY >= sy2:
-          lInsideLeftLaneLine = False
-        elif leftX <= sx1 and bottomY <= sy1 and bottomY >= sy2:
-          lInsideLeftLaneLine = True
+        if bottomY <= sy1 and bottomY >= sy2:
+          leftSeg = sx1
+        if 300 <= sy1 and 300 >= sy2:
+          firstLeftX = sx1
 
-        if rightX >= sx1 and rightX <= sx2 and bottomY <= sy1 and bottomY >= sy2:
-          rInsideLeftLaneLine = not isLeft((sx1,sy1),(sx2,sy2),(rightX,bottomY))
-        elif rightX >= sx2 and bottomY <= sy1 and bottomY >= sy2:
-          rInsideLeftLaneLine = False
-        elif rightX <= sx1 and bottomY <= sy1 and bottomY >= sy2:
-          rInsideLeftLaneLine = True
-
-        if rInsideLeftLaneLine or lInsideLeftLaneLine:
-          break
-
-      lInsideRightLaneLine = False
-      rInsideRightLaneLine = False
+      rightSeg = None
       for (sx1, sy1, sx2, sy2) in rightSegments:
-        sx2 = max(sx1, sx2)
-        sx1 = min(sx1, sx2)
-        sy2 = min(sy1, sy2)
-        sy1 = max(sy1, sy2)
-        if leftX >= sx1 and leftX <= sx2 and bottomY <= sy1 and bottomY >= sy2:
-          lInsideRightLaneLine = isLeft((sx1,sy1),(sx2,sy2),(leftX,bottomY))
-        elif leftX <= sx1 and bottomY <= sy1 and bottomY >= sy2:
-          lInsideRightLaneLine = True
-        elif leftX >= sx2 and bottomY <= sy1 and bottomY >= sy2:
-          lInsideRightLaneLine = False
+        if bottomY <= sy1 and bottomY >= sy2:
+          rightSeg = sx1
+        if 300 <= sy1 and 300 >= sy2:
+          firstRightX = sx1
 
-        if rightX >= sx1 and rightX <= sx2 and bottomY <= sy1 and bottomY >= sy2:
-          rInsideRightLaneLine = isLeft((sx1,sy1),(sx2,sy2),(rightX,bottomY))
-        elif rightX <= sx1 and bottomY <= sy1 and bottomY >= sy2:
-          rInsideRightLaneLine = True
-        elif rightX >= sx2 and bottomY <= sy1 and bottomY >= sy2:
-          rInsideRightLaneLine = False
-        
-        if rInsideRightLaneLine or lInsideRightLaneLine:
-          break
+      if leftSeg is not None and rightSeg is not None:
+        lLineX = leftSeg
+        rLineX = rightSeg
+        laneWidth = rLineX - lLineX
+        laneBuffer = laneWidth / 3
+        if midX < (lLineX - laneBuffer):
+          vehiclesOutLaneLeft.append(vehicle)
+        elif midX > (lLineX - laneBuffer) and midX < (lLineX + laneBuffer):
+          vehiclesOnLeftLane.append(vehicle)
+        elif midX > (lLineX + laneBuffer) and midX < (rLineX - laneBuffer):
+          vehiclesInLane.append(vehicle)
+        elif midX > (rLineX - laneBuffer) and midX < (rLineX + laneBuffer):
+          vehiclesOnRightLane.append(vehicle)
+        elif midX > (rLineX + laneBuffer):
+          vehiclesOutLaneRight.append(vehicle)
+        else:
+          pass
 
-      if lInsideLeftLaneLine and rInsideRightLaneLine:
-        vehiclesInLane.append(vehicle)
-      elif not lInsideLeftLaneLine and rInsideLeftLaneLine:
-        vehiclesOnLeftLane.append(vehicle)
-      elif not lInsideLeftLaneLine and not rInsideLeftLaneLine:
-        vehiclesOutLaneLeft.append(vehicle)
-      elif not rInsideRightLaneLine and lInsideRightLaneLine:
-        vehiclesOnRightLane.append(vehicle)
-      elif not rInsideRightLaneLine and not lInsideRightLaneLine:
-        vehiclesOutLaneRight.append(vehicle)
 
-    #leftXB = lines[0][0][0]
-    #leftYB = lines[0][0][1]
-    #leftXT = lines[0][0][2]
-    #leftYT = lines[0][0][3]
+    if frameIndex % 30 == 0:
+      print(self.seconds)
+      laneCounts = [len(vehiclesOutLaneLeft), len(vehiclesOnLeftLane), len(vehiclesInLane),
+                    len(vehiclesOnRightLane), len(vehiclesOutLaneRight)]
+      print(laneCounts)
+      print(self.currentTargetObject)
+      self.seconds += 1
 
-    #rightXB = lines[1][0][0]
-    #rightYB = lines[1][0][1]
-    #rightXT = lines[1][0][2]
-    #rightYT = lines[1][0][3]
 
-    #leftSlope = (leftYT - leftYB) / (leftXT - leftXB)
-    #leftInt = leftYB - (leftSlope * leftXB)
+    '''
+    Checks if the host is changing lanes
+    '''
+    leftChange = False
+    rightChange = False
+    if firstLeftX is None or firstRightX is None:
+      firstLeftX = self.currentLeftX
+      firstRightX = self.currentRightX
 
-    #rightSlope = (rightYT - rightYB) / (rightXT - rightXB)
-    #rightInt = rightYB - (rightSlope * rightXB)
+    leftDx = firstLeftX - self.currentLeftX
+    rightDx = firstRightX - self.currentRightX
+    if abs(leftDx) > self.laneChangeBuffer:
+      leftChange = True
+    if abs(rightDx) > self.laneChangeBuffer: #or (-1 * rightDx) > self.laneChangeBuffer:
+      rightChange = True
 
-    ## This section finds all the boxes within the current lane
-    ## THINGS TO DO IN THIS SECTION:
-    ##     detect boxes that are half in the lane on left and right
-    ##     detect boxes completely out of lane on left and right
 
-    #vehiclesOutLaneLeft = []
-    #vehiclesOnLeftLane = []
-    #vehiclesInLane = []
-    #vehiclesOnRightLane = []
-    #vehiclesOutLaneRight = []
+    if self.lastLabelProduced != "lcRel":
+      self.currentRightX = firstRightX
+      self.currentLeftX = firstLeftX
 
-    #boxIndex = 0
+      if self.laneChangeDir is None and self.laneChangeTimer == self.buffer:
 
-    #for vehicle in vehicles:
-    #  box = vehicle.box
-    #  lInsideLeftEdge = False
-    #  rInsideLeftEdge = False
-    #  lInsideRightEdge = False
-    #  rInsideRightEdge = False
+        if leftChange is True and rightChange is False:
+          self.laneChangeDir = "Left"
+          self.prevLeftX = self.currentLeftX
+          self.prevRightX = self.currentRightX
+          self.laneChangeTimer -= 1
+        elif rightChange is True and leftChange is False:
+          self.laneChangeDir = "Right"
+          self.prevRightX = self.currentRightX
+          self.prevLeftX = self.currentLeftX
+          self.laneChangeTimer -= 1
 
-    #  leftX = box[0]
-    #  rightX = box[2]
-    #  Y = box[3]
+      elif self.laneChangeDir == "Left":
+        if leftChange is False:
+          if self.laneChangeTimer > 0:
+            self.laneChangeTimer -= 1
+          else:
+            eventTime = self._time - (self.buffer / self.videoFPS)
+            self.labels.append(("lcRel", eventTime))
+            self.lastLabelProduced = "lcRel"
+            self.laneChangeTimer = self.buffer
+            self.cancelLaneChangeTimer = self.cancelBuffer
+#        elif leftChange is True:
+#          if abs(self.currentLeftX - self.prevLeftX) < self.laneChangeBuffer:
+#            if self.cancelLaneChangeTimer > 0:
+#              self.cancelLaneChangeTimer -= 1
+#            else:
+      elif self.laneChangeDir == "Right":
+        if rightChange is False:
+          if self.laneChangeTimer > 0:
+            self.laneChangeTimer -= 1
+          else:
+            eventTime = self._time - (self.buffer / self.videoFPS)
+            self.labels.append(("lcRel", eventTime))
+            self.lastLabelProduced = "lcRel"
+            self.laneChangeTimer = self.buffer
+            self.cancelLaneChangeTimer = self.cancelBuffer
+            self.laneChangeDir = None
 
-    #  lEdgeLeftLaneY = leftSlope*leftX + leftInt
-    #  lEdgeRightLaneY = rightSlope*leftX + rightInt
+    else:
+      eventTime = self._time - (self.buffer / self.videoFPS)
+      newLabel = ("evtEnd", eventTime)
+      self.currentTargetObject = None
+      self.prevLeftX = None
+      self.prevRightX = None
+      self.laneChangeDir = None
+      self.cancelLaneChangeTimer = self.cancelBuffer
+      self.laneChangeTimer = self.buffer
+      self.lastLabelProduced = "evtEnd"
 
-    #  rEdgeLeftLaneY = leftSlope*rightX + leftInt
-    #  rEdgeRightLaneY = rightSlope*rightX + rightInt
-
-    #  if Y > lEdgeLeftLaneY:
-    #    lInsideLeftEdge = True
-
-    #  if Y > lEdgeRightLaneY:
-    #    lInsideRightEdge = True
-
-    #  if Y > rEdgeLeftLaneY:
-    #    rInsideLeftEdge = True
-
-    #  if Y > rEdgeRightLaneY:
-    #    rInsideRightEdge = True
-
-    #  if lInsideLeftEdge and rInsideRightEdge:
-    #    vehiclesInLane.append(vehicle)
-
-    #  if not lInsideLeftEdge and rInsideLeftEdge:
-    #    vehiclesOnLeftLane.append(vehicle)
-
-    #  if not lInsideLeftEdge and not rInsideLeftEdge:
-    #    vehiclesOutLaneLeft.append(vehicle)
-
-    #  if not rInsideRightEdge and lInsideRightEdge:
-    #    vehiclesOnRightLane.append(vehicle)
-
-    #  if not rInsideRightEdge and not lInsideRightEdge:
-    #    vehiclesOutLaneRight.append(vehicle)
 
     '''
     Ensure the target object still exists, resets if target object disappears
     '''
     if self.currentTargetObject is not None:
+      print("The target object is....", self.currentTargetObject)
       if targetFound:
         self.targetLostTimer = self.targetLostBuffer
       else:
         if self.targetLostTimer > 0:
           self.targetLostTimer -= 1
         else:
+
           self.currentTargetObject = None
           self.newEventTimer = self.buffer
           self.cancelTimer = self.cancelBuffer
           self.targetDirection = None
           self.lastTargetPos = None
           self.targetLostTimer = self.targetLostBuffer
+          eventTime = self._time - (self.buffer / self.videoFPS)
+          self.labels.append(("objTurnOff", eventTime))
+          self.lastLabelProduced = None
 
     '''
     Finds the closest vehicle in our lane
@@ -222,23 +221,26 @@ class LabelGenerator:
         closestTarget = vehicle
 
 
+
     '''
     Sets a target object if there is no current target object
     Otherwise checks that the current target object is still the 
     closest vehicle in lane
     '''
+    potentialInLane = False
     targetInLane = False
     if self.currentTargetObject is None:
       if closestTarget is not None:
-
         # Begin countdown making the closestTarget the new currentTarget
-        if self.newEventTimer == self.buffer:
+        if self.newPotentialTarget is None:
+          self.label_time = self._time
           self.newPotentialTarget = closestTarget
           self.newEventTimer -= 1
 
         # Handles when a vehicle is becoming the new currentTarget
         elif self.newEventTimer > 0 and self.newEventTimer < self.buffer:
           if self.newPotentialTarget.id == closestTarget.id:
+            potentialInLane = True
             self.newEventTimer -= 1
           else:
             if self.cancelTimer > 0:
@@ -247,27 +249,35 @@ class LabelGenerator:
               self.newPotentialTarget = None
               self.newEventTimer = self.buffer
               self.cancelTimer = self.cancelBuffer
+              self.label_time = None
 
         # Handles when a vehicle has become the new currentTarget
         else:
           self.currentTargetObject = closestTarget
-          newLabel = ("rightTO", self._time)
+          eventTime = self._time - (self.buffer / self.videoFPS)
+          newLabel = ("rightTO", eventTime)
+          self.label_time = None
           self.labels.append(newLabel)
           self.lastLabelProduced = "rightTO"
           self.lastTargetPos = "In Lane"
           targetInLane = True
           self.newPotentialTarget = None
+          self.newEventTimer = self.buffer
 
     # Checks to see if currentTarget object is still in the lane
     elif closestTarget is not None:
       if self.currentTargetObject.id == closestTarget.id:
         targetInLane = True
-
+    if self.seconds > 68 and self.seconds < 72:
+      print("frame index ", frameIndex)
+      print(self.newPotentialTarget)
+      print(potentialInLane)
+      print(self.newEventTimer)
+      print(self.cancelTimer)
     '''
     This section handles when a target object is in the host vehicle lane
     '''
     if self.lastLabelProduced == "rightTO":
-
       # Current target object is closest in lane
       if targetInLane:
         if self.newEventTimer < self.buffer:
@@ -276,6 +286,7 @@ class LabelGenerator:
           else:
             self.newEventTimer = self.buffer
             self.cancelTimer = self.cancelBuffer
+            self.label_time = None
             self.lastTargetPos = "In Lane"
 
 
@@ -283,10 +294,10 @@ class LabelGenerator:
         # if this is the first time it has left the host lane
         if self.newEventTimer == self.buffer:
           self.newEventTimer = self.buffer - 1
+          self.label_time = self._time
           for vehicle in vehiclesOnLeftLane:
             if vehicle.id == self.currentTargetObject.id:
               self.targetDirection = "Left"
-
 
           for vehicle in vehiclesOnRightLane:
             if vehicle.id == self.currentTargetObject.id:
@@ -309,7 +320,10 @@ class LabelGenerator:
 
         # if the target has left the lane
         else:
-          newLabel = ("cutout", self._time)
+          print("cutout was reached")
+          eventTime = self._time - (self.buffer / self.videoFPS)
+          newLabel = ("cutout", eventTime)
+          self.label_time = None
           self.labels.append(newLabel)
           self.lastLabelProduced = "cutout"
           self.newEventTimer = self.buffer
@@ -320,12 +334,9 @@ class LabelGenerator:
             self.lastTargetPos = "On Right Line"
 
 
-
-    '''
-    This Section handles when the current target object has cut out of 
-    the host vehicles lane
-    '''
-    if self.lastLabelProduced == "cutout":
+    elif self.lastLabelProduced == "cutout":
+      print(self.newEventTimer)
+      print(self.cancelTimer)
       stillOnEdge = False
       inOutsideLane = False
       if self.lastTargetPos == "On Left Line":
@@ -352,18 +363,25 @@ class LabelGenerator:
           else:
             self.newEventTimer = self.buffer
             self.cancelTimer = self.cancelBuffer
+            self.label_time = None
 
 
       # Target object is in neighbor lane
       elif inOutsideLane:
         # Still in the process of leaving lane
-        if self.newEventTimer > 0:
+        if self.newEventTimer == self.buffer:
+          self.newEventTimer -= 1
+          self.label_time = self._time
+
+        elif self.newEventTimer < self.buffer and self.newEventTimer > 0:
           self.newEventTimer -= 1
 
         # Has left the lane
         else:
-          newLabel = ("evtEnd", self._time)
+          eventTime = self._time - (self.buffer / self.videoFPS)
+          newLabel = ("evtEnd", eventTime)
           self.labels.append(newLabel)
+          self.label_time = None
           self.lastLabelProduced = "evtEnd"
           self.newEventTimer = self.buffer
           self.cancelTimer = self.cancelBuffer
@@ -377,13 +395,13 @@ class LabelGenerator:
           self.newEventTimer -= 1
 
         else:
+          print("cancel cutout")
           self.newEventTimer = self.buffer
           self.cancelTimer = self.cancelBuffer
           del self.labels[-1]
           self.lastLabelProduced = "rightTO"
           self.lastTargetPos = "In Lane"
           self.targetDirection = None
-
 
     '''
     This section will track and handle new cars cutting into our lane
@@ -413,6 +431,8 @@ class LabelGenerator:
         if closerSideTarget.id != self.currentTargetObject.id:
           self.newCutinTarget = closerSideTarget
           self.newTargetTimer = self.buffer-1
+          self.cutinLabelTime = self._time
+
 
     # Handles when a new target is in the process of cutting in to host lane
     elif self.newCutinTarget is not None and self.lastLabelProduced != "cutin":
@@ -423,13 +443,15 @@ class LabelGenerator:
           self.newCutinTarget = None
           self.cancelCutinTimer = self.cancelBuffer
           self.newTargetTimer = self.buffer
+          self.cutinLabelTime = None
 
       else:
         if closerSideTarget.id == self.newCutinTarget.id:
           if self.newTargetTimer > 0:
             self.newTargetTimer -= 1
           else:
-            newLabel = ("cutin", self._time)
+            newLabel = ("cutin", self.cutinLabelTime)
+            self.cutinLabelTime = None
             self.labels.append(newLabel)
             self.lastLabelProduced = "cutin"
             self.newTargetTimer = self.buffer
@@ -441,6 +463,7 @@ class LabelGenerator:
             self.newCutinTarget = None
             self.cancelCutinTimer = self.cancelBuffer
             self.newTargetTimer = self.buffer
+            self.cutinLabelTime = None
 
     # Handles when a target has cut into the lane
     else:
@@ -455,11 +478,12 @@ class LabelGenerator:
             self.newTargetTimer -= 1
 
           else:
-            newLabel = ("evtEnd", self._time)
+            eventTime = self._time - (self.buffer / self.videoFPS)
+            newLabel = ("evtEnd", eventTime)
             self.labels.append(newLabel)
             self.currentTargetObject = self.newCutinTarget
             self.newCutinTarget = None
-            newLabel2 = ("rightTO", self._time)
+            newLabel2 = ("rightTO", eventTime)
             self.labels.append(newLabel2)
             self.lastLabelProduced = "rightTO"
             self.lastTargetPos = "In Lane"

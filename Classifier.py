@@ -71,10 +71,10 @@ def processVideo(dp: DataPoint,
       rawboxes, boxscores = vehicleDetector.getFeatures(frame)
       vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
       lines = laneLineDetector.getLines(frame)
-      try:
-        labelGen.processFrame(vehicles, lines, frameIndex)
-      except:
-        pass
+      #try:
+      labelGen.processFrame(vehicles, lines, frameIndex)
+      #except:
+        #print("and we crashed")
 
     if CONFIG.MAKE_PRECOMPUTED_FEATURES:
       allboxes.append(rawboxes)
@@ -92,4 +92,6 @@ def processVideo(dp: DataPoint,
       pickle.dump([allboxes, allboxscores, alllines, allvehicles], file)
 
   dp.predictedLabels = labelGen.getLabels()
+  for i in dp.predictedLabels:
+    print(i)
   return dp
