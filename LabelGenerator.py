@@ -31,9 +31,10 @@ class LabelGenerator:
     self.currentRightX = 0
     self.prevLeftX = None
     self.prevRightX = None
-    self.laneChangeBuffer = 30
+    self.laneChangeBuffer = 50
     self.laneChangeDir = None
-    self.endTimer = self.buffer
+    self.endBuffer = 60
+    self.endTimer = self.endBuffer
 
 
   def getLabels(self):
@@ -55,12 +56,12 @@ class LabelGenerator:
 
     if self.lastLabelProduced == "end":
       if missingLane:
-        self.endTimer = self.buffer
+        self.endTimer = self.endBuffer
       else:
         if self.endTimer > 0:
           self.endTimer -= 1
         else:
-          eventTime = self._time - (self.buffer / self.videoFPS)
+          eventTime = self._time - (self.endBuffer / self.videoFPS)
           newLabel = ("evtEnd", eventTime)
           self.labels.append(newLabel)
           self.lastLabelProduced = "evtEnd"
@@ -75,13 +76,13 @@ class LabelGenerator:
         if self.endTimer > 0:
           self.endTimer -= 1
         else:
-          eventTime = self._time - (self.buffer / self.videoFPS)
+          eventTime = self._time - (self.endBuffer / self.videoFPS)
           newLabel = ("end", eventTime)
           self.labels.append(newLabel)
           self.lastLabelProduced = "end"
           return
       else:
-        self.endTimer = self.buffer
+        self.endTimer = self.endBuffer
 
 
     vehiclesOutLaneLeft = []
