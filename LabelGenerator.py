@@ -33,6 +33,8 @@ class LabelGenerator:
     self.prevRightX = None
     self.laneChangeBuffer = 30
     self.laneChangeDir = None
+    self.endTimer = self.buffer
+
 
   def getLabels(self):
     return self.labels
@@ -46,6 +48,41 @@ class LabelGenerator:
 
     leftSegments = lines[0]
     rightSegments = lines[1]
+
+    missingLane = False
+    if len(leftSegments) == 0 or len(rightSegments) == 0:
+      missingLane = True
+
+    if self.lastLabelProduced == "end":
+      if missingLane:
+        self.endTimer = self.buffer
+      else:
+        if self.endTimer > 0:
+          self.endTimer -= 1
+        else:
+          eventTime = self._time - (self.buffer / self.videoFPS)
+          newLabel = ("evtEnd", eventTime)
+          self.labels.append(newLabel)
+          self.lastLabelProduced = "evtEnd"
+          self.newEventTimer = self.buffer
+          self.cancelTimer = self.cancelBuffer
+          self.currentTargetObject = None
+          self.lastTargetPos = None
+          self.targetDirection = None
+      return
+    else:
+      if missingLane:
+        if self.endTimer > 0:
+          self.endTimer -= 1
+        else:
+          eventTime = self._time - (self.buffer / self.videoFPS)
+          newLabel = ("end", eventTime)
+          self.labels.append(newLabel)
+          self.lastLabelProduced = "end"
+          return
+      else:
+        self.endTimer = self.buffer
+
 
     vehiclesOutLaneLeft = []
     vehiclesOnLeftLane = []
@@ -127,7 +164,7 @@ class LabelGenerator:
     rightDx = firstRightX - self.currentRightX
     if abs(leftDx) > self.laneChangeBuffer:
       leftChange = True
-    if abs(rightDx) > self.laneChangeBuffer: #or (-1 * rightDx) > self.laneChangeBuffer:
+    if abs(rightDx) > self.laneChangeBuffer:
       rightChange = True
 
 
@@ -381,7 +418,6 @@ class LabelGenerator:
           eventTime = self._time - (self.buffer / self.videoFPS)
           newLabel = ("evtEnd", eventTime)
           self.labels.append(newLabel)
-          self.label_time = None
           self.lastLabelProduced = "evtEnd"
           self.newEventTimer = self.buffer
           self.cancelTimer = self.cancelBuffer
