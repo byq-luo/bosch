@@ -130,15 +130,15 @@ class LabelGenerator:
         rLineX = rightSeg
         laneWidth = rLineX - lLineX
         laneBuffer = laneWidth / 3
-        if midX < (lLineX - laneBuffer):
+        if midX < (lLineX - (laneBuffer/2)):
           vehiclesOutLaneLeft.append(vehicle)
-        elif midX > (lLineX - laneBuffer) and midX < (lLineX + laneBuffer):
+        elif midX > (lLineX - (laneBuffer/2)) and midX < (lLineX + laneBuffer):
           vehiclesOnLeftLane.append(vehicle)
         elif midX > (lLineX + laneBuffer) and midX < (rLineX - laneBuffer):
           vehiclesInLane.append(vehicle)
-        elif midX > (rLineX - laneBuffer) and midX < (rLineX + laneBuffer):
+        elif midX > (rLineX - laneBuffer) and midX < (rLineX + (laneBuffer/2)):
           vehiclesOnRightLane.append(vehicle)
-        elif midX > (rLineX + laneBuffer):
+        elif midX > (rLineX + (laneBuffer/2)):
           vehiclesOutLaneRight.append(vehicle)
         else:
           pass
