@@ -35,6 +35,7 @@ class LabelGenerator:
     self.laneChangeDir = None
     self.endBuffer = 120
     self.endTimer = self.endBuffer
+    self.lastTO = None
 
 
   def getLabels(self):
@@ -76,8 +77,8 @@ class LabelGenerator:
         if self.endTimer > 0:
           self.endTimer -= 1
         else:
-          eventTime = self._time - (self.endBuffer / self.videoFPS)
-          newLabel = ("end", eventTime)
+          #eventTime = self._time - (self.endBuffer / self.videoFPS)
+          newLabel = ("end", self._time)
           self.labels.append(newLabel)
           self.lastLabelProduced = "end"
           return
@@ -236,7 +237,7 @@ class LabelGenerator:
         if self.targetLostTimer > 0:
           self.targetLostTimer -= 1
         else:
-
+          self.lastTO = self.currentTargetObject
           self.currentTargetObject = None
           self.newEventTimer = self.buffer
           self.cancelTimer = self.cancelBuffer
@@ -291,11 +292,21 @@ class LabelGenerator:
 
         # Handles when a vehicle has become the new currentTarget
         else:
+          if self.lastTO is not None:
+            if closestTarget.id == self.lastTO.id:
+              del self.labels[-1]
+              self.lastTO = None
+            else:
+              eventTime = self._time - (self.buffer / self.videoFPS)
+              newLabel = ("rightTO", eventTime)
+              self.labels.append(newLabel)
+          else:
+            eventTime = self._time - (self.buffer / self.videoFPS)
+            newLabel = ("rightTO", eventTime)
+            self.labels.append(newLabel)
+
           self.currentTargetObject = closestTarget
-          eventTime = self._time - (self.buffer / self.videoFPS)
-          newLabel = ("rightTO", eventTime)
           self.label_time = None
-          self.labels.append(newLabel)
           self.lastLabelProduced = "rightTO"
           self.lastTargetPos = "In Lane"
           targetInLane = True
