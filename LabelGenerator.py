@@ -31,9 +31,9 @@ class LabelGenerator:
     self.currentRightX = 0
     self.prevLeftX = None
     self.prevRightX = None
-    self.laneChangeBuffer = 50
+    self.laneChangeBuffer = 100
     self.laneChangeDir = None
-    self.endBuffer = 60
+    self.endBuffer = 120
     self.endTimer = self.endBuffer
 
 
@@ -487,7 +487,8 @@ class LabelGenerator:
           if self.newTargetTimer > 0:
             self.newTargetTimer -= 1
           else:
-            newLabel = ("cutin", self.cutinLabelTime)
+            eventTime = self._time - (self.buffer / self.videoFPS)
+            newLabel = ("cutin", eventTime)
             self.cutinLabelTime = None
             self.labels.append(newLabel)
             self.lastLabelProduced = "cutin"
