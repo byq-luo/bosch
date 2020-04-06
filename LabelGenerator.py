@@ -33,9 +33,11 @@ class LabelGenerator:
     self.prevRightX = None
     self.laneChangeBuffer = 100
     self.laneChangeDir = None
-    self.endBuffer = 120
+    self.endBuffer = 130
     self.endTimer = self.endBuffer
     self.lastTO = None
+    self.laneChangeEndBuffer = 45
+    self.laneChangeEndTimer = self.laneChangeEndBuffer
 
 
   def getLabels(self):
@@ -215,17 +217,21 @@ class LabelGenerator:
             self.laneChangeDir = None
 
     else:
-      print("In evtEnd for lcRel")
-      eventTime = self._time - (self.buffer / self.videoFPS)
-      newLabel = ("evtEnd", eventTime)
-      self.labels.append(newLabel)
-      self.currentTargetObject = None
-      self.prevLeftX = None
-      self.prevRightX = None
-      self.laneChangeDir = None
-      self.cancelLaneChangeTimer = self.cancelBuffer
-      self.laneChangeTimer = self.buffer
-      self.lastLabelProduced = "evtEnd"
+      if self.laneChangeEndTimer > 0:
+        self.laneChangeEndTimer -= 1
+      else:
+        print("In evtEnd for lcRel")
+        eventTime = self._time - (self.buffer / self.videoFPS)
+        newLabel = ("evtEnd", eventTime)
+        self.labels.append(newLabel)
+        self.currentTargetObject = None
+        self.prevLeftX = None
+        self.prevRightX = None
+        self.laneChangeDir = None
+        self.cancelLaneChangeTimer = self.cancelBuffer
+        self.laneChangeTimer = self.buffer
+        self.lastLabelProduced = "evtEnd"
+        self.laneChangeEndTimer = self.laneChangeEndBuffer
 
 
     '''
@@ -450,6 +456,9 @@ class LabelGenerator:
     '''
     This section will track and handle new cars cutting into our lane
     '''
+    if self.lastLabelProduced == "lcRel":
+      return
+    
     closerSideTarget = None
     y = 0
 
