@@ -458,7 +458,7 @@ class LabelGenerator:
     '''
     if self.lastLabelProduced == "lcRel":
       return
-    
+
     closerSideTarget = None
     y = 0
 
