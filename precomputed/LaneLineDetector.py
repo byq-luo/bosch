@@ -12,4 +12,4 @@ class LaneLineDetector:
   def loadFeaturesFromDisk(self, featuresPath):
     self.frameIndex  = 0
     with open(featuresPath, 'rb') as file:
-      _, _, self.lines, _ = pickle.load(file)
+      _, _, self.lines, _, _, _ = pickle.load(file)

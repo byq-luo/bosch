@@ -20,4 +20,4 @@ class VehicleDetector:
   def loadFeaturesFromDisk(self, featuresPath):
     self.frameNumber = 0
     with open(featuresPath, 'rb') as file:
-      self.boxes, self.scores, _, _ = pickle.load(file)
+      self.boxes, self.scores, _, _, _, _ = pickle.load(file)
