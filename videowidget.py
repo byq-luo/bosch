@@ -31,6 +31,7 @@ class VideoWidget(QWidget):
     # QTimer is basically what we were doing with time.sleep but more accurate
     self.timer = QTimer(self)
     self.timer.timeout.connect(self.update)
+    self.timer.stop()
 
     # so that the image does not disappear when pause is hit
     self.previousFrame = None
@@ -76,6 +77,9 @@ class VideoWidget(QWidget):
     self.fullTimeLabel = fullTime
 
   def setVideo(self, dataPoint):
+    if self.dataPoint is not None:
+      self.dataPoint.clearFeatures()
+    dataPoint.loadFeatures()
     self.dataPoint = dataPoint
     self.video = Video(dataPoint.videoPath)
     self.setFullTimeLabel()
@@ -201,3 +205,6 @@ class VideoWidget(QWidget):
 
       self.update()
       return frame
+
+  def stop(self):
+    self.timer.stop()

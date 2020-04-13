@@ -20,11 +20,12 @@ class DataPoint:
     self.videoFolder = folder
 
     self.labelsPath = self.videoPath.replace('videos/', 'labels/').replace('m0.avi', 'labels.txt')
+    self.featuresPath = self.videoPath.replace('videos/', 'labels/').replace('m0.avi', 'features.pkl')
 
-    self._loadFromDisk()
+    self._loadLabels()
 
-  def _loadFromDisk(self):
-    try:
+  def _loadLabels(self):
+    try: # load labels
       with open(self.labelsPath) as file:
         labelLines = [ln.rstrip('\n') for ln in file.readlines()]
         for ln in labelLines:
@@ -34,6 +35,19 @@ class DataPoint:
           self.groundTruthLabels.append((label, correctTime))
     except:
       self.groundTruthLabels = []
+
+  # we cache the features on disk to avoid possible OOM when processing hundreds or thousands of videos
+  def loadFeatures(self):
+    try: # load features
+      with open(self.featuresPath, 'rb') as file:
+        [self.boundingBoxes, self.laneLines] = pickle.load(file)
+    except:
+      self.boundingBoxes = []
+      self.laneLines = []
+
+  def clearFeatures(self):
+    self.boundingBoxes = []
+    self.laneLines = []
 
   def labelsToOutputFormat(self, labels):
     ret = []
@@ -45,8 +59,10 @@ class DataPoint:
 
   def saveToStorage(self, storage: Storage):
     labels = self.labelsToOutputFormat(self.predictedLabels)
-    print(self.labelsPath)
     storage.writeListToFile(labels, self.labelsPath)
+    storage.writeObjsToPkl([self.boundingBoxes,self.laneLines], self.featuresPath)
+    self.boundingBoxes = []
+    self.laneLines = []
 
   def compareLabels(self):
     # For now just assign a random score

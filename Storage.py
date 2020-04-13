@@ -1,4 +1,4 @@
-import os
+import os, pickle
 
 # Useful for dependency injection in testing.
 class Storage:
@@ -17,3 +17,7 @@ class Storage:
   def writeListToFile(self, lines : list, filename: str):
     with open(filename, 'w') as file:
       file.writelines(lines)
+
+  def writeObjsToPkl(self, objs: list, filename: str):
+    with open(filename, 'wb') as file:
+      pickle.dump(objs, file)
