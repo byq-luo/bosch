@@ -66,7 +66,7 @@ def processVideo(dp: DataPoint,
     if not isFrameAvail:
       print('Video='+dp.videoPath+' returned no frame for index=' +
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
-      rawboxes, boxscores, vehicles, lines = [], [], [], []
+      rawboxes, boxscores, vehicles, lines = [], [], [], [[],[]]
     else:
       rawboxes, boxscores = vehicleDetector.getFeatures(frame)
       vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
