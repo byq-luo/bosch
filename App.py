@@ -15,8 +15,6 @@ from Storage import Storage
 
 import CONFIG
 
-# TODO TODO background workers do not stop if GUI is closed while processing
-
 class MainWindow(QMainWindow):
   def __init__(self):
     super(MainWindow, self).__init__()
@@ -65,10 +63,13 @@ class MainWindow(QMainWindow):
     videoPath, labelIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
     dp : DataPoint = self.dataPoints[videoPath]
     frameIndex = dp.predictedLabels[labelIndex][1]
-    self.ui.videoWidget.seekToTime(frameIndex)
+    self.ui.videoWidget.seekToTime(max(0,frameIndex-2))
 
   def labelInListChanged(self, newItem):
-    videoPath, index = newItem.data(Qt.UserRole)
+    data = newItem.data(Qt.UserRole)
+    if data is None:
+      return
+    videoPath, index = data
     dataPoint = self.dataPoints[videoPath]
     try:
       newLabel = newItem.text()
@@ -87,17 +88,21 @@ class MainWindow(QMainWindow):
 
   def setLabelList(self, dataPoint):
     self.ui.labelTableWidget.setRowCount(0)
+    self.ui.labelTableWidget.setColumnCount(2)
     listIndex = 0
     videoPath = dataPoint.videoPath
     for label, labelTime in dataPoint.predictedLabels:
       rowIndex = self.ui.labelTableWidget.rowCount()
       self.ui.labelTableWidget.insertRow(rowIndex)
-      item = QTableWidgetItem(' {:10s} {:.1f}'.format(label, labelTime))
+      item = QTableWidgetItem('{:10s}'.format(label))
+      item2 = QTableWidgetItem('{:.1f}'.format(labelTime))
       # TODO provide a more useful time measure
       #(either use the following uncommented line or change the time representation in the video widget)
       #item = QTableWidgetItem('{:10s} {:02d}:{:02d}'.format(label, labelTime//60, labelTime%60))
       item.setData(Qt.UserRole, (videoPath, listIndex))
+      item2.setData(Qt.UserRole, (videoPath, listIndex))
       self.ui.labelTableWidget.setItem(rowIndex, 0, item)
+      self.ui.labelTableWidget.setItem(rowIndex, 1, item2)
       listIndex += 1
 
   def videoInListClicked(self, row, column):
@@ -117,7 +122,7 @@ class MainWindow(QMainWindow):
     msg = ' ?'
     if dataPoint.aggregatePredConfidence != 0:
       msg = ' {:2.2f}'.format(dataPoint.aggregatePredConfidence)
-    name = QTableWidgetItem(dataPoint.videoName)
+    name = QTableWidgetItem(dataPoint.videoName.replace('_',' '))
     name.setData(Qt.UserRole, dataPoint.videoPath)
     score = QTableWidgetItem(msg)
     score.setData(Qt.UserRole, dataPoint.videoPath)
@@ -202,4 +207,9 @@ if __name__ == '__main__':
   app = QApplication(sys.argv)
   window = MainWindow()
   window.show()
-  sys.exit(app.exec_())
+  app.exec_()
+
+  window.classifier.stop()
+  window.ui.videoWidget.stop()
+
+  sys.exit()

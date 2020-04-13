@@ -11,27 +11,28 @@ import numpy as np
 import random
 import cv2
 
-# TODO somehow make use of frames from the future?
-# TODO test if resizing the images makes performance (accuracy or speed) any better
 # TODO make ERFNet work for any input image size
-# TODO also make Detectron only give bounding boxes for vehicle classes
-# TODO does ERFNet take BGR or RGB? what about DeepSort?
+# TODO does ERFNet take BGR or RGB?
 # See https://github.com/XingangPan/SCNN/tree/master/tools
 # and https://github.com/cardwing/Codes-for-Lane-Detection
 
 
 def _updateDataPoint(dp, rawboxes, vehicles, laneLines):
   boxes = []
-  # Sending back min length box list works good
   vehicleBoxes = [v.box for v in vehicles]
   vehicleIDs = [v.id for v in vehicles]
+
+  # Make lists the same length by zero padding
   if len(vehicleBoxes) < len(rawboxes):
     vehicleBoxes += [np.array([0, 0, 0, 0])] * (len(rawboxes)-len(vehicleBoxes))
     vehicleIDs += ['.']
   if len(vehicleBoxes) > len(rawboxes):
     rawboxes += [np.array([0, 0, 0, 0])] * (len(vehicleBoxes)-len(rawboxes))
+
   for box, vbox, _id in zip(rawboxes, vehicleBoxes, vehicleIDs):
-    boxes.append((list(map(int, box)), list(map(int, vbox)), _id))
+    boxes.append((list(map(int, box)),
+                  list(map(int, vbox)),
+                  _id))
 
   dp.boundingBoxes.append(boxes)
   dp.laneLines.append(laneLines)
@@ -40,7 +41,8 @@ def _updateDataPoint(dp, rawboxes, vehicles, laneLines):
 def processVideo(dp: DataPoint,
                  vehicleDetector,
                  laneLineDetector,
-                 progressTracker):
+                 progressTracker,
+                 stopEvent):
 
   video = Video(dp.videoPath)
   totalNumFrames = video.getTotalNumFrames()
@@ -58,6 +60,11 @@ def processVideo(dp: DataPoint,
 
   frames = []
   for frameIndex in range(totalNumFrames):
+
+    if stopEvent.is_set():
+      print("Classifier process exiting.",flush=True)
+      return dp
+
     if CONFIG.SHOULD_LOAD_VID_FROM_DISK:
       isFrameAvail, frame = video.getFrame(vehicleDetector.wantsRGB)
     else:
@@ -71,10 +78,7 @@ def processVideo(dp: DataPoint,
       rawboxes, boxscores = vehicleDetector.getFeatures(frame)
       vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
       lines = laneLineDetector.getLines(frame)
-      #try:
       labelGen.processFrame(vehicles, lines, frameIndex)
-      #except:
-        #print("and we crashed")
 
     if CONFIG.MAKE_PRECOMPUTED_FEATURES:
       allboxes.append(rawboxes)
@@ -92,6 +96,4 @@ def processVideo(dp: DataPoint,
       pickle.dump([allboxes, allboxscores, alllines, allvehicles], file)
 
   dp.predictedLabels = labelGen.getLabels()
-  for i in dp.predictedLabels:
-    print(i)
   return dp
