@@ -113,12 +113,6 @@ class Ui_MainWindow(object):
         self.verticalLayout.addWidget(self.labelTableWidget)
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
-        self.pushButton = QtWidgets.QPushButton(self.centralwidget)
-        self.pushButton.setObjectName("pushButton")
-        self.horizontalLayout_4.addWidget(self.pushButton)
-        self.pushButton_2 = QtWidgets.QPushButton(self.centralwidget)
-        self.pushButton_2.setObjectName("pushButton_2")
-        self.horizontalLayout_4.addWidget(self.pushButton_2)
         self.verticalLayout.addLayout(self.horizontalLayout_4)
         self.boundingBoxCheckbox = QtWidgets.QCheckBox(self.centralwidget)
         self.boundingBoxCheckbox.setObjectName("boundingBoxCheckbox")
@@ -160,14 +154,12 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "Score"))
         item = self.fileTableWidget.horizontalHeaderItem(1)
         item.setText(_translate("MainWindow", "Filename"))
-        self.currentVideoTime.setText(_translate("MainWindow", "00:00"))
-        self.fullVideoTime.setText(_translate("MainWindow", "00:00"))
+        self.currentVideoTime.setText(_translate("MainWindow", "000"))
+        self.fullVideoTime.setText(_translate("MainWindow", "000"))
         self.playButton.setText(_translate("MainWindow", "Play"))
         self.pauseButton.setText(_translate("MainWindow", "Pause"))
         item = self.labelTableWidget.horizontalHeaderItem(0)
         item.setText(_translate("MainWindow", "Predictions"))
-        self.pushButton.setText(_translate("MainWindow", "Insert"))
-        self.pushButton_2.setText(_translate("MainWindow", "Delete"))
         self.boundingBoxCheckbox.setText(_translate("MainWindow", "Show Bounding Box"))
         self.showLabelsCheckbox.setText(_translate("MainWindow", "Show Current Label"))
         self.showLaneLinesCheckbox.setText(_translate("MainWindow", "Show Lane Lines"))
@@ -177,13 +169,3 @@ class Ui_MainWindow(object):
         self.actionProcessVideos.setText(_translate("MainWindow", "Process Videos"))
         self.actionInfo.setText(_translate("MainWindow", "Statistics"))
 from videowidget import VideoWidget
-
-
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    MainWindow.show()
-    sys.exit(app.exec_())
