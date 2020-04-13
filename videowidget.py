@@ -9,7 +9,6 @@ if CONFIG.IMMEDIATE_MODE:
   from LaneLineDetectorERFNet import LaneLineDetector
   from VehicleDetectorYolo import VehicleDetectorYolo
   from VehicleTrackerSORT import VehicleTracker
-  #from VehicleTrackerDL import VehicleTracker
   import cv2
   import numpy as np
 
@@ -83,16 +82,12 @@ class VideoWidget(QWidget):
 
   def setFullTimeLabel(self):
     totalSeconds = self.video.getVideoLength()
-    minutes = int(totalSeconds / 60)
-    seconds = int(totalSeconds % 60)
-    timeString = '{}:{:02d}'.format(minutes, seconds)
+    timeString = '{:03d}'.format((int(totalSeconds)))
     self.fullTimeLabel.setText(timeString)
 
   def updateTimeLabel(self):
     totalSeconds = self.video.getCurrentTime()
-    minutes = int(totalSeconds / 60)
-    seconds = int(totalSeconds % 60)
-    timeString = '{}:{:02d}'.format(minutes, seconds)
+    timeString = '{:03d}'.format(int(totalSeconds))
     self.currentTimeLabel.setText(timeString)
 
   def updateSliderValue(self):
