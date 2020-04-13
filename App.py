@@ -122,8 +122,12 @@ class MainWindow(QMainWindow):
     msg = ' ?'
     if dataPoint.aggregatePredConfidence != 0:
       msg = ' {:2.2f}'.format(dataPoint.aggregatePredConfidence)
-    name = QTableWidgetItem(dataPoint.videoName.replace('_',' '))
+
+    presentName = dataPoint.videoName.replace('m0','')
+    presentName = '   '.join(presentName.split('_')[2:])
+    name = QTableWidgetItem(presentName)
     name.setData(Qt.UserRole, dataPoint.videoPath)
+    name.setToolTip(dataPoint.videoPath)
     score = QTableWidgetItem(msg)
     score.setData(Qt.UserRole, dataPoint.videoPath)
     self.ui.fileTableWidget.setItem(rowIndex, 0, score)
@@ -142,6 +146,8 @@ class MainWindow(QMainWindow):
       self.addToVideoList(dataPoint)
 
   def initiateProcessing(self):
+    self.ui.actionProcessVideos.triggered.disconnect()
+    self.ui.actionProcessVideos.setDisabled(True)
     self.classifier.processVideos(
       list(self.dataPoints.values()),
       self.processingCompleteCallback,

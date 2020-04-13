@@ -21,7 +21,7 @@
        <widget class="QTableWidget" name="fileTableWidget">
         <property name="maximumSize">
          <size>
-          <width>450</width>
+          <width>375</width>
           <height>16777215</height>
          </size>
         </property>
@@ -271,6 +271,9 @@
           <width>270</width>
           <height>16777215</height>
          </size>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
         </property>
         <property name="selectionBehavior">
          <enum>QAbstractItemView::SelectRows</enum>
