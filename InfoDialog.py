@@ -10,37 +10,37 @@ from DataPoint import DataPoint
 
 import torch
 
-from statsdialog_ui import Ui_StatsDialog
+from infodialog_ui import Ui_InfoDialog
+
 
 def getBold(s):
   return '<span style=" font-weight:600;">' + s + '</span>'
 
-def getTxt(k,v):
+
+def getTxt(k, v):
   return '<html><head/><body><p>' + getBold(k) + v + '</p></body></html>'
 
 
-class StatsDialog(QDialog):
-  def __init__(self, dataPoints):
-    super(StatsDialog, self).__init__()
+class InfoDialog(QDialog):
+  def __init__(self, dataPoints: dict):
+    super(InfoDialog, self).__init__()
 
     # Set up the user interface from Designer.
-    self.ui = Ui_StatsDialog()
+    self.ui = Ui_InfoDialog()
     self.ui.setupUi(self)
     self.canvas = None
     self.labelCounts = {}
 
-    self.setFig(self.genPlot())
-
     self.estHoursSaved = ''
     self.hoursOfVidProcessed = ''
     self.processingHoursRemaining = ''
-    self.averageVidLength= ''
+    self.averageVidLength = ''
     self.deviceName = "Cuda not available!"
     if torch.cuda.is_available():
       self.deviceName = torch.cuda.get_device_name(torch.cuda.current_device())
-    self.updateLabels(dataPoints)
+    self.updateState(dataPoints)
 
-  def updateLabels(self, dataPoints):
+  def _updateLabels(self, dataPoints : list):
     videoTimes = [dp.videoLength for dp in dataPoints]
     totalTime = sum(videoTimes) / 3600
     avgTime = int(totalTime / (len(videoTimes)+1) * 60)
@@ -52,20 +52,26 @@ class StatsDialog(QDialog):
     self.estHoursSaved = str('idk')
     self.hoursOfVidProcessed = str(hoursProcessed)
     self.processingHoursRemaining = str(hoursRemaining)
-    self.averageVidLength= str(avgTime) + ' minutes'
+    self.averageVidLength = str(avgTime) + ' minutes'
 
-    self.ui.label_1.setText(getTxt('Estimated hours saved: ',self.estHoursSaved))
-    self.ui.label_2.setText(getTxt('Hours of video processed: ',self.hoursOfVidProcessed))
-    self.ui.label_3.setText(getTxt('Processing hours remaining: ',self.processingHoursRemaining))
-    self.ui.label_4.setText(getTxt('Average video length: ',self.averageVidLength))
-    self.ui.label_5.setText(getTxt('GPU device name: ',self.deviceName))
+    self.ui.label_1.setText(getTxt('Estimated hours saved: ', self.estHoursSaved))
+    self.ui.label_2.setText(getTxt('Hours of video processed: ', self.hoursOfVidProcessed))
+    self.ui.label_3.setText(getTxt('Processing hours remaining: ', self.processingHoursRemaining))
+    self.ui.label_4.setText(getTxt('Average video length: ', self.averageVidLength))
+    self.ui.label_5.setText(getTxt('GPU device name: ', self.deviceName))
 
-
-  def updatePlot(self, dp : DataPoint, dataPoints):
-    self.updateLabels(dataPoints)
-    for label, frameNum in dp.predictedLabels:
-      self.labelCounts[label] = self.labelCounts.get(label, 0) + 1
+  def _updateHist(self, dataPoints : list):
+    self.labelCounts = dict()
+    for dp in dataPoints:
+      if dp.hasBeenProcessed:
+        for label, frameNum in dp.predictedLabels:
+          self.labelCounts[label] = self.labelCounts.get(label, 0) + 1
     self.setFig(self.genPlot())
+
+  def updateState(self, dataPoints : dict):
+    dataPoints = dataPoints.values()
+    self._updateLabels(dataPoints)
+    self._updateHist(dataPoints)
 
   def setFig(self, fig):
     if self.canvas is not None:
@@ -75,7 +81,6 @@ class StatsDialog(QDialog):
     self.canvas.setStyleSheet("background-color:transparent;")
     self.ui.plotLayout.addWidget(self.canvas)
     self.canvas.draw()
-
 
   def genPlot(self):
     fig = Figure()

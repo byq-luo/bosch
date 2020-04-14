@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1345</width>
+    <width>1600</width>
     <height>683</height>
    </rect>
   </property>
@@ -311,7 +311,7 @@
         </attribute>
         <column>
          <property name="text">
-          <string>Predictions</string>
+          <string>Label</string>
          </property>
         </column>
         <column>
@@ -360,17 +360,17 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="processMultipleFilesAction"/>
+   <addaction name="actionInfo"/>
+   <addaction name="separator"/>
+   <addaction name="actionOpenFolder"/>
    <addaction name="separator"/>
    <addaction name="actionProcessVideos"/>
    <addaction name="separator"/>
    <addaction name="actionDelete_Predictions_For_Selected_Videos"/>
    <addaction name="separator"/>
    <addaction name="actionRemove_Selected_Videos"/>
-   <addaction name="separator"/>
-   <addaction name="actionInfo"/>
   </widget>
-  <action name="processMultipleFilesAction">
+  <action name="actionOpenFolder">
    <property name="text">
     <string>Open Folder</string>
    </property>

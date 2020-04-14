@@ -21,3 +21,7 @@ class Storage:
   def writeObjsToPkl(self, objs: list, filename: str):
     with open(filename, 'wb') as file:
       pickle.dump(objs, file)
+  
+  def loadObjsFromPkl(self, filename: str):
+    with open(filename, 'rb') as file:
+      return pickle.load(file)

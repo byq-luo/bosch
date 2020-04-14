@@ -62,7 +62,7 @@ def processVideo(dp: DataPoint,
   for frameIndex in range(totalNumFrames):
 
     if stopEvent.is_set():
-      print("Classifier process exiting.",flush=True)
+      print("Classifier process exited.",flush=True)
       return dp
 
     if CONFIG.SHOULD_LOAD_VID_FROM_DISK:

@@ -1,14 +1,14 @@
 import sys
 # sys.path.append('deepsort')
 
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QDialog
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QDialog, QLineEdit, QCheckBox, QPushButton
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
 import os
 
-from StatsDialog import StatsDialog
+from InfoDialog import InfoDialog
 from ClassifierRunner import ClassifierRunner
 from DataPoint import DataPoint
 from Storage import Storage
@@ -25,6 +25,15 @@ class MainWindow(QMainWindow):
     self.classifier = ClassifierRunner()
     # just a thin wrapper around a storage device
     self.storage = Storage()
+
+    # https://stackoverflow.com/questions/7369005/add-a-qlineedit-to-a-qtoolbar-in-qtcreator-designer
+    self.ui.toolBar.addSeparator()
+    self.ui.setSavePathButton = QPushButton('  Set labels save path  ')
+    self.ui.setSavePathButton.clicked.connect(self.setSavePathButtonClicked)
+    self.ui.toolBar.addWidget(self.ui.setSavePathButton)
+    self.ui.toolBar.addSeparator()
+    self.ui.saveFeaturesCheckBox = QCheckBox('Save Features')
+    self.ui.toolBar.addWidget(self.ui.saveFeaturesCheckBox)
 
     self.ui.playButton.clicked.connect(self.ui.videoWidget.play)
     self.ui.pauseButton.clicked.connect(self.ui.videoWidget.pause)
@@ -52,34 +61,36 @@ class MainWindow(QMainWindow):
     if CONFIG.USE_PRECOMPUTED_FEATURES:
       self.loadVideosFromFolder('precomputed/videos')
     else:
-      self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
+      self.ui.actionOpenFolder.triggered.connect(self.openFolderNameDialog)
 
-    self.dialog = StatsDialog(self.dataPoints.values())
+    self.dialog = InfoDialog(self.dataPoints)
 
   def showInfoDialog(self):
     self.dialog.show()
 
   def labelInListClicked(self, row, column):
-    videoPath, labelIndex = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
-    dp : DataPoint = self.dataPoints[videoPath]
-    frameIndex = dp.predictedLabels[labelIndex][1]
-    self.ui.videoWidget.seekToTime(max(0,frameIndex-2))
+    (label,labelTime) = self.ui.labelTableWidget.currentItem().data(Qt.UserRole)
+    self.ui.videoWidget.seekToTime(max(0,labelTime-2))
 
-  def setLabelList(self, dataPoint):
+  def clearLabelList(self):
+    self.ui.labelTableWidget.clear()
+    self.ui.labelTableWidget.setHorizontalHeaderItem(0,QTableWidgetItem('Label'))
+    self.ui.labelTableWidget.setHorizontalHeaderItem(1,QTableWidgetItem('Time'))
     self.ui.labelTableWidget.setRowCount(0)
     self.ui.labelTableWidget.setColumnCount(2)
-    listIndex = 0
-    videoPath = dataPoint.videoPath
+
+  def setLabelList(self, dataPoint):
+    self.clearLabelList()
     for label, labelTime in dataPoint.predictedLabels:
       rowIndex = self.ui.labelTableWidget.rowCount()
       self.ui.labelTableWidget.insertRow(rowIndex)
       item = QTableWidgetItem('{:10s}'.format(label))
       item2 = QTableWidgetItem('{:.1f}'.format(labelTime))
-      item.setData(Qt.UserRole, (videoPath, listIndex))
-      item2.setData(Qt.UserRole, (videoPath, listIndex))
+      data = (label,labelTime)
+      item.setData(Qt.UserRole, data)
+      item2.setData(Qt.UserRole, data)
       self.ui.labelTableWidget.setItem(rowIndex, 0, item)
       self.ui.labelTableWidget.setItem(rowIndex, 1, item2)
-      listIndex += 1
 
   def videoInListClicked(self, row, column):
     videoPath = self.ui.fileTableWidget.currentItem().data(Qt.UserRole)
@@ -87,7 +98,7 @@ class MainWindow(QMainWindow):
 
   def setCurrentVideo(self, dataPoint, play=True):
     self.setLabelList(dataPoint)
-    self.ui.videoWidget.setVideo(dataPoint)
+    self.ui.videoWidget.setVideo(dataPoint,self.storage)
     if play:
       self.ui.videoWidget.play()
   
@@ -124,36 +135,67 @@ class MainWindow(QMainWindow):
       self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
 
+  def setSavePathButtonClicked(self):
+    folder = self.openFolderDialog()
+    if folder:
+      self.ui.setSavePathButton.setText('  '+folder+'  ')
+      for dp in self.dataPoints.values():
+        dp.setSavePath(folder)
+      self.updateFileTableForDataPointChange()
+      self.dialog.updateState(self.dataPoints)
+
+  def updateFileTableForDataPointChange(self):
+    x = self.ui.fileTableWidget
+    for i in range(len(self.dataPoints)):
+      item = x.item(i,1)
+      if item is not None:
+        videoPath = item.data(Qt.UserRole)
+        dataPoint = self.dataPoints[videoPath]
+        name, done = self.getFileTableItem(dataPoint)
+        x.setItem(i, 0, done)
+        x.setItem(i, 1, name)
+
   def removeSelectedVideos(self):
     x = self.ui.fileTableWidget
     rows = sorted({r.row() for r in x.selectedIndexes()})
     for i in reversed(rows):
       item = x.item(i,1)
       videoPath = item.data(Qt.UserRole)
+      if self.isCurrentVideo(self.dataPoints[videoPath]):
+        self.clearLabelList()
+        self.ui.videoWidget.clearCurrentVideo()
       del self.dataPoints[videoPath]
       x.removeRow(i)
     x.clearSelection()
+    self.dialog.updateState(self.dataPoints)
 
   def deletePredictionsForSelected(self):
     x = self.ui.fileTableWidget
-    rows = sorted({r.row() for r in x.selectedIndexes()})
-    for i in rows:
+    for i in sorted({r.row() for r in x.selectedIndexes()}):
       item = x.item(i,1)
       videoPath = item.data(Qt.UserRole)
       dp = self.dataPoints[videoPath]
+      if self.isCurrentVideo(dp):
+        self.clearLabelList()
+        self.ui.videoWidget.clearCurrentVideo()
       dp.deleteData()
       name, done = self.getFileTableItem(dp)
       x.setItem(i,0,done)
       x.setItem(i,1,name)
     x.clearSelection()
+    self.dialog.updateState(self.dataPoints)
   
   def disableActions(self):
     self.ui.actionProcessVideos.triggered.disconnect()
     self.ui.actionProcessVideos.setDisabled(True)
     self.ui.actionDelete_Predictions_For_Selected_Videos.triggered.disconnect()
     self.ui.actionDelete_Predictions_For_Selected_Videos.setDisabled(True)
+    self.ui.actionOpenFolder.triggered.disconnect()
+    self.ui.actionOpenFolder.setDisabled(True)
     self.ui.actionRemove_Selected_Videos.triggered.disconnect()
     self.ui.actionRemove_Selected_Videos.setDisabled(True)
+    self.ui.setSavePathButton.setDisabled(True)
+    self.ui.saveFeaturesCheckBox.setDisabled(True)
 
   def initiateProcessing(self):
     if len(self.dataPoints) == 0:
@@ -166,25 +208,23 @@ class MainWindow(QMainWindow):
       self.processingCompleteCallback,
       self.processingProgressCallback)
 
-  def openFileNameDialog(self):
-    options = QFileDialog.Options()
-    options |= QFileDialog.DontUseNativeDialog
-    fileName, _ = QFileDialog.getOpenFileName(self, caption="Choose a video",\
-                                              filter="AVI Files (*.avi *.mkv)",\
-                                              options=options)
-    if fileName:
-      dataPoint = DataPoint(fileName)
-      self.dataPoints[dataPoint.videoPath] = dataPoint
-      self.addToVideoList(dataPoint)
+  def openVideosFolder(self):
+    folder = self.openFolderDialog()
+    if folder:
+      self.loadVideosFromFolder(folder)
+      self.dialog.updateState(self.dataPoints)
 
-  def openFolderNameDialog(self):
+  def openFolderDialog(self):
     options = QFileDialog.Options()
     options |= QFileDialog.DontUseNativeDialog
     options |= QFileDialog.ShowDirsOnly
-    folderName = QFileDialog.getExistingDirectory(self, caption="Select Directory", options=options)
-    if folderName:
-      self.loadVideosFromFolder(folderName)
-      self.dialog.updateLabels(self.dataPoints.values())
+    return QFileDialog.getExistingDirectory(self, caption="Select Directory", options=options)
+
+  def isCurrentVideo(self, dataPoint):
+    currentItem = self.ui.videoWidget.dataPoint
+    if currentItem is not None:
+      currentVideoPath = self.ui.videoWidget.dataPoint.videoPath
+      return currentVideoPath == dataPoint.videoPath
 
   # put the work onto the gui thread
   processingProgressSignal = QtCore.pyqtSignal(float, float, DataPoint)
@@ -203,24 +243,14 @@ class MainWindow(QMainWindow):
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
 
-    dataPoint.saveToStorage(self.storage)
-    self.dialog.updatePlot(dataPoint, self.dataPoints.values())
+    dataPoint.saveToStorage(self.storage, shouldSaveFeatures=self.ui.saveFeaturesCheckBox.isChecked())
     self.dataPoints[dataPoint.videoPath] = dataPoint
+    self.dialog.updateState(self.dataPoints)
 
-    for i in range(len(self.dataPoints)):
-      item = self.ui.fileTableWidget.item(i,1)
-      if item is not None:
-        videoPath = item.data(Qt.UserRole)
-        dataPoint = self.dataPoints[videoPath]
-        name, done = self.getFileTableItem(dataPoint)
-        self.ui.fileTableWidget.setItem(i, 0, done)
-        self.ui.fileTableWidget.setItem(i, 1, name)
+    self.updateFileTableForDataPointChange()
 
-    currentItem = self.ui.videoWidget.dataPoint
-    if currentItem is not None:
-      currentVideoPath = self.ui.videoWidget.dataPoint.videoPath
-      if currentVideoPath == dataPoint.videoPath:
-        self.setCurrentVideo(dataPoint, play=False)
+    if self.isCurrentVideo(dataPoint):
+      self.setCurrentVideo(dataPoint, play=False)
 
 if __name__ == '__main__':
   # this solves a gross bug in cv2.cvtColor on macOS
@@ -231,6 +261,7 @@ if __name__ == '__main__':
   mp.set_start_method('spawn')
 
   app = QApplication(sys.argv)
+
   window = MainWindow()
   window.show()
   app.exec_()

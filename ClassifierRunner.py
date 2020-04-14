@@ -87,7 +87,7 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool,
     while not future.done():
       time.sleep(1)
       if stopEvent.is_set():
-        print('Stopping ClassifierRunner.')
+        print('ClassifierRunner exited.')
         return
       totalPercentDone = progressTracker.getTotalProgress()
       videoPercentDone = progressTracker.getCurVidProgress()
@@ -99,8 +99,9 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool,
 class ClassifierRunner:
   def __init__(self):
     self.progressTracker = _ProgressTracker()
-    # only run one video at a time
+    # allows us to stop the process we start
     self.stopEvent = multiprocessing.Event()
+    # only run one video at a time
     self.pool = ProcessPoolExecutor(max_workers=1, initializer=_loadLibs, initargs=(self.progressTracker,self.stopEvent))
 
   def processVideos(self, dataPoints, processingCompleteCallback, processingProgressCallback):

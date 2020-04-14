@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>StatsDialog</class>
- <widget class="QDialog" name="StatsDialog">
+ <class>InfoDialog</class>
+ <widget class="QDialog" name="InfoDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -15,7 +15,7 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <layout class="QVBoxLayout" name="statsLayout">
+    <layout class="QVBoxLayout" name="layout">
      <item>
       <widget class="QLabel" name="label_1">
        <property name="text">
