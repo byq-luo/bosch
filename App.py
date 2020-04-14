@@ -61,7 +61,7 @@ class MainWindow(QMainWindow):
     if CONFIG.USE_PRECOMPUTED_FEATURES:
       self.loadVideosFromFolder('precomputed/videos')
     else:
-      self.ui.actionOpenFolder.triggered.connect(self.openFolderDialog)
+      self.ui.actionOpenFolder.triggered.connect(self.openVideosFolder)
 
     self.dialog = InfoDialog(self.dataPoints)
 

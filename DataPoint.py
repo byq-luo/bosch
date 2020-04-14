@@ -12,7 +12,7 @@ class DataPoint:
     name, extension = os.path.splitext(nameExtension)
     self.videoName = name
     self.videoFileName = name + extension
-    self.savePath = folder.replace('videos', 'labels')
+    self.savePath = folder
 
     self.predictedLabels = [] # tuple(str, float)
     self.boundingBoxes = [] # tuple(something i do not remember)
