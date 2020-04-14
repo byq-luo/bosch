@@ -11,10 +11,8 @@ class DataPoint:
     self.videoName = ''
     self.videoFolder = ''
     self.predictedLabels = []
-    self.groundTruthLabels = []
     self.boundingBoxes = []
     self.laneLines = []
-    self.aggregatePredConfidence = 0
     folder, nameExtension = os.path.split(videoPath)
     name, extension = os.path.splitext(nameExtension)
     self.videoName = name
@@ -30,10 +28,9 @@ class DataPoint:
     try:
       with open(self.featuresPath) as f:
         self.hasBeenProcessed = True
+        self._loadLabels()
     except:
       self.hasBeenProcessed = False
-
-    self._loadLabels()
 
   def _loadLabels(self):
     try: # load labels
@@ -43,9 +40,9 @@ class DataPoint:
           label, labelTime = ln.split(',')
           label = label.split('=')[0]
           correctTime = float(labelTime) % 300
-          self.groundTruthLabels.append((label, correctTime))
+          self.predictedLabels.append((label, correctTime))
     except:
-      self.groundTruthLabels = []
+      self.predictedLabels = []
 
   # we cache the features on disk to avoid possible OOM when processing hundreds or thousands of videos
   def loadFeatures(self):
