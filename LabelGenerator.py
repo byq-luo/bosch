@@ -323,7 +323,8 @@ class LabelGenerator:
           if self.lastTO is not None:
             if closestTarget.id == self.lastTO.id:
               print("in delete last TO")
-              del self.labels[-1]
+              if len(self.labels) != 0:
+                del self.labels[-1]
               self.lastTO = None
             else:
               eventTime = self._time - (self.buffer / self.videoFPS)
