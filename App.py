@@ -131,7 +131,7 @@ class MainWindow(QMainWindow):
         videoFeaturesPath = videoPath.replace('videos/', 'features/').replace('.avi', '.pkl')
         if not os.path.isfile(videoFeaturesPath):
           continue
-      dataPoint = DataPoint(videoPath)
+      dataPoint = DataPoint(videoPath,self.storage)
       self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
 
@@ -140,7 +140,7 @@ class MainWindow(QMainWindow):
     if folder:
       self.ui.setSavePathButton.setText('  '+folder+'  ')
       for dp in self.dataPoints.values():
-        dp.setSavePath(folder)
+        dp.setSavePath(folder,self.storage)
       self.updateFileTableForDataPointChange()
       self.dialog.updateState(self.dataPoints)
 
@@ -178,7 +178,7 @@ class MainWindow(QMainWindow):
       if self.isCurrentVideo(dp):
         self.clearLabelList()
         self.ui.videoWidget.clearCurrentVideo()
-      dp.deleteData()
+      dp.deleteData(self.storage)
       name, done = self.getFileTableItem(dp)
       x.setItem(i,0,done)
       x.setItem(i,1,name)

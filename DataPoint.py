@@ -4,7 +4,7 @@ from Video import Video
 
 # This class is a relationship between a video and its data
 class DataPoint:
-  def __init__(self, videoPath: str):
+  def __init__(self, videoPath: str, storage):
     assert(videoPath != '')
     self.videoPath = videoPath
     self.videoName = ''
@@ -23,19 +23,18 @@ class DataPoint:
     del video
 
     self.hasBeenProcessed = False
-    self.setSavePath(self.savePath)
+    self.setSavePath(self.savePath, storage)
     if self.hasBeenProcessed:
-      self._loadLabels()
+      self._loadLabels(storage)
 
-  def _loadLabels(self):
+  def _loadLabels(self, storage):
     try:
-      with open(self.labelsPath) as file:
-        labelLines = [ln.rstrip('\n') for ln in file.readlines()]
-        for ln in labelLines:
-          label, labelTime = ln.split(',')
-          label = label.split('=')[0] # handle rightTO label
-          labelTime = float(labelTime) % 300
-          self.predictedLabels.append((label, labelTime))
+      lines = storage.getFileLines(self.labelsPath)
+      for ln in lines:
+        label, labelTime = ln.split(',')
+        label = label.split('=')[0] # handle rightTO label
+        labelTime = float(labelTime) % 300
+        self.predictedLabels.append((label, labelTime))
     except:
       self.predictedLabels = []
 
@@ -58,13 +57,13 @@ class DataPoint:
       ret.append(label + ',' + str(labelTime) + '\n')
     return ret
 
-  def deleteData(self):
+  def deleteData(self, storage):
     try:
-      os.remove(self.featuresPath)
+      storage.deleteFile(self.featuresPath)
     except:
       pass
     try:
-      os.remove(self.labelsPath)
+      storage.deleteFile(self.labelsPath)
     except:
       pass
     self.clearFeatures()
@@ -81,7 +80,7 @@ class DataPoint:
     self.boundingBoxes = []
     self.laneLines = []
 
-  def setSavePath(self, folder):
+  def setSavePath(self, folder, storage):
     if len(folder) == 0:
       return
     if folder[-1] not in ['/','\\']:
@@ -89,12 +88,9 @@ class DataPoint:
     self.savePath = folder
     self.labelsPath = self.savePath + self.videoFileName.replace('m0.avi', 'labels.txt')
     self.featuresPath = self.savePath + self.videoFileName.replace('m0.avi', 'features.pkl')
-    self.updateDone()
+    self.updateDone(storage)
 
-  def updateDone(self):
-    try:
-      with open(self.labelsPath) as f:
-        self.hasBeenProcessed = True
-    except:
-      self.hasBeenProcessed = False
+  def updateDone(self, storage):
+    self.hasBeenProcessed = storage.fileExists(self.labelsPath)
+    if not self.hasBeenProcessed:
       self.predictedLabels = []

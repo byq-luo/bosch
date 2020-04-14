@@ -25,3 +25,15 @@ class Storage:
   def loadObjsFromPkl(self, filename: str):
     with open(filename, 'rb') as file:
       return pickle.load(file)
+  
+  def deleteFile(self, filename:str):
+    os.remove(filename)
+  
+  def getFileLines(self, filename:str):
+    lines = []
+    with open(filename, 'r') as f:
+      lines = f.readlines()
+    return lines
+  
+  def fileExists(self, filename:str):
+    return os.path.isfile(filename)
