@@ -18,9 +18,6 @@ class Ui_InfoDialog(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.setObjectName("layout")
-        self.label_1 = QtWidgets.QLabel(InfoDialog)
-        self.label_1.setObjectName("label_1")
-        self.layout.addWidget(self.label_1)
         self.label_2 = QtWidgets.QLabel(InfoDialog)
         self.label_2.setObjectName("label_2")
         self.layout.addWidget(self.label_2)
@@ -44,7 +41,6 @@ class Ui_InfoDialog(object):
     def retranslateUi(self, InfoDialog):
         _translate = QtCore.QCoreApplication.translate
         InfoDialog.setWindowTitle(_translate("InfoDialog", "Info"))
-        self.label_1.setText(_translate("InfoDialog", "TextLabel"))
         self.label_2.setText(_translate("InfoDialog", "TextLabel"))
         self.label_3.setText(_translate("InfoDialog", "TextLabel"))
         self.label_4.setText(_translate("InfoDialog", "TextLabel"))

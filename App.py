@@ -25,6 +25,7 @@ class MainWindow(QMainWindow):
     self.classifier = ClassifierRunner()
     # just a thin wrapper around a storage device
     self.storage = Storage()
+    self.saveFolder = None
 
     # https://stackoverflow.com/questions/7369005/add-a-qlineedit-to-a-qtoolbar-in-qtcreator-designer
     self.ui.toolBar.addSeparator()
@@ -132,13 +133,14 @@ class MainWindow(QMainWindow):
         videoFeaturesPath = videoPath.replace('videos/', 'features/').replace('.avi', '.pkl')
         if not os.path.isfile(videoFeaturesPath):
           continue
-      dataPoint = DataPoint(videoPath,self.storage)
+      dataPoint = DataPoint(videoPath,self.storage,self.saveFolder)
       self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
 
   def setSavePathButtonClicked(self):
     folder = self.openFolderDialog()
     if folder:
+      self.saveFolder = folder # incase save folder is specified first
       self.ui.setSavePathButton.setText('  '+folder+'  ')
       for dp in self.dataPoints.values():
         dp.setSavePath(folder,self.storage)
@@ -184,7 +186,7 @@ class MainWindow(QMainWindow):
       x.setItem(i,1,name)
     x.clearSelection()
     self.dialog.updateState(self.dataPoints)
-  
+
   def disableActions(self):
     self.ui.actionProcessVideos.triggered.disconnect()
     self.ui.actionProcessVideos.setDisabled(True)
