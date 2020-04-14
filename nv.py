@@ -1,3 +1,0 @@
-#test nv
-
-print("confirm")
