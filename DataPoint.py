@@ -64,6 +64,17 @@ class DataPoint:
         label = label + '=XX'
       ret.append(label + ',' + str(labelTime) + '\n')
     return ret
+  
+  def deleteData(self):
+    try:
+      os.remove(self.featuresPath)
+    except:
+      pass
+    try:
+      os.remove(self.labelsPath)
+    except:
+      pass
+    self.hasBeenProcessed=False
 
   def saveToStorage(self, storage: Storage):
     labels = self.labelsToOutputFormat(self.predictedLabels)

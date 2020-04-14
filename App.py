@@ -37,6 +37,8 @@ class MainWindow(QMainWindow):
     self.processingCompleteSignal.connect(self.processingComplete)
     self.setWindowIcon(QIcon('icons/bosch.ico'))
     self.ui.actionInfo.triggered.connect(self.showInfoDialog)
+    self.ui.actionDelete_Predictions_For_Selected_Videos.triggered.connect(self.deletePredictionsForSelected)
+    self.ui.actionRemove_Selected_Videos.triggered.connect(self.removeSelectedVideos)
 
     if not CONFIG.IMMEDIATE_MODE:
       self.ui.actionProcessVideos.triggered.connect(self.initiateProcessing)
@@ -122,13 +124,45 @@ class MainWindow(QMainWindow):
       self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
 
+  def removeSelectedVideos(self):
+    x = self.ui.fileTableWidget
+    rows = sorted({r.row() for r in x.selectedIndexes()})
+    for i in reversed(rows):
+      item = x.item(i,1)
+      videoPath = item.data(Qt.UserRole)
+      del self.dataPoints[videoPath]
+      x.removeRow(i)
+    x.clearSelection()
+
+  def deletePredictionsForSelected(self):
+    x = self.ui.fileTableWidget
+    rows = sorted({r.row() for r in x.selectedIndexes()})
+    for i in rows:
+      item = x.item(i,1)
+      videoPath = item.data(Qt.UserRole)
+      dp = self.dataPoints[videoPath]
+      dp.deleteData()
+      name, done = self.getFileTableItem(dp)
+      x.setItem(i,0,done)
+      x.setItem(i,1,name)
+    x.clearSelection()
+  
+  def disableActions(self):
+    self.ui.actionProcessVideos.triggered.disconnect()
+    self.ui.actionProcessVideos.setDisabled(True)
+    self.ui.actionDelete_Predictions_For_Selected_Videos.triggered.disconnect()
+    self.ui.actionDelete_Predictions_For_Selected_Videos.setDisabled(True)
+    self.ui.actionRemove_Selected_Videos.triggered.disconnect()
+    self.ui.actionRemove_Selected_Videos.setDisabled(True)
+
   def initiateProcessing(self):
     if len(self.dataPoints) == 0:
       return
-    self.ui.actionProcessVideos.triggered.disconnect()
-    self.ui.actionProcessVideos.setDisabled(True)
+    self.disableActions()
+    toProc = list(self.dataPoints.values())
+    toProc = [t for t in toProc if not t.hasBeenProcessed]
     self.classifier.processVideos(
-      list(self.dataPoints.values()),
+      toProc,
       self.processingCompleteCallback,
       self.processingProgressCallback)
 

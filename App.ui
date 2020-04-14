@@ -364,6 +364,10 @@
    <addaction name="separator"/>
    <addaction name="actionProcessVideos"/>
    <addaction name="separator"/>
+   <addaction name="actionDelete_Predictions_For_Selected_Videos"/>
+   <addaction name="separator"/>
+   <addaction name="actionRemove_Selected_Videos"/>
+   <addaction name="separator"/>
    <addaction name="actionInfo"/>
   </widget>
   <action name="processMultipleFilesAction">
@@ -382,6 +386,16 @@
   <action name="actionInfo">
    <property name="text">
     <string>Info</string>
+   </property>
+  </action>
+  <action name="actionDelete_Predictions_For_Selected_Videos">
+   <property name="text">
+    <string>Delete Predictions For Selected Videos</string>
+   </property>
+  </action>
+  <action name="actionRemove_Selected_Videos">
+   <property name="text">
+    <string>Remove Selected Videos</string>
    </property>
   </action>
  </widget>
