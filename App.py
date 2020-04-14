@@ -57,13 +57,14 @@ class MainWindow(QMainWindow):
     else:
       self.loadVideosFromFolder('.')
 
+    self.dialog = InfoDialog(self.dataPoints)
+
     # If we are in TESTING mode just load videos from the precomputed folder
     if CONFIG.USE_PRECOMPUTED_FEATURES:
       self.loadVideosFromFolder('precomputed/videos')
+      self.dialog.updateState(self.dataPoints)
     else:
       self.ui.actionOpenFolder.triggered.connect(self.openVideosFolder)
-
-    self.dialog = InfoDialog(self.dataPoints)
 
   def showInfoDialog(self):
     self.dialog.show()
@@ -177,7 +178,6 @@ class MainWindow(QMainWindow):
       dp = self.dataPoints[videoPath]
       if self.isCurrentVideo(dp):
         self.clearLabelList()
-        self.ui.videoWidget.clearCurrentVideo()
       dp.deleteData(self.storage)
       name, done = self.getFileTableItem(dp)
       x.setItem(i,0,done)

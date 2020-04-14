@@ -30,6 +30,7 @@ class DataPoint:
   def _loadLabels(self, storage):
     try:
       lines = storage.getFileLines(self.labelsPath)
+      self.predictedLabels = []
       for ln in lines:
         label, labelTime = ln.split(',')
         label = label.split('=')[0] # handle rightTO label
@@ -94,3 +95,6 @@ class DataPoint:
     self.hasBeenProcessed = storage.fileExists(self.labelsPath)
     if not self.hasBeenProcessed:
       self.predictedLabels = []
+    else:
+      self._loadLabels(storage)
+      self.loadFeatures(storage)
