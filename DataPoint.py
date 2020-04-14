@@ -1,5 +1,6 @@
 from Storage import Storage
 import os, pickle, random
+from Video import Video
 
 # This class is a relationship between a video and its data
 class DataPoint:
@@ -18,6 +19,10 @@ class DataPoint:
     name, extension = os.path.splitext(nameExtension)
     self.videoName = name
     self.videoFolder = folder
+
+    video = Video(videoPath)
+    self.videoLength = video.getVideoLength()
+    del video
 
     self.labelsPath = self.videoPath.replace('videos/', 'labels/').replace('m0.avi', 'labels.txt')
     self.featuresPath = self.videoPath.replace('videos/', 'labels/').replace('m0.avi', 'features.pkl')

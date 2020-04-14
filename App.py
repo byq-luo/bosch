@@ -52,7 +52,7 @@ class MainWindow(QMainWindow):
     else:
       self.ui.processMultipleFilesAction.triggered.connect(self.openFolderNameDialog)
 
-    self.dialog = StatsDialog()
+    self.dialog = StatsDialog(self.dataPoints.values())
 
   def showInfoDialog(self):
     self.dialog.show()
@@ -148,6 +148,7 @@ class MainWindow(QMainWindow):
     folderName = QFileDialog.getExistingDirectory(self, caption="Select Directory", options=options)
     if folderName:
       self.loadVideosFromFolder(folderName)
+      self.dialog.updateLabels(self.dataPoints.values())
 
   # put the work onto the gui thread
   processingProgressSignal = QtCore.pyqtSignal(float, float, DataPoint)
@@ -167,7 +168,7 @@ class MainWindow(QMainWindow):
     # dataPoint are different python objects.
 
     dataPoint.saveToStorage(self.storage)
-    self.dialog.updatePlot(dataPoint)
+    self.dialog.updatePlot(dataPoint, self.dataPoints.values())
     self.dataPoints[dataPoint.videoPath] = dataPoint
 
     for i in range(len(self.dataPoints)):
