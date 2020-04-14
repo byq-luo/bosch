@@ -4,7 +4,7 @@ from Video import Video
 
 # This class is a relationship between a video and its data
 class DataPoint:
-  def __init__(self, videoPath: str, storage):
+  def __init__(self, videoPath: str, storage, savePath=None):
     assert(videoPath != '')
     self.videoPath = videoPath
     self.videoName = ''
@@ -12,7 +12,7 @@ class DataPoint:
     name, extension = os.path.splitext(nameExtension)
     self.videoName = name
     self.videoFileName = name + extension
-    self.savePath = folder
+    self.savePath = savePath or folder
 
     self.predictedLabels = [] # tuple(str, float)
     self.boundingBoxes = [] # tuple(something i do not remember)
