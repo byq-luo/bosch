@@ -146,6 +146,8 @@ class MainWindow(QMainWindow):
       self.addToVideoList(dataPoint)
 
   def initiateProcessing(self):
+    if len(self.dataPoints) == 0:
+      return
     self.ui.actionProcessVideos.triggered.disconnect()
     self.ui.actionProcessVideos.setDisabled(True)
     self.classifier.processVideos(
@@ -157,7 +159,7 @@ class MainWindow(QMainWindow):
     options = QFileDialog.Options()
     options |= QFileDialog.DontUseNativeDialog
     fileName, _ = QFileDialog.getOpenFileName(self, caption="Choose a video",\
-                                              filter="AVI/MKV Files (*.avi *.mkv)",\
+                                              filter="AVI Files (*.avi *.mkv)",\
                                               options=options)
     if fileName:
       dataPoint = DataPoint(fileName)
@@ -193,7 +195,7 @@ class MainWindow(QMainWindow):
     # self.videoScoreChanged(dataPoint)
 
     dataPoint.saveToStorage(self.storage)
-
+    self.dialog.updatePlot(dataPoint)
     self.dataPoints[dataPoint.videoPath] = dataPoint
 
     currentItem = self.ui.videoWidget.dataPoint

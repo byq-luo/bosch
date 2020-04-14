@@ -6,6 +6,12 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 import os
+from DataPoint import DataPoint
+
+import torch
+deviceName = "Cuda not available!"
+if torch.cuda.is_available():
+  deviceName = torch.cuda.get_device_name(torch.cuda.current_device())
 
 from statsdialog_ui import Ui_StatsDialog
 
@@ -18,9 +24,15 @@ class StatsDialog(QDialog):
     self.ui = Ui_StatsDialog()
     self.ui.setupUi(self)
     self.canvas = None
+    self.labelCounts = {}
 
-    fig = self.genFakePlot()
-    self.set_fig(fig)
+    self.set_fig(self.genPlot())
+
+
+  def updatePlot(self, dp : DataPoint):
+    for label, frameNum in dp.predictedLabels:
+      self.labelCounts[label] = self.labelCounts.get(label, 0) + 1
+    self.set_fig(self.genPlot())
 
   def set_fig(self, fig):
     if self.canvas is not None:
@@ -29,28 +41,16 @@ class StatsDialog(QDialog):
     self.canvas = FigureCanvas(fig)
     self.canvas.setStyleSheet("background-color:transparent;")
     self.ui.plotLayout.addWidget(self.canvas)
+    self.ui.label_8.setText(deviceName)
     self.canvas.draw()
 
-  def genFakePlot(self):
-    labelCounts = {}
 
-    for ls in os.walk('groundTruthLabels'):
-      for g in ls:
-        for f in g:
-          name, ext = os.path.splitext(f)
-          if ext == '.txt':
-            with open('groundTruthLabels/'+f) as file:
-              for line in file.readlines():
-                label, labelTime = line.split(',')
-                label = label.split('=')[0].rstrip('\n').rstrip()
-                if label:
-                  labelCounts[label] = labelCounts.get(label, 0) + 1
-
+  def genPlot(self):
     fig = Figure()
     fig.patch.set_facecolor("None")
     ax = fig.add_subplot(111)
-    heights = labelCounts.values()
-    bars = labelCounts.keys()
+    heights = self.labelCounts.values()
+    bars = self.labelCounts.keys()
     y_pos = range(len(bars))
     ax.bar(y_pos, heights)
     ax.set_xticks(np.arange(len(bars)))
