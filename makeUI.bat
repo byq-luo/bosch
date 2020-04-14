@@ -1,3 +1,2 @@
-conda deactivate
 pyuic5 App.ui > App_ui.py
-conda activate pytorch
+pyuic5 statsdialog.ui > statsdialog_ui.py

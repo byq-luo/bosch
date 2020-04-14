@@ -96,4 +96,5 @@ def processVideo(dp: DataPoint,
       pickle.dump([allboxes, allboxscores, alllines, allvehicles], file)
 
   dp.predictedLabels = labelGen.getLabels()
+  dp.hasBeenProcessed = True
   return dp

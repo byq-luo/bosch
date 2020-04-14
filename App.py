@@ -21,7 +21,6 @@ class MainWindow(QMainWindow):
     self.ui = Ui_MainWindow()
     self.ui.setupUi(self)
 
-    # TODO what if user tries to process same video twice?
     self.dataPoints = dict()
     self.classifier = ClassifierRunner()
     # just a thin wrapper around a storage device
@@ -34,7 +33,6 @@ class MainWindow(QMainWindow):
     self.ui.videoWidget.setTimeLabels(self.ui.currentVideoTime, self.ui.fullVideoTime)
     self.ui.fileTableWidget.cellClicked.connect(self.videoInListClicked)
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
-    self.ui.labelTableWidget.itemChanged.connect(self.labelInListChanged)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
     self.setWindowIcon(QIcon('icons/bosch.ico'))
@@ -65,27 +63,6 @@ class MainWindow(QMainWindow):
     frameIndex = dp.predictedLabels[labelIndex][1]
     self.ui.videoWidget.seekToTime(max(0,frameIndex-2))
 
-  def labelInListChanged(self, newItem):
-    data = newItem.data(Qt.UserRole)
-    if data is None:
-      return
-    videoPath, index = data
-    dataPoint = self.dataPoints[videoPath]
-    try:
-      newLabel = newItem.text()
-      assert newLabel.find(" ") != -1
-      label, time = newLabel.split(" ")
-      time = time.strip()
-      label = label.strip()
-      assert label.isalpha() is True
-      finalLabel = (label, float(time))
-      dataPoint.predictedLabels[index] = finalLabel
-      # causes enters inf loop due to signals
-      # newItem.setText('{:10s} {}'.format(label, time))
-    except:
-      label, time = dataPoint.predictedLabels[index]
-      # newItem.setText('{:10s} {}'.format(label, time))
-
   def setLabelList(self, dataPoint):
     self.ui.labelTableWidget.setRowCount(0)
     self.ui.labelTableWidget.setColumnCount(2)
@@ -96,9 +73,6 @@ class MainWindow(QMainWindow):
       self.ui.labelTableWidget.insertRow(rowIndex)
       item = QTableWidgetItem('{:10s}'.format(label))
       item2 = QTableWidgetItem('{:.1f}'.format(labelTime))
-      # TODO provide a more useful time measure
-      #(either use the following uncommented line or change the time representation in the video widget)
-      #item = QTableWidgetItem('{:10s} {:02d}:{:02d}'.format(label, labelTime//60, labelTime%60))
       item.setData(Qt.UserRole, (videoPath, listIndex))
       item2.setData(Qt.UserRole, (videoPath, listIndex))
       self.ui.labelTableWidget.setItem(rowIndex, 0, item)
@@ -114,23 +88,24 @@ class MainWindow(QMainWindow):
     self.ui.videoWidget.setVideo(dataPoint)
     if play:
       self.ui.videoWidget.play()
+  
+  def getFileTableItem(self, dp:DataPoint):
+    shownName = dp.videoName.replace('m0','')
+    shownName = '   '.join(shownName.split('_')[2:])
+    name = QTableWidgetItem(shownName)
+    name.setData(Qt.UserRole, dp.videoPath)
+    name.setToolTip(dp.videoPath)
+
+    done = QTableWidgetItem(' ')
+    if dp.hasBeenProcessed:
+      done = QTableWidgetItem('   ✓')
+    return name, done
 
   def addToVideoList(self, dataPoint: DataPoint):
     rowIndex = self.ui.fileTableWidget.rowCount()
     self.ui.fileTableWidget.insertRow(rowIndex)
-    # TODO
-    msg = ' ?'
-    if dataPoint.aggregatePredConfidence != 0:
-      msg = ' {:2.2f}'.format(dataPoint.aggregatePredConfidence)
-
-    presentName = dataPoint.videoName.replace('m0','')
-    presentName = '   '.join(presentName.split('_')[2:])
-    name = QTableWidgetItem(presentName)
-    name.setData(Qt.UserRole, dataPoint.videoPath)
-    name.setToolTip(dataPoint.videoPath)
-    score = QTableWidgetItem(msg)
-    score.setData(Qt.UserRole, dataPoint.videoPath)
-    self.ui.fileTableWidget.setItem(rowIndex, 0, score)
+    name, done = self.getFileTableItem(dataPoint)
+    self.ui.fileTableWidget.setItem(rowIndex, 0, done)
     self.ui.fileTableWidget.setItem(rowIndex, 1, name)
 
   def loadVideosFromFolder(self, folder):
@@ -191,12 +166,18 @@ class MainWindow(QMainWindow):
     # BehaviorClassifier are not reflected in oldVid. oldVid and
     # dataPoint are different python objects.
 
-    dataPoint.compareLabels()
-    # self.videoScoreChanged(dataPoint)
-
     dataPoint.saveToStorage(self.storage)
     self.dialog.updatePlot(dataPoint)
     self.dataPoints[dataPoint.videoPath] = dataPoint
+
+    for i in range(len(self.dataPoints)):
+      item = self.ui.fileTableWidget.item(i,1)
+      if item is not None:
+        videoPath = item.data(Qt.UserRole)
+        dataPoint = self.dataPoints[videoPath]
+        name, done = self.getFileTableItem(dataPoint)
+        self.ui.fileTableWidget.setItem(i, 0, done)
+        self.ui.fileTableWidget.setItem(i, 1, name)
 
     currentItem = self.ui.videoWidget.dataPoint
     if currentItem is not None:
