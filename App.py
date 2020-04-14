@@ -99,6 +99,8 @@ class MainWindow(QMainWindow):
     done = QTableWidgetItem(' ')
     if dp.hasBeenProcessed:
       done = QTableWidgetItem('   ✓')
+    done.setData(Qt.UserRole, dp.videoPath)
+    done.setToolTip(dp.videoPath)
     return name, done
 
   def addToVideoList(self, dataPoint: DataPoint):
