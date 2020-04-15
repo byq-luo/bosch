@@ -376,7 +376,7 @@ class LabelGenerator:
                 self.targetDirection = "Left"
             except:
                 continue
-                  
+
           for vehicle in vehiclesOnRightLane:
             try:
               if vehicle.id == self.currentTargetObject.id:
@@ -587,7 +587,8 @@ class LabelGenerator:
 
         else:
           print("in del cutin")
-          del self.labels[-1]
+          if len(self.labels) != 0:
+            del self.labels[-1]
           self.newCutinTarget = None
           self.newTargetTimer = self.buffer
           self.cancelCutinTimer = self.cancelBuffer
