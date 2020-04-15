@@ -62,6 +62,7 @@ class MainWindow(QMainWindow):
 
     # If we are in TESTING mode just load videos from the precomputed folder
     if CONFIG.USE_PRECOMPUTED_FEATURES:
+      #self.loadVideosFromFolder('precomputed/videos')
       self.loadVideosFromFolder('precomputed/videos')
       self.dialog.updateState(self.dataPoints)
     else:
