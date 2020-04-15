@@ -2,7 +2,7 @@ from Storage import Storage
 import os
 
 groundTruthPath = "D:\entire_hdd\labels_correct_timestamp"
-genereatedPath = "D:\labels"
+genereatedPath = "D:\oldfeatures"
 groundPaths = []
 generatedPaths = []
 totalGroundLables = 0

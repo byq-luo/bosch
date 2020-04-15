@@ -269,10 +269,11 @@ class LabelGenerator:
           self.lastTargetPos = None
           self.targetLostTimer = self.targetLostBuffer
           eventTime = self._time - (self.buffer / self.videoFPS)
-          if self.lastTargetX < 100 or self.lastTargetX > 500:
-            self.labels.append(("objTurnOff", eventTime))
-            self.labels.append(("evtEnd", self._time))
-            self.lastLabelProduced = "evtEnd"
+          if self.lastTargetX is not None:
+            if self.lastTargetX < 100 or self.lastTargetX > 500:
+              self.labels.append(("objTurnOff", eventTime))
+              self.labels.append(("evtEnd", self._time))
+              self.lastLabelProduced = "evtEnd"
           else:
             self.lastLabelProduced = None
 
@@ -370,12 +371,18 @@ class LabelGenerator:
           self.newEventTimer = self.buffer - 1
           self.label_time = self._time
           for vehicle in vehiclesOnLeftLane:
-            if vehicle.id == self.currentTargetObject.id:
-              self.targetDirection = "Left"
-
+            try:
+              if vehicle.id == self.currentTargetObject.id:
+                self.targetDirection = "Left"
+            except:
+                continue
+                  
           for vehicle in vehiclesOnRightLane:
-            if vehicle.id == self.currentTargetObject.id:
-              self.targetDirection = "Right"
+            try:
+              if vehicle.id == self.currentTargetObject.id:
+                self.targetDirection = "Right"
+            except:
+              continue
 
 
         # if the target object has already started leaving the lane
