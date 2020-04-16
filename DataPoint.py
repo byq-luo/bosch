@@ -24,8 +24,6 @@ class DataPoint:
 
     self.hasBeenProcessed = False
     self.setSavePath(self.savePath, storage)
-    if self.hasBeenProcessed:
-      self._loadLabels(storage)
 
   def _loadLabels(self, storage):
     try:
@@ -89,12 +87,8 @@ class DataPoint:
     self.savePath = folder
     self.labelsPath = self.savePath + self.videoFileName.replace('m0.avi', 'labels.txt')
     self.featuresPath = self.savePath + self.videoFileName.replace('m0.avi', 'features.pkl')
-    self.updateDone(storage)
-
-  def updateDone(self, storage):
     self.hasBeenProcessed = storage.fileExists(self.labelsPath)
     if not self.hasBeenProcessed:
       self.predictedLabels = []
     else:
       self._loadLabels(storage)
-      self.loadFeatures(storage)

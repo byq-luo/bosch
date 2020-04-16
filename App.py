@@ -1,4 +1,4 @@
-import sys
+import sys, os
 # sys.path.append('deepsort')
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QDialog, QLineEdit, QCheckBox, QPushButton
@@ -6,7 +6,6 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 import PyQt5.QtCore as QtCore
 from App_ui import Ui_MainWindow
-import os
 
 from InfoDialog import InfoDialog
 from ClassifierRunner import ClassifierRunner
@@ -62,7 +61,6 @@ class MainWindow(QMainWindow):
 
     # If we are in TESTING mode just load videos from the precomputed folder
     if CONFIG.USE_PRECOMPUTED_FEATURES:
-      #self.loadVideosFromFolder('precomputed/videos')
       self.loadVideosFromFolder('precomputed/videos')
       self.dialog.updateState(self.dataPoints)
     else:
@@ -132,7 +130,7 @@ class MainWindow(QMainWindow):
       # Do not load videos that have no precomputed boxes in TESTING mode
       if CONFIG.USE_PRECOMPUTED_FEATURES:
         videoFeaturesPath = videoPath.replace('videos/', 'features/').replace('.avi', '.pkl')
-        if not os.path.isfile(videoFeaturesPath):
+        if not self.storage.fileExists(videoFeaturesPath):
           continue
       dataPoint = DataPoint(videoPath,self.storage,self.saveFolder)
       self.dataPoints[dataPoint.videoPath] = dataPoint
@@ -206,6 +204,8 @@ class MainWindow(QMainWindow):
     self.disableActions()
     toProc = list(self.dataPoints.values())
     toProc = [t for t in toProc if not t.hasBeenProcessed]
+    if len(toProc) == 0:
+      return
     self.classifier.processVideos(
       toProc,
       self.processingCompleteCallback,
