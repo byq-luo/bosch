@@ -1,4 +1,5 @@
 from multiprocessing import Value, Lock
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 
 import time
@@ -57,7 +58,7 @@ class _ProgressTracker(object):
 # executed in another python process
 
 
-def _loadLibs(progressTracker):
+def _loadLibs(progressTracker, stopEvent):
   import CONFIG
   if CONFIG.USE_PRECOMPUTED_FEATURES:
     from precomputed.VehicleDetector import VehicleDetector
@@ -69,14 +70,15 @@ def _loadLibs(progressTracker):
   globals()['vehicleDetector'] = VehicleDetector()
   globals()['laneLineDetector'] = LaneLineDetector()
   globals()['progressTracker'] = progressTracker
+  globals()['stopEvent'] = stopEvent
 
 
 def _processVideo(dataPoint: DataPoint):
   # accesses the globals assigned above
-  return processVideo(dataPoint, vehicleDetector, laneLineDetector, progressTracker)
+  return processVideo(dataPoint, vehicleDetector, laneLineDetector, progressTracker, stopEvent)
 
 
-def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool):
+def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool, stopEvent):
   assert(dataPoints != [])
   for dataPoint in dataPoints:
     progressTracker.addToTotalNumFrames(dataPoint.videoPath)
@@ -84,6 +86,9 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool)
     future = pool.submit(_processVideo, dataPoint)
     while not future.done():
       time.sleep(1)
+      if stopEvent.is_set():
+        print('ClassifierRunner exited.')
+        return
       totalPercentDone = progressTracker.getTotalProgress()
       videoPercentDone = progressTracker.getCurVidProgress()
       progressCallback(totalPercentDone, videoPercentDone, dataPoint)
@@ -94,11 +99,16 @@ def _run(dataPoints, progressTracker, completedCallback, progressCallback, pool)
 class ClassifierRunner:
   def __init__(self):
     self.progressTracker = _ProgressTracker()
+    # allows us to stop the process we start
+    self.stopEvent = multiprocessing.Event()
     # only run one video at a time
-    self.pool = ProcessPoolExecutor(max_workers=1, initializer=_loadLibs, initargs=(self.progressTracker,))
+    self.pool = ProcessPoolExecutor(max_workers=1, initializer=_loadLibs, initargs=(self.progressTracker,self.stopEvent))
 
   def processVideos(self, dataPoints, processingCompleteCallback, processingProgressCallback):
     from threading import Thread
-    thread = Thread(target=_run, args=(dataPoints, self.progressTracker,
-                                       processingCompleteCallback, processingProgressCallback, self.pool))
-    thread.start()
+    self.thread = Thread(target=_run, daemon=True, args=(dataPoints, self.progressTracker,
+                                       processingCompleteCallback, processingProgressCallback, self.pool, self.stopEvent))
+    self.thread.start()
+
+  def stop(self):
+    self.stopEvent.set()

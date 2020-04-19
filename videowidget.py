@@ -3,13 +3,13 @@ from PyQt5.QtCore import QPoint, QTimer, Qt
 from PyQt5.QtGui import QPainter, QImage
 from VideoOverlay import VideoOverlay
 from Video import Video
+from Storage import Storage
 import CONFIG 
 
 if CONFIG.IMMEDIATE_MODE:
   from LaneLineDetectorERFNet import LaneLineDetector
   from VehicleDetectorYolo import VehicleDetectorYolo
   from VehicleTrackerSORT import VehicleTracker
-  #from VehicleTrackerDL import VehicleTracker
   import cv2
   import numpy as np
 
@@ -23,6 +23,7 @@ class VideoWidget(QWidget):
       self.tracker = VehicleTracker()
 
   def initUI(self):
+
     self.video = None
     self.dataPoint = None
 
@@ -32,6 +33,7 @@ class VideoWidget(QWidget):
     # QTimer is basically what we were doing with time.sleep but more accurate
     self.timer = QTimer(self)
     self.timer.timeout.connect(self.update)
+    self.timer.stop()
 
     # so that the image does not disappear when pause is hit
     self.previousFrame = None
@@ -50,24 +52,22 @@ class VideoWidget(QWidget):
     self.timer.stop()
     self.timer.start(self.video.getFps())
 
-  def seekToFrame(self, frameIndex):
-    self.video.setFrameNumber(frameIndex)
+  def seekToFrame(self, frameNumber):
+    self.video.setFrameNumber(frameNumber)
     self.didSeek = True
     self.update()
 
   def seekToTime(self, t):
-    frameNum = int(t * self.video.getFps())
     numFrames = self.video.getTotalNumFrames()
-    self.video.setFrameNumber(min(frameNum, numFrames-1))
-    self.didSeek = True
-    self.update()
+    frameNumber = min(int(t * self.video.getFps()), numFrames-1)
+    self.seekToFrame(frameNumber)
 
   def seekToPercent(self, percent):
     if self.video is None:
       return
     totalNumFrames = self.video.getTotalNumFrames()
-    frameIndex = int(percent / 1000 * totalNumFrames)
-    self.seekToFrame(frameIndex)
+    frameNum = int(percent / 1000 * totalNumFrames)
+    self.seekToFrame(frameNum)
 
   def setSlider(self, slider):
     self.slider = slider
@@ -76,28 +76,36 @@ class VideoWidget(QWidget):
     self.currentTimeLabel = currentTime
     self.fullTimeLabel = fullTime
 
-  def setVideo(self, dataPoint):
+  def clearCurrentVideo(self):
+    self.pause()
+    self.dataPoint = None
+    self.video = None
+    self.update()
+
+  def setVideo(self, dataPoint, storage):
+    if self.dataPoint is not None:
+      self.dataPoint.clearFeatures()
+    dataPoint.loadFeatures(storage)
     self.dataPoint = dataPoint
     self.video = Video(dataPoint.videoPath)
     self.setFullTimeLabel()
 
   def setFullTimeLabel(self):
-    totalSeconds = self.video.getVideoLength()
-    minutes = int(totalSeconds / 60)
-    seconds = int(totalSeconds % 60)
-    timeString = '{}:{:02d}'.format(minutes, seconds)
-    self.fullTimeLabel.setText(timeString)
+    if self.video is not None:
+      totalSeconds = self.video.getVideoLength()
+      timeString = '{:03d}'.format((int(totalSeconds)))
+      self.fullTimeLabel.setText(timeString)
 
   def updateTimeLabel(self):
-    totalSeconds = self.video.getCurrentTime()
-    minutes = int(totalSeconds / 60)
-    seconds = int(totalSeconds % 60)
-    timeString = '{}:{:02d}'.format(minutes, seconds)
-    self.currentTimeLabel.setText(timeString)
+    if self.video is not None:
+      totalSeconds = self.video.getCurrentTime()
+      timeString = '{:03d}'.format(int(totalSeconds))
+      self.currentTimeLabel.setText(timeString)
 
   def updateSliderValue(self):
-    currentPercent = int(1000 * self.video.getFrameNumber() / self.video.getTotalNumFrames())
-    self.slider.setValue(currentPercent)
+    if self.video is not None:
+      currentPercent = int(1000 * self.video.getFrameNumber() / self.video.getTotalNumFrames())
+      self.slider.setValue(currentPercent)
 
   def _drawImage(self, frame, qp:QPainter):
     vidHeight, vidWidth, vidChannels = frame.shape
@@ -129,7 +137,7 @@ class VideoWidget(QWidget):
       self.updateSliderValue()
       self.didSeek = False
 
-      frameIndex = self.video.getFrameNumber()
+      frameNum = self.video.getFrameNumber()
       isFrameAvail, frame = self.video.getFrame()
       currentTime = self.video.getCurrentTime()
 
@@ -139,19 +147,18 @@ class VideoWidget(QWidget):
         self.video.setFrameNumber(0)
       elif isFrameAvail:
         if CONFIG.IMMEDIATE_MODE:
-          # frame = cv2.blur(frame, (2,2))
-          frame = self.renderImmediately(frame, frameIndex)
+          frame = self.renderImmediately(frame, frameNum)
         else:
-          frame = self.videoOverlay.processFrame(frame, frameIndex, self.dataPoint, currentTime)
+          frame = self.videoOverlay.processFrame(frame, frameNum, self.dataPoint, currentTime)
         self.previousFrame = frame
         self._drawImage(frame, qp)
-    elif self.previousFrame is not None:
+    elif self.previousFrame is not None and self.video is not None:
       self._drawImage(self.previousFrame, qp)
 
     qp.end()
 
   # This function is only for development purposes
-  def renderImmediately(self, frame, frameIndex):
+  def renderImmediately(self, frame, frameNum):
       # rawboxes, boxscores = self.vehicleDetector.getFeatures(frame)
       # vehicles = self.tracker.getVehicles(frame, rawboxes, boxscores)
       # # Use VehicleTrackerDL to render fingerprint of vehicles
@@ -206,3 +213,6 @@ class VideoWidget(QWidget):
 
       self.update()
       return frame
+
+  def stop(self):
+    self.timer.stop()

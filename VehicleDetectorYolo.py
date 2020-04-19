@@ -4,7 +4,6 @@ from yolo.utils.utils import *
 from yolo.utils.datasets import *
 
 import torch
-from torch.utils.data import DataLoader
 from torchvision import datasets
 from torch.autograd import Variable
 

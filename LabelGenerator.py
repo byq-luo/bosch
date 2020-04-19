@@ -173,6 +173,8 @@ class LabelGenerator:
       laneCounts = [len(vehiclesOutLaneLeft), len(vehiclesOnLeftLane), len(vehiclesInLane),
                     len(vehiclesOnRightLane), len(vehiclesOutLaneRight)]
       print(laneCounts)
+      print(self.currentTargetObject)
+      self.seconds += 1
       print(self.lastTargetX)
 
 
@@ -331,6 +333,7 @@ class LabelGenerator:
       if closestTarget is not None:
         # Begin countdown making the closestTarget the new currentTarget
         if self.newPotentialTarget is None:
+          self.label_time = self._time
           self.newPotentialTarget = closestTarget
           self.newEventTimer -= 1
 
@@ -346,6 +349,7 @@ class LabelGenerator:
               self.newPotentialTarget = None
               self.newEventTimer = self.buffer
               self.cancelTimer = self.cancelBuffer
+              self.label_time = None
 
         # Handles when a vehicle has become the new currentTarget
         else:

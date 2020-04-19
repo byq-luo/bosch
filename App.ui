@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1345</width>
-    <height>683</height>
+    <width>1920</width>
+    <height>1080</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,7 +21,7 @@
        <widget class="QTableWidget" name="fileTableWidget">
         <property name="maximumSize">
          <size>
-          <width>450</width>
+          <width>375</width>
           <height>16777215</height>
          </size>
         </property>
@@ -60,7 +60,7 @@
         </attribute>
         <column>
          <property name="text">
-          <string>Score</string>
+          <string>Done</string>
          </property>
         </column>
         <column>
@@ -111,7 +111,7 @@
         <item>
          <widget class="QLabel" name="currentVideoTime">
           <property name="text">
-           <string>00:00</string>
+           <string>000</string>
           </property>
          </widget>
         </item>
@@ -166,7 +166,7 @@
         <item>
          <widget class="QLabel" name="fullVideoTime">
           <property name="text">
-           <string>00:00</string>
+           <string>000</string>
           </property>
          </widget>
         </item>
@@ -191,9 +191,35 @@
          </spacer>
         </item>
         <item>
+         <spacer name="horizontalSpacer_8">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
          <widget class="QPushButton" name="playButton">
           <property name="text">
            <string>Play</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pauseButton">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Pause</string>
           </property>
          </widget>
         </item>
@@ -212,19 +238,6 @@
            </size>
           </property>
          </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pauseButton">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Pause</string>
-          </property>
-         </widget>
         </item>
         <item>
          <spacer name="horizontalSpacer_6">
@@ -268,15 +281,27 @@
        <widget class="QTableWidget" name="labelTableWidget">
         <property name="maximumSize">
          <size>
-          <width>270</width>
+          <width>300</width>
           <height>16777215</height>
          </size>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
+        </property>
+        <property name="selectionBehavior">
+         <enum>QAbstractItemView::SelectRows</enum>
         </property>
         <property name="showGrid">
          <bool>false</bool>
         </property>
+        <attribute name="horizontalHeaderDefaultSectionSize">
+         <number>120</number>
+        </attribute>
         <attribute name="horizontalHeaderHighlightSections">
          <bool>false</bool>
+        </attribute>
+        <attribute name="horizontalHeaderMinimumSectionSize">
+         <number>9</number>
         </attribute>
         <attribute name="horizontalHeaderStretchLastSection">
          <bool>true</bool>
@@ -286,28 +311,18 @@
         </attribute>
         <column>
          <property name="text">
-          <string>Predictions</string>
+          <string>Label</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Time</string>
          </property>
         </column>
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_4">
-        <item>
-         <widget class="QPushButton" name="pushButton">
-          <property name="text">
-           <string>Insert</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_2">
-          <property name="text">
-           <string>Delete</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <layout class="QHBoxLayout" name="horizontalLayout_4"/>
       </item>
       <item>
        <widget class="QCheckBox" name="boundingBoxCheckbox">
@@ -345,13 +360,17 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="processMultipleFilesAction"/>
+   <addaction name="actionInfo"/>
+   <addaction name="separator"/>
+   <addaction name="actionOpenFolder"/>
    <addaction name="separator"/>
    <addaction name="actionProcessVideos"/>
    <addaction name="separator"/>
-   <addaction name="actionInfo"/>
+   <addaction name="actionDelete_Predictions_For_Selected_Videos"/>
+   <addaction name="separator"/>
+   <addaction name="actionRemove_Selected_Videos"/>
   </widget>
-  <action name="processMultipleFilesAction">
+  <action name="actionOpenFolder">
    <property name="text">
     <string>Open Folder</string>
    </property>
@@ -366,7 +385,17 @@
   </action>
   <action name="actionInfo">
    <property name="text">
-    <string>Statistics</string>
+    <string>Info</string>
+   </property>
+  </action>
+  <action name="actionDelete_Predictions_For_Selected_Videos">
+   <property name="text">
+    <string>Delete Predictions For Selected Videos</string>
+   </property>
+  </action>
+  <action name="actionRemove_Selected_Videos">
+   <property name="text">
+    <string>Remove Selected Videos</string>
    </property>
   </action>
  </widget>

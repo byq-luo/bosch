@@ -1,39 +1,52 @@
 from Storage import Storage
 import os, pickle, random
+from Video import Video
 
 # This class is a relationship between a video and its data
 class DataPoint:
-  def __init__(self, videoPath: str):
+  def __init__(self, videoPath: str, storage, savePath=None):
     assert(videoPath != '')
     self.videoPath = videoPath
-    self.initialLabelTime = None
     self.videoName = ''
-    self.videoFolder = ''
-    self.predictedLabels = []
-    self.groundTruthLabels = []
-    self.boundingBoxes = []
-    self.laneLines = []
-    self.aggregatePredConfidence = 0
     folder, nameExtension = os.path.split(videoPath)
     name, extension = os.path.splitext(nameExtension)
     self.videoName = name
-    self.videoFolder = folder
+    self.videoFileName = name + extension
+    self.savePath = savePath or folder
 
-    self.labelsPath = self.videoPath.replace('videos/', 'labels/').replace('m0.avi', 'labels.txt')
+    self.predictedLabels = [] # tuple(str, float)
+    self.boundingBoxes = [] # tuple(something i do not remember)
+    self.laneLines = [] # ..
 
-    self._loadFromDisk()
+    video = Video(videoPath)
+    self.videoLength = video.getVideoLength()
+    del video
 
-  def _loadFromDisk(self):
+    self.hasBeenProcessed = False
+    self.setSavePath(self.savePath, storage)
+
+  def _loadLabels(self, storage):
     try:
-      with open(self.labelsPath) as file:
-        labelLines = [ln.rstrip('\n') for ln in file.readlines()]
-        for ln in labelLines:
-          label, labelTime = ln.split(',')
-          label = label.split('=')[0]
-          correctTime = float(labelTime) % 300
-          self.groundTruthLabels.append((label, correctTime))
+      lines = storage.getFileLines(self.labelsPath)
+      self.predictedLabels = []
+      for ln in lines:
+        label, labelTime = ln.split(',')
+        label = label.split('=')[0] # handle rightTO label
+        labelTime = float(labelTime) % 300
+        self.predictedLabels.append((label, labelTime))
     except:
-      self.groundTruthLabels = []
+      self.predictedLabels = []
+
+  # we cache the features on disk to avoid possible OOM when processing hundreds or thousands of videos
+  def loadFeatures(self, storage):
+    try:
+      [self.boundingBoxes, self.laneLines] = storage.loadObjsFromPkl(self.featuresPath)
+    except:
+      self.clearFeatures()
+
+  def clearFeatures(self):
+    self.boundingBoxes = []
+    self.laneLines = []
 
   def labelsToOutputFormat(self, labels):
     ret = []
@@ -43,58 +56,39 @@ class DataPoint:
       ret.append(label + ',' + str(labelTime) + '\n')
     return ret
 
-  def saveToStorage(self, storage: Storage):
+  def deleteData(self, storage):
+    try:
+      storage.deleteFile(self.featuresPath)
+    except:
+      pass
+    try:
+      storage.deleteFile(self.labelsPath)
+    except:
+      pass
+    self.clearFeatures()
+    self.predictedLabels = []
+    self.hasBeenProcessed = False
+
+  def saveToStorage(self, storage: Storage, shouldSaveFeatures):
     labels = self.labelsToOutputFormat(self.predictedLabels)
-    print(self.labelsPath)
     storage.writeListToFile(labels, self.labelsPath)
+    if shouldSaveFeatures:
+      storage.writeObjsToPkl([self.boundingBoxes,self.laneLines], self.featuresPath)
 
-  def compareLabels(self):
-    # For now just assign a random score
-    self.aggregatePredConfidence = random.random()
-    if False:
-      nicepredictedlabels = self.predictedLabels
-      nicegroundlabels = self.groundTruthLabels
-      extralabels = []
-      missinglabels = []
-      i = 0   # predicted label counter
-      j = 0   # ground truth counter
-      found = 0.0
-      extra = 0
-      missing = 0
-      wrongtime = 0
-      while i < len(nicepredictedlabels):
-        while j < len(nicegroundlabels):
-          if nicepredictedlabels[i][0] == nicegroundlabels[j][0]:
-            # label is correct and in correct slot
-            difference = float(float(nicepredictedlabels[i][1]) - float(nicegroundlabels[j][1]))
-            found += .5
-            if abs(difference) <= 0.5:
-              # label is correct and time is correct
-              found += .5
-            else:
-              # label is correct but time is wrong
-              wrongtime += 1
-            i += 1
-            j += 1
-          else:
-            # check the next labels to see if they match
-            if nicepredictedlabels[i+1][0] == nicegroundlabels[j][0]:
-              # we have an extra label
-              tup = nicepredictedlabels[i][0], nicepredictedlabels[i][1]
-              extralabels.append(tup)
-              extra += 1
-              i+=1
-            elif nicepredictedlabels[i][0] == nicegroundlabels[j+1][0]:
-              # we hav a missing label
-              tup = nicegroundlabels[j][0], nicegroundlabels[j][1]
-              missinglabels.append(tup)
-              missing += 1
-              j+=1
-            else:
-              # we are either missing multiple labels or have multiple additional labels
-              i += 1
-              j += 1
+    # TODO this may have wierd interaction with videowidget?
+    self.boundingBoxes = []
+    self.laneLines = []
 
-      total = len(nicegroundlabels)
-      total = (found-(missing + extra))/total
-      return total
+  def setSavePath(self, folder, storage):
+    if len(folder) == 0:
+      return
+    if folder[-1] not in ['/','\\']:
+      folder += '/'
+    self.savePath = folder
+    self.labelsPath = self.savePath + self.videoFileName.replace('m0.avi', 'labels.txt')
+    self.featuresPath = self.savePath + self.videoFileName.replace('m0.avi', 'features.pkl')
+    self.hasBeenProcessed = storage.fileExists(self.labelsPath)
+    if not self.hasBeenProcessed:
+      self.predictedLabels = []
+    else:
+      self._loadLabels(storage)
