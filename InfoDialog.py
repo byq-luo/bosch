@@ -22,8 +22,8 @@ def getTxt(k, v):
 
 
 class InfoDialog(QDialog):
-  def __init__(self, dataPoints: dict):
-    super(InfoDialog, self).__init__()
+  def __init__(self, dataPoints: dict, parent):
+    super(InfoDialog, self).__init__(parent=parent)
 
     # Set up the user interface from Designer.
     self.ui = Ui_InfoDialog()

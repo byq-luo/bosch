@@ -1,5 +1,4 @@
 import sys, os
-# sys.path.append('deepsort')
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QDialog, QLineEdit, QCheckBox, QPushButton
 from PyQt5.QtGui import QIcon
@@ -24,7 +23,7 @@ class MainWindow(QMainWindow):
     self.classifier = ClassifierRunner()
     # just a thin wrapper around a storage device
     self.storage = Storage()
-    self.saveFolder = None
+    self.labelsSaveFolder = None
 
     # https://stackoverflow.com/questions/7369005/add-a-qlineedit-to-a-qtoolbar-in-qtcreator-designer
     self.ui.toolBar.addSeparator()
@@ -57,7 +56,7 @@ class MainWindow(QMainWindow):
     else:
       self.loadVideosFromFolder('.')
 
-    self.dialog = InfoDialog(self.dataPoints)
+    self.dialog = InfoDialog(self.dataPoints, parent=self)
 
     # If we are in TESTING mode just load videos from the precomputed folder
     if CONFIG.USE_PRECOMPUTED_FEATURES:
@@ -102,8 +101,8 @@ class MainWindow(QMainWindow):
     self.ui.videoWidget.setVideo(dataPoint,self.storage)
     if play:
       self.ui.videoWidget.play()
-  
-  def getFileTableItem(self, dp:DataPoint):
+
+  def getFileTableQWidgetItem(self, dp:DataPoint):
     shownName = dp.videoName.replace('m0','')
     shownName = '   '.join(shownName.split('_')[2:])
     name = QTableWidgetItem(shownName)
@@ -120,26 +119,26 @@ class MainWindow(QMainWindow):
   def addToVideoList(self, dataPoint: DataPoint):
     rowIndex = self.ui.fileTableWidget.rowCount()
     self.ui.fileTableWidget.insertRow(rowIndex)
-    name, done = self.getFileTableItem(dataPoint)
+    name, done = self.getFileTableQWidgetItem(dataPoint)
     self.ui.fileTableWidget.setItem(rowIndex, 0, done)
     self.ui.fileTableWidget.setItem(rowIndex, 1, name)
 
   def loadVideosFromFolder(self, folder):
     videoPaths = self.storage.recursivelyFindVideosInFolder(folder)
     for videoPath in videoPaths:
-      # Do not load videos that have no precomputed boxes in TESTING mode
+      # Do not load videos that have no precomputed boxes while in USE_PRECOMPUTED_FEATURES mode
       if CONFIG.USE_PRECOMPUTED_FEATURES:
         videoFeaturesPath = videoPath.replace('videos/', 'features/').replace('.avi', '.pkl')
         if not self.storage.fileExists(videoFeaturesPath):
           continue
-      dataPoint = DataPoint(videoPath,self.storage,self.saveFolder)
+      dataPoint = DataPoint(videoPath,self.storage,self.labelsSaveFolder)
       self.dataPoints[dataPoint.videoPath] = dataPoint
       self.addToVideoList(dataPoint)
 
   def setSavePathButtonClicked(self):
     folder = self.openFolderDialog()
     if folder:
-      self.saveFolder = folder # incase save folder is specified first
+      self.labelsSaveFolder = folder
       self.ui.setSavePathButton.setText('  '+folder+'  ')
       for dp in self.dataPoints.values():
         dp.setSavePath(folder,self.storage)
@@ -153,7 +152,7 @@ class MainWindow(QMainWindow):
       if item is not None:
         videoPath = item.data(Qt.UserRole)
         dataPoint = self.dataPoints[videoPath]
-        name, done = self.getFileTableItem(dataPoint)
+        name, done = self.getFileTableQWidgetItem(dataPoint)
         x.setItem(i, 0, done)
         x.setItem(i, 1, name)
 
@@ -180,7 +179,7 @@ class MainWindow(QMainWindow):
       if self.isCurrentVideo(dp):
         self.clearLabelList()
       dp.deleteData(self.storage)
-      name, done = self.getFileTableItem(dp)
+      name, done = self.getFileTableQWidgetItem(dp)
       x.setItem(i,0,done)
       x.setItem(i,1,name)
     x.clearSelection()
