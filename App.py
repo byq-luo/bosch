@@ -14,17 +14,7 @@ from Storage import Storage
 import CONFIG
 
 class MainWindow(QMainWindow):
-  def __init__(self):
-    super(MainWindow, self).__init__()
-    self.ui = Ui_MainWindow()
-    self.ui.setupUi(self)
-
-    self.dataPoints = dict()
-    self.classifier = ClassifierRunner()
-    # just a thin wrapper around a storage device
-    self.storage = Storage()
-    self.labelsSaveFolder = None
-
+  def setupUi(self):
     # https://stackoverflow.com/questions/7369005/add-a-qlineedit-to-a-qtoolbar-in-qtcreator-designer
     self.ui.toolBar.addSeparator()
     self.ui.setSavePathButton = QPushButton('  Set labels save path  ')
@@ -32,6 +22,7 @@ class MainWindow(QMainWindow):
     self.ui.toolBar.addWidget(self.ui.setSavePathButton)
     self.ui.toolBar.addSeparator()
     self.ui.saveFeaturesCheckBox = QCheckBox('Save Features')
+    self.ui.saveFeaturesCheckBox.setChecked(True)
     self.ui.toolBar.addWidget(self.ui.saveFeaturesCheckBox)
 
     self.ui.playButton.clicked.connect(self.ui.videoWidget.play)
@@ -56,14 +47,26 @@ class MainWindow(QMainWindow):
     else:
       self.loadVideosFromFolder('.')
 
-    self.dialog = InfoDialog(self.dataPoints, parent=self)
-
-    # If we are in TESTING mode just load videos from the precomputed folder
     if CONFIG.USE_PRECOMPUTED_FEATURES:
       self.loadVideosFromFolder('precomputed/videos')
       self.dialog.updateState(self.dataPoints)
     else:
       self.ui.actionOpenFolder.triggered.connect(self.openVideosFolder)
+
+  def __init__(self):
+    super(MainWindow, self).__init__()
+    self.ui = Ui_MainWindow()
+    self.ui.setupUi(self)
+
+    self.dataPoints = dict()
+    self.classifier = ClassifierRunner()
+    self.storage = Storage()
+    self.labelsSaveFolder = None
+
+    self.dialog = InfoDialog(self.dataPoints, parent=self)
+
+    self.setupUi()
+
 
   def showInfoDialog(self):
     self.dialog.show()
