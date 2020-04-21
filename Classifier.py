@@ -1,6 +1,4 @@
 from LabelGenerator import LabelGenerator
-# from VehicleTracker import VehicleTracker
-# from VehicleTrackerDL import VehicleTracker
 from VehicleTrackerSORT import VehicleTracker
 from DataPoint import DataPoint
 from Video import Video
