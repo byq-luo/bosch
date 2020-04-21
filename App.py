@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
     self.ui.labelTableWidget.cellClicked.connect(self.labelInListClicked)
     self.processingProgressSignal.connect(self.processingProgressUpdate)
     self.processingCompleteSignal.connect(self.processingComplete)
-    self.setWindowIcon(QIcon('icons/bosch.ico'))
+    self.setWindowIcon(QIcon('bosch.ico'))
     self.ui.actionInfo.triggered.connect(self.showInfoDialog)
     self.ui.actionDelete_Predictions_For_Selected_Videos.triggered.connect(self.deletePredictionsForSelected)
     self.ui.actionRemove_Selected_Videos.triggered.connect(self.removeSelectedVideos)
