@@ -6,6 +6,8 @@ import torch.nn.functional as F
 import numpy as np
 import math
 
+# TODO I wonder if particle filtering could be used here to track the lane lines given measurements from ERFnet
+
 def mix(a, b, m):
   return (a-b)*(1-m) + b
 
@@ -25,16 +27,17 @@ class LaneLineDetector:
     self.state = [None]*4
     self.output = [None]*4
     self.frameIndex = -1
-    self.plr = [None]*4
+    self.previousReturnValue = [None]*4
     self.framesSinceDiscontinuous = 0
 
   def getLines(self, frame):
+
+    # Run the feature extraction only once every two frames.
     self.frameIndex += 1
-    l,r,ls,rs = self.plr
+    l,r,ls,rs = self.previousReturnValue
     if self.frameIndex % 2 == 0:
       l, r, ls, rs = self._getProbs(frame)
-      self.plr = l, r, ls, rs
-    # l, r, ls, rs = self._getProbs(frame)
+      self.previousReturnValue = l, r, ls, rs
 
     laneLines = []
     for prob, score, _id in zip([l,r], [ls,rs], [1,2]):

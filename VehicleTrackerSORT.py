@@ -4,7 +4,6 @@ from Vehicle import Vehicle
 
 class VehicleTracker:
   def __init__(self):
-    #create instance of SORT
     # TODO find better values for these params
     self.mot_tracker = Sort(max_age=60, min_hits=20) 
 
