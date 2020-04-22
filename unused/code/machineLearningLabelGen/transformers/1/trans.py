@@ -11,7 +11,7 @@ from Dataset import Dataset
 
 PREDICT_EVERY_NTH_FRAME = 30
 WINDOWWIDTH = 30*30
-ActualWINDOWWIDTH = 30*30//2
+ActualWINDOWWIDTH = 30*30//2 # skip half the data
 AllPossibleLabels = ['rightTO', 'lcRel', 'cutin', 'cutout', 'evtEnd', 'BLANK']
 NUMLABELS = len(AllPossibleLabels)
 BATCH_SIZE = 16
