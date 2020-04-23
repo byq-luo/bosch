@@ -234,11 +234,14 @@ class LabelGenerator:
         self.newCutinTarget = None
         eventTime = self._time - (self.buffer / self.videoFPS)
 
-        if self.lastTargetX < 100 or self.lastTargetX > 500:
-          self.labels.append(("objTurnOff", eventTime))
-          self.labels.append(("evtEnd", self._time))
-          self.lastLabelProduced = "evtEnd"
-          self.lastTO = None
+        try:
+          if self.lastTargetX < 100 or self.lastTargetX > 500:
+            self.labels.append(("objTurnOff", eventTime))
+            self.labels.append(("evtEnd", self._time))
+            self.lastLabelProduced = "evtEnd"
+            self.lastTO = None
+        except:
+          pass
 
   '''
   This function takes in a list of vehicles in the hosts lane and returns

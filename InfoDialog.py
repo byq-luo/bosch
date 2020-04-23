@@ -56,7 +56,7 @@ class InfoDialog(QDialog):
 
     # self.ui.label_1.setText(getTxt('Estimated hours saved: ', self.estHoursSaved))
     self.ui.label_2.setText(getTxt('Hours of video processed: ', self.hoursOfVidProcessed))
-    self.ui.label_3.setText(getTxt('Processing hours remaining: ', self.processingHoursRemaining))
+    self.ui.label_3.setText(getTxt('Hours of video unprocessed: ', self.processingHoursRemaining))
     self.ui.label_4.setText(getTxt('Average video length: ', self.averageVidLength))
     self.ui.label_5.setText(getTxt('GPU device name: ', self.deviceName))
 

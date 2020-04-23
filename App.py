@@ -1,4 +1,5 @@
 import sys, os
+# sys.path.append('deepsort')
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QDialog, QLineEdit, QCheckBox, QPushButton
 from PyQt5.QtGui import QIcon
@@ -131,7 +132,7 @@ class MainWindow(QMainWindow):
     for videoPath in videoPaths:
       # Do not load videos that have no precomputed boxes while in USE_PRECOMPUTED_FEATURES mode
       if CONFIG.USE_PRECOMPUTED_FEATURES:
-        videoFeaturesPath = videoPath.replace('videos/', 'features/').replace('.avi', '.pkl')
+        videoFeaturesPath = videoPath.replace('videos', 'features').replace('.avi', '.pkl')
         if not self.storage.fileExists(videoFeaturesPath):
           continue
       dataPoint = DataPoint(videoPath,self.storage,self.labelsSaveFolder)

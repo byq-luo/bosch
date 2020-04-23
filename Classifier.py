@@ -46,6 +46,7 @@ def processVideo(dp: DataPoint,
   totalNumFrames = video.getTotalNumFrames()
 
   videoFeaturesPath = dp.videoPath.replace('videos', 'features').replace('.avi', '.pkl')
+
   if CONFIG.USE_PRECOMPUTED_FEATURES:
     vehicleDetector.loadFeaturesFromDisk(videoFeaturesPath)
     laneLineDetector.loadFeaturesFromDisk(videoFeaturesPath)
@@ -73,10 +74,14 @@ def processVideo(dp: DataPoint,
             str(frameIndex)+' but totalNumFrames='+str(totalNumFrames))
       rawboxes, boxscores, vehicles, lines = [], [], [], [[],[]]
     else:
-      rawboxes, boxscores = vehicleDetector.getFeatures(frame)
-      vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
-      lines = laneLineDetector.getLines(frame)
-      labelGen.processFrame(vehicles, lines, frameIndex)
+
+        rawboxes, boxscores = vehicleDetector.getFeatures(frame)
+        vehicles = tracker.getVehicles(frame, rawboxes, boxscores)
+        lines = laneLineDetector.getLines(frame)
+        try:
+          labelGen.processFrame(vehicles, lines, frameIndex)
+        except Exception as e:
+          print(e)
 
     if CONFIG.MAKE_PRECOMPUTED_FEATURES:
       allboxes.append(rawboxes)
