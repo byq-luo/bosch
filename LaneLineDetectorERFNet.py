@@ -6,15 +6,13 @@ import torch.nn.functional as F
 import numpy as np
 import math
 
-# TODO B: look at lane scores to check for change lane.?
+# TODO I wonder if particle filtering could be used here to track the lane lines given measurements from ERFnet
 
 def mix(a, b, m):
   return (a-b)*(1-m) + b
 
-THRESHOLD = .2
-
+OUTPUT_SEGMENT_THRESHOLD = .2
 # FEEDBACK = 0.3
-
 TIMESMOOTH = .7
 XSMOOTH = .7
 XTRENDSMOOTH = .7
@@ -29,17 +27,17 @@ class LaneLineDetector:
     self.state = [None]*4
     self.output = [None]*4
     self.frameIndex = -1
-    self.plr = [None]*4
+    self.previousReturnValue = [None]*4
     self.framesSinceDiscontinuous = 0
 
   def getLines(self, frame):
+
+    # Run the feature extraction only once every two frames.
     self.frameIndex += 1
-    l,r,ls,rs = self.plr
+    l,r,ls,rs = self.previousReturnValue
     if self.frameIndex % 2 == 0:
       l, r, ls, rs = self._getProbs(frame)
-      self.plr = l, r, ls, rs
-
-    # l, r, ls, rs = self._getProbs(frame)
+      self.previousReturnValue = l, r, ls, rs
 
     laneLines = []
     for prob, score, _id in zip([l,r], [ls,rs], [1,2]):
@@ -144,7 +142,7 @@ class LaneLineDetector:
       # Filter anything we are not confident about
       ox,oy=[],[]
       for y in range(len(xs)):
-        if maxs[y] > THRESHOLD:
+        if maxs[y] > OUTPUT_SEGMENT_THRESHOLD:
           ox.append(xs[y])
           oy.append(ys[y])
       xs,ys=ox,oy
@@ -183,7 +181,7 @@ class LaneLineDetector:
       output = F.softmax(output, dim=1)
       # Remove empty batch dimension
       output = output[0]
-      # output[output<THRESHOLD]*=0.
+      # output[output<OUTPUT_SEGMENT_THRESHOLD]*=0.
       lane_scores = lane_scores[0]
       # output[0] is the probability map for all 4 lane lines
       # output[i] is the probability map for the ith lane line (1<=i<=4)
